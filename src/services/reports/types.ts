@@ -1,0 +1,64 @@
+/** Structured report types (JSON instead of HTML strings). */
+
+export type ReportLine = {
+  kind: 'group' | 'item' | 'total';
+  ref?: string;
+  description: string;
+  qty?: number;
+  unit?: string;
+  rate?: number | null;
+  amount?: number | null;
+  isRebar?: boolean;
+  dec?: number;
+};
+
+export type LabourActivity = {
+  ref: string;
+  activity: string;
+  qty: number;
+  unit: string;
+  outputRate: string;
+  gang: string;
+  days: number;
+};
+
+export type TradeSummary = {
+  trade: string;
+  manDays: number;
+  dayRate: number;
+  cost: number;
+};
+
+export type ElementReportBundle = {
+  elementKey: string;
+  num: number;
+  suffix: string;
+  label: string;
+  kind: 'structural' | 'masonry' | 'finish' | 'earthworks';
+  units: number;
+  boq: ReportLine[];
+  bom: ReportLine[];
+  labour: { activities: LabourActivity[]; trades: TradeSummary[]; totalManDays: number; totalCost: number };
+  summary: Record<string, number>;
+  cost: { boq: number; bom: number; labour: number };
+};
+
+export type ProjectReportsPayload = {
+  scope: 'floor' | 'project';
+  floorId: string | null;
+  currency: string;
+  summary: {
+    totalConcrete: number;
+    totalFormwork: number;
+    totalSteel: number;
+    totalUnits: number;
+    pricedTotal: number;
+    elementCount: number;
+  };
+  /** Consolidated tables across scope */
+  boq: ReportLine[];
+  bom: ReportLine[];
+  labour: { activities: LabourActivity[]; trades: TradeSummary[]; totalManDays: number; totalCost: number };
+  /** Per-element bundles (for element tabs / drill-down) */
+  byElement: ElementReportBundle[];
+};

@@ -1,0 +1,596 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import { Project, type IProject } from '../models/Project';
+import { Floor, type IFloor } from '../models/Floor';
+import { Instance, type IInstance } from '../models/Instance';
+import { DEFAULT_FLOORS } from '../defaults/projectDefaults';
+import { loadOwnedProject } from '../middleware/loadOwnedProject';
+import { calculateInstances, SUPPORTED_ELEMENT_KEYS } from '../services/calculate';
+import { buildProjectReports } from '../services/reports';
+import { REPORTABLE_KEYS } from '../services/reports/elementMeta';
+
+const router = Router();
+
+function publicProject(p: IProject) {
+  return {
+    id: p._id.toString(),
+    name: p.name,
+    number: p.number,
+    client: p.client,
+    contractor: p.contractor,
+    location: p.location,
+    currency: p.currency,
+    units: p.units,
+    preparedBy: p.preparedBy,
+    revision: p.revision,
+    date: p.date,
+    materials: p.materials,
+    rateLib: p.rateLib,
+    useRateAnalysis: p.useRateAnalysis !== false,
+    grid: p.grid,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  };
+}
+
+function publicFloor(f: IFloor) {
+  return {
+    id: f._id.toString(),
+    floorId: f.floorId,
+    label: f.label,
+    elevation: f.elevation,
+    height: f.height,
+    sortOrder: f.sortOrder,
+  };
+}
+
+function publicInstance(inst: IInstance) {
+  return {
+    id: inst._id.toString(),
+    floorId: inst.floorId,
+    elementKey: inst.elementKey,
+    shape: inst.shape,
+    mark: inst.mark,
+    count: inst.count,
+    geometry: inst.geometry,
+    concreteGrade: inst.concreteGrade,
+    reinforcement: inst.reinforcement,
+    spec: inst.spec,
+    createdAt: inst.createdAt,
+    updatedAt: inst.updatedAt,
+  };
+}
+
+/* ---------- Project CRUD ---------- */
+
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const projects = await Project.find({ userId: req.user!.userId }).sort({ updatedAt: -1 });
+    res.json({
+      projects: projects.map((p) => ({
+        id: p._id.toString(),
+        name: p.name,
+        number: p.number,
+        client: p.client,
+        currency: p.currency,
+        updatedAt: p.updatedAt,
+        createdAt: p.createdAt,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Enriched home-dashboard payload: per-project floor/instance counts,
+ * priced BOQ totals, and unpriced element counts.
+ * NOTE: handCalcVerifiedPct is a placeholder (100) until verification exists.
+ */
+router.get('/dashboard', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const projects = await Project.find({ userId }).sort({ updatedAt: -1 });
+
+    const cards = await Promise.all(
+      projects.map(async (p) => {
+        const [floors, instances] = await Promise.all([
+          Floor.find({ projectId: p._id }),
+          Instance.find({ projectId: p._id }),
+        ]);
+
+        const reports = buildProjectReports(p, instances, { scope: 'project' });
+        const unpricedCount = reports.byElement.filter(
+          (be) => be.units > 0 && !(be.cost.boq > 0),
+        ).length;
+        const instanceCount = instances.length;
+        const verified = instanceCount > 0 && unpricedCount === 0;
+
+        return {
+          id: p._id.toString(),
+          name: p.name,
+          number: p.number,
+          client: p.client,
+          location: p.location || '',
+          currency: p.currency || 'USD',
+          defaultGrade: p.materials?.defaultConcreteGrade || 'C25/30',
+          floorCount: floors.length,
+          elementCount: instanceCount,
+          pricedTotal: reports.summary.pricedTotal || 0,
+          unpricedCount,
+          verified,
+          updatedAt: p.updatedAt,
+          createdAt: p.createdAt,
+        };
+      }),
+    );
+
+    const activeProjects = cards.length;
+    const elementsModelled = cards.reduce((s, c) => s + c.elementCount, 0);
+    const pendingReview = cards.reduce((s, c) => s + c.unpricedCount, 0);
+    const totalPricedValue = cards.reduce((s, c) => s + c.pricedTotal, 0);
+    const currency =
+      cards.find((c) => c.pricedTotal > 0)?.currency || cards[0]?.currency || 'USD';
+
+    res.json({
+      stats: {
+        activeProjects,
+        elementsModelled,
+        /** Placeholder — no hand-calc verification model yet */
+        handCalcVerifiedPct: 100,
+        handCalcVerifiedIsPlaceholder: true,
+        totalPricedValue,
+        currency,
+        pendingReview,
+      },
+      projects: cards,
+      /** Activity log not implemented — empty until a follow-up step */
+      recentActivity: [] as {
+        id: string;
+        description: string;
+        createdAt: string;
+      }[],
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const name = String(req.body?.name ?? '').trim() || 'Untitled Project';
+    const project = await Project.create({
+      userId: req.user!.userId,
+      name,
+      number: req.body?.number,
+      client: req.body?.client,
+      contractor: req.body?.contractor,
+      location: req.body?.location,
+      currency: req.body?.currency,
+      units: req.body?.units,
+      preparedBy: req.body?.preparedBy,
+      revision: req.body?.revision,
+      date: req.body?.date,
+      materials: req.body?.materials,
+      rateLib: req.body?.rateLib,
+      grid: req.body?.grid,
+    });
+
+    await Floor.insertMany(
+      DEFAULT_FLOORS.map((f) => ({ ...f, projectId: project._id })),
+    );
+
+    const floors = await Floor.find({ projectId: project._id }).sort({ sortOrder: 1 });
+    res.status(201).json({
+      project: publicProject(project),
+      floors: floors.map(publicFloor),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:projectId', loadOwnedProject, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const floors = await Floor.find({ projectId: req.project!._id }).sort({ sortOrder: 1 });
+    res.json({
+      project: publicProject(req.project!),
+      floors: floors.map(publicFloor),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const p = req.project!;
+    const fields = [
+      'name', 'number', 'client', 'contractor', 'location', 'currency', 'units',
+      'preparedBy', 'revision', 'date', 'materials', 'rateLib', 'grid', 'useRateAnalysis',
+    ] as const;
+    for (const key of fields) {
+      if (req.body?.[key] !== undefined) {
+        (p as any)[key] = req.body[key];
+      }
+    }
+    await p.save();
+    res.json({ project: publicProject(p) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:projectId', loadOwnedProject, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.project!._id;
+    await Instance.deleteMany({ projectId: id });
+    await Floor.deleteMany({ projectId: id });
+    await Project.deleteOne({ _id: id });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ---------- Floors ---------- */
+
+router.get('/:projectId/floors', loadOwnedProject, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const floors = await Floor.find({ projectId: req.project!._id }).sort({ sortOrder: 1 });
+    res.json({ floors: floors.map(publicFloor) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:projectId/floors', loadOwnedProject, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const floorId = String(req.body?.floorId ?? '').trim();
+    const label = String(req.body?.label ?? '').trim();
+    if (!floorId || !label) {
+      res.status(400).json({ error: 'floorId and label are required' });
+      return;
+    }
+    const existing = await Floor.findOne({ projectId: req.project!._id, floorId });
+    if (existing) {
+      res.status(409).json({ error: 'A floor with that floorId already exists' });
+      return;
+    }
+    const maxSort = await Floor.find({ projectId: req.project!._id })
+      .sort({ sortOrder: -1 })
+      .limit(1);
+    const sortOrder =
+      req.body?.sortOrder != null
+        ? Number(req.body.sortOrder)
+        : (maxSort[0]?.sortOrder ?? -1) + 1;
+
+    const floor = await Floor.create({
+      projectId: req.project!._id,
+      floorId,
+      label,
+      elevation: Number(req.body?.elevation ?? 0),
+      height: Number(req.body?.height ?? 3),
+      sortOrder,
+    });
+    res.status(201).json({ floor: publicFloor(floor) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch(
+  '/:projectId/floors/:floorDocId',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const floor = await Floor.findOne({
+        _id: req.params.floorDocId,
+        projectId: req.project!._id,
+      });
+      if (!floor) {
+        res.status(404).json({ error: 'Floor not found' });
+        return;
+      }
+
+      const oldFloorId = floor.floorId;
+      if (req.body?.label !== undefined) floor.label = String(req.body.label).trim();
+      if (req.body?.elevation !== undefined) floor.elevation = Number(req.body.elevation);
+      if (req.body?.height !== undefined) floor.height = Number(req.body.height);
+      if (req.body?.sortOrder !== undefined) floor.sortOrder = Number(req.body.sortOrder);
+
+      if (req.body?.floorId !== undefined) {
+        const newFloorId = String(req.body.floorId).trim();
+        if (!newFloorId) {
+          res.status(400).json({ error: 'floorId cannot be empty' });
+          return;
+        }
+        if (newFloorId !== oldFloorId) {
+          const clash = await Floor.findOne({
+            projectId: req.project!._id,
+            floorId: newFloorId,
+          });
+          if (clash) {
+            res.status(409).json({ error: 'A floor with that floorId already exists' });
+            return;
+          }
+          floor.floorId = newFloorId;
+          await Instance.updateMany(
+            { projectId: req.project!._id, floorId: oldFloorId },
+            { $set: { floorId: newFloorId } },
+          );
+        }
+      }
+
+      await floor.save();
+      res.json({ floor: publicFloor(floor) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.delete(
+  '/:projectId/floors/:floorDocId',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const floor = await Floor.findOne({
+        _id: req.params.floorDocId,
+        projectId: req.project!._id,
+      });
+      if (!floor) {
+        res.status(404).json({ error: 'Floor not found' });
+        return;
+      }
+      // Cascade: prune all element instances on this floor
+      await Instance.deleteMany({
+        projectId: req.project!._id,
+        floorId: floor.floorId,
+      });
+      await Floor.deleteOne({ _id: floor._id });
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/* ---------- Instances ---------- */
+
+router.get(
+  '/:projectId/instances',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const filter: Record<string, unknown> = { projectId: req.project!._id };
+      if (req.query.floorId) filter.floorId = String(req.query.floorId);
+      if (req.query.elementKey) filter.elementKey = String(req.query.elementKey);
+      const instances = await Instance.find(filter).sort({ mark: 1, createdAt: 1 });
+      res.json({ instances: instances.map(publicInstance) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.post(
+  '/:projectId/instances',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const floorId = String(req.body?.floorId ?? '').trim();
+      const elementKey = String(req.body?.elementKey ?? '').trim();
+      const shape = String(req.body?.shape ?? '').trim();
+      const mark = String(req.body?.mark ?? '').trim();
+      if (!floorId || !elementKey || !shape || !mark) {
+        res.status(400).json({ error: 'floorId, elementKey, shape, and mark are required' });
+        return;
+      }
+      const floor = await Floor.findOne({ projectId: req.project!._id, floorId });
+      if (!floor) {
+        res.status(400).json({ error: 'floorId does not exist on this project' });
+        return;
+      }
+
+      const inst = await Instance.create({
+        projectId: req.project!._id,
+        floorId,
+        elementKey,
+        shape,
+        mark,
+        count: Number(req.body?.count ?? 1) || 1,
+        geometry: req.body?.geometry ?? {},
+        concreteGrade: req.body?.concreteGrade ?? null,
+        reinforcement: req.body?.reinforcement ?? null,
+        spec: req.body?.spec ?? null,
+      });
+      res.status(201).json({ instance: publicInstance(inst) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  '/:projectId/instances/:instanceId',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const inst = await Instance.findOne({
+        _id: req.params.instanceId,
+        projectId: req.project!._id,
+      });
+      if (!inst) {
+        res.status(404).json({ error: 'Instance not found' });
+        return;
+      }
+      res.json({ instance: publicInstance(inst) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.patch(
+  '/:projectId/instances/:instanceId',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const inst = await Instance.findOne({
+        _id: req.params.instanceId,
+        projectId: req.project!._id,
+      });
+      if (!inst) {
+        res.status(404).json({ error: 'Instance not found' });
+        return;
+      }
+
+      if (req.body?.floorId !== undefined) {
+        const floorId = String(req.body.floorId).trim();
+        const floor = await Floor.findOne({ projectId: req.project!._id, floorId });
+        if (!floor) {
+          res.status(400).json({ error: 'floorId does not exist on this project' });
+          return;
+        }
+        inst.floorId = floorId;
+      }
+      if (req.body?.elementKey !== undefined) inst.elementKey = String(req.body.elementKey).trim();
+      if (req.body?.shape !== undefined) inst.shape = String(req.body.shape).trim();
+      if (req.body?.mark !== undefined) inst.mark = String(req.body.mark).trim();
+      if (req.body?.count !== undefined) inst.count = Number(req.body.count) || 1;
+      if (req.body?.geometry !== undefined) inst.geometry = req.body.geometry;
+      if (req.body?.concreteGrade !== undefined) inst.concreteGrade = req.body.concreteGrade;
+      if (req.body?.reinforcement !== undefined) inst.reinforcement = req.body.reinforcement;
+      if (req.body?.spec !== undefined) inst.spec = req.body.spec;
+
+      await inst.save();
+      res.json({ instance: publicInstance(inst) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.delete(
+  '/:projectId/instances/:instanceId',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await Instance.deleteOne({
+        _id: req.params.instanceId,
+        projectId: req.project!._id,
+      });
+      if (result.deletedCount === 0) {
+        res.status(404).json({ error: 'Instance not found' });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/* ---------- Reports ---------- */
+
+router.get(
+  '/:projectId/reports',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const scopeRaw = String(req.query.scope ?? 'floor').trim().toLowerCase();
+      const scope = scopeRaw === 'project' ? 'project' : 'floor';
+      const floorId = req.query.floorId != null ? String(req.query.floorId).trim() : '';
+      const elementKey =
+        req.query.elementKey != null ? String(req.query.elementKey).trim() : '';
+
+      if (scope === 'floor') {
+        if (!floorId) {
+          res.status(400).json({ error: 'floorId is required when scope=floor' });
+          return;
+        }
+        const floor = await Floor.findOne({ projectId: req.project!._id, floorId });
+        if (!floor) {
+          res.status(400).json({ error: 'floorId does not exist on this project' });
+          return;
+        }
+      }
+
+      if (elementKey && !REPORTABLE_KEYS.includes(elementKey)) {
+        res.status(400).json({
+          error: `Unsupported elementKey. Supported: ${REPORTABLE_KEYS.join(', ')}`,
+        });
+        return;
+      }
+
+      const filter: Record<string, unknown> = { projectId: req.project!._id };
+      if (scope === 'floor') filter.floorId = floorId;
+      if (elementKey) filter.elementKey = elementKey;
+
+      const instances = await Instance.find(filter).sort({
+        elementKey: 1,
+        floorId: 1,
+        mark: 1,
+        createdAt: 1,
+      });
+
+      const reports = buildProjectReports(req.project!, instances, {
+        scope,
+        floorId: scope === 'floor' ? floorId : null,
+        elementKey: elementKey || null,
+      });
+
+      res.json(reports);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/* ---------- Calculate ---------- */
+
+router.post(
+  '/:projectId/calculate',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const elementKey = String(req.body?.elementKey ?? '').trim();
+      const floorId = String(req.body?.floorId ?? '').trim();
+      if (!elementKey || !floorId) {
+        res.status(400).json({ error: 'elementKey and floorId are required' });
+        return;
+      }
+      if (!(SUPPORTED_ELEMENT_KEYS as readonly string[]).includes(elementKey)) {
+        res.status(400).json({
+          error: `Unsupported elementKey. Supported: ${SUPPORTED_ELEMENT_KEYS.join(', ')}`,
+        });
+        return;
+      }
+
+      const floor = await Floor.findOne({ projectId: req.project!._id, floorId });
+      if (!floor) {
+        res.status(400).json({ error: 'floorId does not exist on this project' });
+        return;
+      }
+
+      const instances = await Instance.find({
+        projectId: req.project!._id,
+        floorId,
+        elementKey,
+      }).sort({ mark: 1, createdAt: 1 });
+
+      const results = calculateInstances(elementKey, instances, req.project!.materials);
+      res.json({
+        projectId: req.project!._id.toString(),
+        floorId,
+        elementKey,
+        count: results.length,
+        results,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+export default router;
