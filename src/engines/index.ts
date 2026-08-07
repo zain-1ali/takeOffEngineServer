@@ -18,6 +18,8 @@ export type {
   EarthworkShape,
   EarthworkCalcResult,
 } from './earthworks';
+export { calcColumn, columnConcrete, columnRebar, columnSection } from './columns';
+export type { ColumnInput, ColumnShape, ColumnSection } from './columns';
 export { calcWall, wallConcrete, wallRebar, wallCenterlineLength } from './walls';
 export { calcStone, stoneMasonryVolume } from './stoneStrip';
 export { calcFinish, finishNetArea } from './finishes';

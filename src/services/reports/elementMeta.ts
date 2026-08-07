@@ -79,6 +79,18 @@ export const ELEMENT_META: Record<string, ElementMeta> = {
     label: 'Earthworks',
     kind: 'earthworks',
   },
+  COLUMNS: {
+    key: 'COLUMNS',
+    num: 7,
+    suffix: '',
+    label: 'Columns',
+    kind: 'structural',
+    concreteDesc: (g) =>
+      `Reinforced in-situ concrete, grade ${g}, in columns; all section shapes`,
+    formworkDesc: 'Formwork to sides of columns; including striking',
+    rebarDesc: (d) =>
+      `High-yield reinforcement bars, dia. ${d} mm, cut, bent and fixed in columns`,
+  },
   STONE_STRIP: {
     key: 'STONE_STRIP',
     num: 2,

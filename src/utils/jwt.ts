@@ -26,11 +26,15 @@ export function verifyToken(token: string): JwtPayload {
   return jwt.verify(token, getJwtSecret()) as JwtPayload;
 }
 
+function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
 export function setAuthCookie(res: Response, token: string): void {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction(),
+    sameSite: isProduction() ? 'none' : 'lax',
     maxAge: SEVEN_DAYS_MS,
     path: '/',
   });
@@ -39,8 +43,8 @@ export function setAuthCookie(res: Response, token: string): void {
 export function clearAuthCookie(res: Response): void {
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction(),
+    sameSite: isProduction() ? 'none' : 'lax',
     path: '/',
   });
 }
