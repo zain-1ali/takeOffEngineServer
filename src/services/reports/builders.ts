@@ -127,6 +127,8 @@ export type StructuralAgg = {
   steelByDia: Record<string, number>;
   totalConcrete: number;
   totalFormwork: number;
+  totalSoffitFormwork: number;
+  totalVerticalFormwork: number;
   totalSteel: number;
   units: number;
   count: number;
@@ -140,6 +142,8 @@ export function aggregateStructural(
   const steelByDia: Record<string, number> = {};
   let totalConcrete = 0;
   let totalFormwork = 0;
+  let totalSoffitFormwork = 0;
+  let totalVerticalFormwork = 0;
   let totalSteel = 0;
   let units = 0;
 
@@ -151,6 +155,9 @@ export function aggregateStructural(
     concreteByGrade[grade] = (concreteByGrade[grade] || 0) + calc.totalVolumeM3;
     totalConcrete += calc.totalVolumeM3;
     totalFormwork += calc.totalFormworkM2;
+    totalSoffitFormwork += calc.totalSoffitFormworkM2 || 0;
+    totalVerticalFormwork +=
+      calc.totalVerticalFormworkM2 ?? calc.totalFormworkM2;
     totalSteel += calc.totalRebarKg;
     (calc.perUnit.rebar.groups || []).forEach((g) => {
       const k = String(g.diameterMm);
@@ -170,6 +177,8 @@ export function aggregateStructural(
     steelByDia,
     totalConcrete: round(totalConcrete),
     totalFormwork: round(totalFormwork),
+    totalSoffitFormwork: round(totalSoffitFormwork),
+    totalVerticalFormwork: round(totalVerticalFormwork),
     totalSteel: round(totalSteel),
     units,
     count: entries.length,
@@ -181,6 +190,7 @@ export function buildStructuralReports(
   entries: ReportEntry[],
   rates: RateAccessors,
   calculate: StructuralCalculator,
+  materials?: MaterialsConfig | null,
 ): ElementReportBundle {
   const agg = aggregateStructural(entries, calculate);
   const boq: ReportLine[] = [];
@@ -191,8 +201,9 @@ export function buildStructuralReports(
   Object.keys(agg.concreteByGrade)
     .sort()
     .forEach((grade) => {
-      ai++;
       const q = agg.concreteByGrade[grade];
+      if (!(q > 0)) return;
+      ai++;
       const rate = rates.boqRate('concrete');
       const desc = meta.concreteDesc?.(grade) || `Concrete grade ${grade}`;
       boq.push(item(`A${ai}`, desc, q, 'm³', rate));
@@ -208,14 +219,16 @@ export function buildStructuralReports(
     if (a != null) boqTot += a;
   }
 
-  boq.push(group('C — Reinforcement'));
+  boq.push(group('C — Reinforcement / steel'));
   let ci = 0;
   Object.keys(agg.steelByDia)
     .map(Number)
     .sort((a, b) => a - b)
     .forEach((dia) => {
+      const kg = agg.steelByDia[String(dia)];
+      if (!(kg > 0)) return;
       ci++;
-      const t = agg.steelByDia[String(dia)] / 1000;
+      const t = kg / 1000;
       const rate = rates.boqRate('rebar');
       const desc = meta.rebarDesc?.(dia) || `Reinforcement H${dia}`;
       boq.push(item(`C${ci}`, desc, t, 't', rate, { isRebar: true, dec: 3 }));
@@ -233,7 +246,7 @@ export function buildStructuralReports(
   let aggr = 0;
   let water = 0;
   Object.entries(agg.concreteByGrade).forEach(([grade, vol]) => {
-    const m = mixFor(grade);
+    const m = mixFor(grade, materials as any);
     cement += vol * m.cement;
     sand += vol * m.sand;
     aggr += vol * m.agg;
@@ -255,6 +268,35 @@ export function buildStructuralReports(
   const sheets = Math.ceil((agg.totalFormwork * (1 + FORMWORK_WASTE)) / PLY_SHEET_M2);
   bom.push(group('B — Formwork materials'));
   pushBom('B1', 'Plywood formwork sheets (2440×1220mm), incl. 15% wastage', sheets, 'nos', 'plywoodSheet', 0);
+  // Indicative support allowances (revision-gated kg/m² on project materials).
+  const bracingRate =
+    (materials as { verticalBracingRate?: number } | null | undefined)
+      ?.verticalBracingRate ?? 0;
+  const propRate =
+    (materials as { soffitPropRate?: number } | null | undefined)?.soffitPropRate ??
+    0;
+  const bracingKg = round(agg.totalVerticalFormwork * bracingRate, 2);
+  const propKg = round(agg.totalSoffitFormwork * propRate, 2);
+  if (bracingKg > 0) {
+    pushBom(
+      'B2',
+      'Vertical formwork bracing (timber/props/stakes) — indicative',
+      bracingKg,
+      'kg',
+      'formworkBracingKg',
+      2,
+    );
+  }
+  if (propKg > 0) {
+    pushBom(
+      'B3',
+      'Soffit falsework / props — indicative',
+      propKg,
+      'kg',
+      'formworkSoffitPropKg',
+      2,
+    );
+  }
 
   bom.push(group('C — Reinforcement materials'));
   let cbi = 0;
@@ -313,9 +355,11 @@ export function buildStoneReports(
   mortar = round(mortar);
   blinding = round(blinding);
 
-  const cementBags = mortar * 7.2;
-  const sand = mortar * 1.0;
-  const blindMix = mixFor('C15/20');
+  const mortarMix = (materials as { mortarMix?: { cementBagsPerM3: number; sandM3PerM3: number } })
+    .mortarMix || { cementBagsPerM3: 7.2, sandM3PerM3: 1.0 };
+  const cementBags = mortar * mortarMix.cementBagsPerM3;
+  const sand = mortar * mortarMix.sandM3PerM3;
+  const blindMix = mixFor('C15/20', materials as any);
   const ratio = materials.stoneMortarRatio || '1:4';
 
   const boq: ReportLine[] = [];
@@ -447,7 +491,7 @@ export function buildFinishReports(
   });
   boq.push(total(`${meta.label} total`, boqTot));
 
-  const plMix = mixFor('C20/25');
+  const plMix = mixFor('C20/25', materials as any);
   const bom: ReportLine[] = [];
   let bomTot = 0;
   let bi = 0;

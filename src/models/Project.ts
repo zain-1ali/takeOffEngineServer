@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
+import type { ConcreteMix, MortarMix } from '../defaults/mixDefaults';
 import {
   DEFAULT_GRID,
   DEFAULT_MATERIALS,
@@ -18,6 +19,27 @@ export type ProjectMaterials = {
   paintCoats: number;
   tileWastage: number;
   earthworkBulkingFactor: number;
+  /** Draft kg/m² allowances — BOM uses applied_* until revision bump. */
+  verticalBracingRate: number;
+  soffitPropRate: number;
+  appliedVerticalBracingRate: number;
+  appliedSoffitPropRate: number;
+  concreteMixes: Record<string, ConcreteMix>;
+  appliedConcreteMixes: Record<string, ConcreteMix>;
+  mortarMix: MortarMix;
+  appliedMortarMix: MortarMix;
+  appliedStoneMortarRatio: string;
+  appliedStoneMortarFraction: number;
+};
+
+export type CurrencyConversionLogEntry = {
+  id: string;
+  fromCurrency: string;
+  toCurrency: string;
+  rateUsed: number;
+  rateDate: string;
+  timestamp: Date;
+  triggeredBy: string;
 };
 
 export interface IProject extends Document {
@@ -29,6 +51,7 @@ export interface IProject extends Document {
   contractor: string;
   location: string;
   currency: string;
+  /** Canonical: `metric` | `imperial` (legacy free-text still accepted via parseUnitSystem). */
   units: string;
   preparedBy: string;
   revision: string;
@@ -37,6 +60,7 @@ export interface IProject extends Document {
   rateLib: typeof DEFAULT_RATE_LIB;
   useRateAnalysis: boolean;
   grid: { xAxes: AxisLine[]; yAxes: AxisLine[] };
+  currencyConversionLog: CurrencyConversionLogEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +69,14 @@ const axisSchema = new Schema(
   {
     label: { type: String, required: true },
     spacing: { type: Number, required: true, default: 0 },
+  },
+  { _id: false },
+);
+
+const mortarMixSchema = new Schema(
+  {
+    cementBagsPerM3: { type: Number, required: true },
+    sandM3PerM3: { type: Number, required: true },
   },
   { _id: false },
 );
@@ -65,6 +97,38 @@ const materialsSchema = new Schema(
       default: DEFAULT_MATERIALS.earthworkBulkingFactor,
       min: 0,
     },
+    verticalBracingRate: {
+      type: Number,
+      default: DEFAULT_MATERIALS.verticalBracingRate,
+      min: 0,
+    },
+    soffitPropRate: {
+      type: Number,
+      default: DEFAULT_MATERIALS.soffitPropRate,
+      min: 0,
+    },
+    appliedVerticalBracingRate: {
+      type: Number,
+      default: DEFAULT_MATERIALS.appliedVerticalBracingRate,
+      min: 0,
+    },
+    appliedSoffitPropRate: {
+      type: Number,
+      default: DEFAULT_MATERIALS.appliedSoffitPropRate,
+      min: 0,
+    },
+    concreteMixes: { type: Schema.Types.Mixed, default: undefined },
+    appliedConcreteMixes: { type: Schema.Types.Mixed, default: undefined },
+    mortarMix: { type: mortarMixSchema, default: undefined },
+    appliedMortarMix: { type: mortarMixSchema, default: undefined },
+    appliedStoneMortarRatio: {
+      type: String,
+      default: DEFAULT_MATERIALS.appliedStoneMortarRatio,
+    },
+    appliedStoneMortarFraction: {
+      type: Number,
+      default: DEFAULT_MATERIALS.appliedStoneMortarFraction,
+    },
   },
   { _id: false },
 );
@@ -78,11 +142,14 @@ const projectSchema = new Schema<IProject>(
     contractor: { type: String, default: '' },
     location: { type: String, default: '' },
     currency: { type: String, default: 'USD' },
-    units: { type: String, default: 'Metric (m, m³)' },
+    units: { type: String, default: 'metric' },
     preparedBy: { type: String, default: '' },
     revision: { type: String, default: 'A' },
     date: { type: String, default: () => new Date().toISOString().slice(0, 10) },
-    materials: { type: materialsSchema, default: () => ({ ...DEFAULT_MATERIALS }) },
+    materials: {
+      type: materialsSchema,
+      default: () => JSON.parse(JSON.stringify(DEFAULT_MATERIALS)),
+    },
     rateLib: {
       type: Schema.Types.Mixed,
       default: () => JSON.parse(JSON.stringify(DEFAULT_RATE_LIB)),
@@ -91,6 +158,20 @@ const projectSchema = new Schema<IProject>(
     grid: {
       xAxes: { type: [axisSchema], default: () => DEFAULT_GRID.xAxes.map((a) => ({ ...a })) },
       yAxes: { type: [axisSchema], default: () => DEFAULT_GRID.yAxes.map((a) => ({ ...a })) },
+    },
+    currencyConversionLog: {
+      type: [
+        {
+          id: { type: String, required: true },
+          fromCurrency: { type: String, required: true },
+          toCurrency: { type: String, required: true },
+          rateUsed: { type: Number, required: true },
+          rateDate: { type: String, required: true },
+          timestamp: { type: Date, required: true },
+          triggeredBy: { type: String, required: true },
+        },
+      ],
+      default: [],
     },
   },
   { timestamps: true },

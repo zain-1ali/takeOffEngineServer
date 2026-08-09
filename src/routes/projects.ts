@@ -2,13 +2,34 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { Project, type IProject } from '../models/Project';
 import { Floor, type IFloor } from '../models/Floor';
 import { Instance, type IInstance } from '../models/Instance';
+import { ManualBoqItem } from '../models/ManualBoqItem';
 import { DEFAULT_FLOORS } from '../defaults/projectDefaults';
 import { loadOwnedProject } from '../middleware/loadOwnedProject';
 import { calculateInstances, SUPPORTED_ELEMENT_KEYS } from '../services/calculate';
 import { buildProjectReports } from '../services/reports';
 import { REPORTABLE_KEYS } from '../services/reports/elementMeta';
+import ratePdfImportRouter from './ratePdfImport';
+import manualBoqItemsRouter from './manualBoqItems';
+import {
+  applyDraftMixesToRevision,
+  ensureMaterialsMixes,
+} from '../services/materialsMix';
+import {
+  applyManualBoqRatesForRevision,
+  toManualBoqReportItem,
+} from '../services/manualBoq';
+import {
+  buildConversionLogEntry,
+  convertRateLib,
+  createCurrencyQuote,
+  takeCurrencyQuote,
+} from '../services/currencyConvert';
+import type { RateLib } from '../engines/rateAnalysis';
 
 const router = Router();
+
+router.use('/:projectId/rate-lib/import-pdf', ratePdfImportRouter);
+router.use('/:projectId/manual-boq', manualBoqItemsRouter);
 
 function publicProject(p: IProject) {
   return {
@@ -23,10 +44,21 @@ function publicProject(p: IProject) {
     preparedBy: p.preparedBy,
     revision: p.revision,
     date: p.date,
-    materials: p.materials,
+    materials: ensureMaterialsMixes(
+      (p.materials || {}) as Parameters<typeof ensureMaterialsMixes>[0],
+    ),
     rateLib: p.rateLib,
     useRateAnalysis: p.useRateAnalysis !== false,
     grid: p.grid,
+    currencyConversionLog: (p.currencyConversionLog || []).map((e) => ({
+      id: e.id,
+      fromCurrency: e.fromCurrency,
+      toCurrency: e.toCurrency,
+      rateUsed: e.rateUsed,
+      rateDate: e.rateDate,
+      timestamp: e.timestamp,
+      triggeredBy: e.triggeredBy,
+    })),
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
@@ -93,12 +125,18 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
 
     const cards = await Promise.all(
       projects.map(async (p) => {
-        const [floors, instances] = await Promise.all([
+        const [floors, instances, manualItems] = await Promise.all([
           Floor.find({ projectId: p._id }),
           Instance.find({ projectId: p._id }),
+          ManualBoqItem.find({ projectId: p._id }),
         ]);
 
-        const reports = buildProjectReports(p, instances, { scope: 'project' });
+        const reports = buildProjectReports(
+          p,
+          instances,
+          { scope: 'project' },
+          manualItems.map((m) => toManualBoqReportItem(m as any)),
+        );
         const unpricedCount = reports.byElement.filter(
           (be) => be.units > 0 && !(be.cost.boq > 0),
         ).length;
@@ -204,8 +242,10 @@ router.get('/:projectId', loadOwnedProject, async (req: Request, res: Response, 
 router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const p = req.project!;
+    const prevRevision = p.revision;
+    // Currency must change only via POST /convert-currency (explicit FX + audit log).
     const fields = [
-      'name', 'number', 'client', 'contractor', 'location', 'currency', 'units',
+      'name', 'number', 'client', 'contractor', 'location', 'units',
       'preparedBy', 'revision', 'date', 'materials', 'rateLib', 'grid', 'useRateAnalysis',
     ] as const;
     for (const key of fields) {
@@ -213,6 +253,20 @@ router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response
         (p as any)[key] = req.body[key];
       }
     }
+    // Normalise mix tables; if revision bumped, apply draft mixes + manual BOQ rate snapshots.
+    p.materials = ensureMaterialsMixes(p.materials as any) as any;
+    if (
+      req.body?.revision !== undefined &&
+      String(req.body.revision) !== String(prevRevision)
+    ) {
+      p.materials = applyDraftMixesToRevision(p.materials as any) as any;
+      await applyManualBoqRatesForRevision(
+        p._id.toString(),
+        p.rateLib as RateLib,
+        String(p.revision),
+      );
+    }
+    p.markModified('materials');
     await p.save();
     res.json({ project: publicProject(p) });
   } catch (err) {
@@ -224,6 +278,7 @@ router.delete('/:projectId', loadOwnedProject, async (req: Request, res: Respons
   try {
     const id = req.project!._id;
     await Instance.deleteMany({ projectId: id });
+    await ManualBoqItem.deleteMany({ projectId: id });
     await Floor.deleteMany({ projectId: id });
     await Project.deleteOne({ _id: id });
     res.json({ ok: true });
@@ -231,6 +286,82 @@ router.delete('/:projectId', loadOwnedProject, async (req: Request, res: Respons
     next(err);
   }
 });
+
+/** Fresh Frankfurter quote for an explicit currency conversion (not applied yet). */
+router.post(
+  '/:projectId/convert-currency/quote',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const toCurrency = String(req.body?.toCurrency || '')
+        .trim()
+        .toUpperCase();
+      if (!toCurrency) {
+        res.status(400).json({ error: 'toCurrency is required' });
+        return;
+      }
+      const quote = await createCurrencyQuote(req.project!.currency, toCurrency);
+      res.json({
+        quote,
+        message: `1 ${quote.fromCurrency} = ${quote.rate} ${quote.toCurrency} as of ${quote.rateDate}`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Quote failed';
+      res.status(502).json({ error: message });
+    }
+  },
+);
+
+/**
+ * Apply a previously quoted rate to rateLib resource costs and update currency.
+ * Requires quoteId from /convert-currency/quote — never uses a guessed/stale rate.
+ */
+router.post(
+  '/:projectId/convert-currency',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const quoteId = String(req.body?.quoteId || '').trim();
+      if (!quoteId) {
+        res.status(400).json({ error: 'quoteId is required (fetch a quote first)' });
+        return;
+      }
+      let quote;
+      try {
+        quote = takeCurrencyQuote(quoteId);
+      } catch (err) {
+        res.status(400).json({
+          error: err instanceof Error ? err.message : 'Invalid quote',
+        });
+        return;
+      }
+
+      const p = req.project!;
+      if (quote.fromCurrency !== p.currency.toUpperCase()) {
+        res.status(409).json({
+          error: `Quote is for ${quote.fromCurrency} but project currency is ${p.currency}`,
+        });
+        return;
+      }
+
+      p.rateLib = convertRateLib(p.rateLib as any, quote.rate) as any;
+      p.currency = quote.toCurrency;
+      const logEntry = buildConversionLogEntry(quote, req.user!.userId);
+      if (!p.currencyConversionLog) p.currencyConversionLog = [];
+      p.currencyConversionLog.push(logEntry as any);
+      p.markModified('rateLib');
+      p.markModified('currencyConversionLog');
+      await p.save();
+
+      res.json({
+        project: publicProject(p),
+        conversion: logEntry,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /* ---------- Floors ---------- */
 
@@ -534,11 +665,27 @@ router.get(
         createdAt: 1,
       });
 
-      const reports = buildProjectReports(req.project!, instances, {
-        scope,
-        floorId: scope === 'floor' ? floorId : null,
-        elementKey: elementKey || null,
-      });
+      const manualFilter: Record<string, unknown> = {
+        projectId: req.project!._id,
+      };
+      if (scope === 'floor') {
+        manualFilter.$or = [{ floorId }, { floorId: null }];
+      }
+      // Element-tab drill-down excludes manual items (not part of ELEMENT_ENGINES).
+      const manualItems = elementKey
+        ? []
+        : await ManualBoqItem.find(manualFilter).sort({ createdAt: 1 });
+
+      const reports = buildProjectReports(
+        req.project!,
+        instances,
+        {
+          scope,
+          floorId: scope === 'floor' ? floorId : null,
+          elementKey: elementKey || null,
+        },
+        manualItems.map((m) => toManualBoqReportItem(m as any)),
+      );
 
       res.json(reports);
     } catch (err) {

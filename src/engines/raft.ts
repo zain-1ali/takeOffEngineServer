@@ -2,6 +2,7 @@
  * Raft foundation calculator. Follows the pad-footing structural contract:
  * concrete + grouped reinforcement per unit, then count-scaled totals.
  */
+import { withVerticalFormworkOnly } from './formworkSplit';
 import { round } from './math';
 import { twoWayMesh, type MeshResult } from './padFooting';
 import type { ConcreteResult, RebarGroup, StructuralCalcResult } from './types';
@@ -99,12 +100,11 @@ export function raftRebar(f: RaftInput, netVolumeM3: number) {
 export function calcRaft(f: RaftInput): StructuralCalcResult {
   const concrete = raftConcrete(f);
   const rebar = raftRebar(f, concrete.netVolumeM3);
-  const n = f.count || 1;
-  return {
+  return withVerticalFormworkOnly({
     perUnit: { concrete, rebar },
-    count: n,
-    totalVolumeM3: round(concrete.netVolumeM3 * n),
-    totalFormworkM2: round(concrete.formworkAreaM2 * n),
-    totalRebarKg: round(rebar.totalWeightKg * n),
-  };
+    count: f.count || 1,
+    volumeM3: concrete.netVolumeM3,
+    formworkM2: concrete.formworkAreaM2,
+    rebarKg: rebar.totalWeightKg,
+  });
 }

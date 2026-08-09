@@ -30,7 +30,12 @@ export type StructuralCalcResult = {
   };
   count: number;
   totalVolumeM3: number;
+  /** Soffit + vertical (unchanged total for BOQ formwork area). */
   totalFormworkM2: number;
+  /** Horizontal / sloping soffit — soffit prop allowance. */
+  totalSoffitFormworkM2: number;
+  /** Side/edge/vertical faces — bracing allowance. */
+  totalVerticalFormworkM2: number;
   totalRebarKg: number;
 };
 

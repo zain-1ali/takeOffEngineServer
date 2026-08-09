@@ -6,12 +6,18 @@ import {
   ELEMENT_ENGINES,
   structuralCalculator,
 } from '../../elementEngines';
+import {
+  buildManualReportContribution,
+  type ManualBoqReportItem,
+} from '../manualBoqPricing';
 import { ELEMENT_META } from './elementMeta';
 import {
   aggregateStructural,
   makeEntries,
   type ReportEntry,
 } from './builders';
+import { materialsForBom } from '../materialsMix';
+import { applyDisplayUnitsToReports } from './applyDisplayUnits';
 import {
   CEMENT_BAG_KG,
   FORMWORK_WASTE,
@@ -31,7 +37,7 @@ import type {
 } from './types';
 
 function group(description: string): ReportLine {
-  return { kind: 'group', description };
+  return { kind: 'group', description, source: 'MODELLED' };
 }
 
 function item(
@@ -52,11 +58,12 @@ function item(
     amount: lineAmount(qty, rate),
     isRebar: opts?.isRebar,
     dec: opts?.dec,
+    source: 'MODELLED',
   };
 }
 
 function total(description: string, amount: number): ReportLine {
-  return { kind: 'total', description, amount };
+  return { kind: 'total', description, amount, source: 'MODELLED' };
 }
 
 function bomMaterialItems(bundle: ElementReportBundle): ReportLine[] {
@@ -94,7 +101,7 @@ function consolidateBoq(
         be.boq.forEach((line) => {
           if (line.kind !== 'item') return;
           n++;
-          lines.push({ ...line, ref: `${be.num}.${n}` });
+          lines.push({ ...line, ref: `${be.num}.${n}`, source: line.source || 'MODELLED' });
           if (line.amount != null) elTot += line.amount;
         });
       } else {
@@ -131,6 +138,7 @@ function consolidateBom(
   byElement: ElementReportBundle[],
   structuralEntries: ReportEntry[],
   rates: ReturnType<typeof makeRateAccessors>,
+  materials: IProject['materials'],
 ): ReportLine[] {
   const lines: ReportLine[] = [];
   const hasStructural = byElement.some((be) => be.kind === 'structural');
@@ -142,7 +150,7 @@ function consolidateBom(
     let aggr = 0;
     let water = 0;
     Object.entries(agg.concreteByGrade).forEach(([grade, vol]) => {
-      const m = mixFor(grade);
+      const m = mixFor(grade, materials);
       cement += vol * m.cement;
       sand += vol * m.sand;
       aggr += vol * m.agg;
@@ -170,6 +178,38 @@ function consolidateBom(
         { dec: 0 },
       ),
     );
+    const bracingKg = round(
+      agg.totalVerticalFormwork * (materials.verticalBracingRate || 0),
+      2,
+    );
+    const propKg = round(
+      agg.totalSoffitFormwork * (materials.soffitPropRate || 0),
+      2,
+    );
+    if (bracingKg > 0) {
+      lines.push(
+        item(
+          'B2',
+          'Vertical formwork bracing (timber/props/stakes) — indicative',
+          bracingKg,
+          'kg',
+          rates.matRate('formworkBracingKg'),
+          { dec: 2 },
+        ),
+      );
+    }
+    if (propKg > 0) {
+      lines.push(
+        item(
+          'B3',
+          'Soffit falsework / props — indicative',
+          propKg,
+          'kg',
+          rates.matRate('formworkSoffitPropKg'),
+          { dec: 2 },
+        ),
+      );
+    }
 
     lines.push(group('C — Reinforcement materials'));
     let ci = 0;
@@ -178,11 +218,16 @@ function consolidateBom(
       .map(Number)
       .sort((a, b) => a - b)
       .forEach((d) => {
-        ci++;
         const kg = agg.steelByDia[String(d)];
+        if (!(kg > 0)) return;
+        ci++;
         tot += kg;
+        const label =
+          d === 0
+            ? 'Structural steel H-section piles'
+            : `Reinforcement bars, H${d}`;
         lines.push(
-          item(`C${ci}`, `Reinforcement bars, H${d}`, kg, 'kg', rates.matRate('rebarKg'), {
+          item(`C${ci}`, label, kg, 'kg', rates.matRate('rebarKg'), {
             dec: 2,
             isRebar: true,
           }),
@@ -239,6 +284,7 @@ function consolidateLabour(
       outputRate: `${r.perDay} ${r.unit}/day`,
       gang: r.gang.map(([role, cnt]) => `${cnt} ${role}`).join(' + '),
       days,
+      source: 'MODELLED',
     });
   };
   pushStructural('concrete', structuralAgg.totalConcrete);
@@ -252,7 +298,7 @@ function consolidateLabour(
       if (be.kind === 'structural') return;
       be.labour.activities.forEach((a) => {
         ref++;
-        activities.push({ ...a, ref: `L${ref}` });
+        activities.push({ ...a, ref: `L${ref}`, source: a.source || 'MODELLED' });
       });
       be.labour.trades.forEach((t) => {
         manDays[t.trade] = (manDays[t.trade] || 0) + t.manDays;
@@ -264,7 +310,13 @@ function consolidateLabour(
     .map((trade) => {
       const md = manDays[trade];
       const dayRate = rates.labRate(trade);
-      return { trade, manDays: md, dayRate, cost: md * dayRate };
+      return {
+        trade,
+        manDays: md,
+        dayRate,
+        cost: md * dayRate,
+        source: 'MODELLED' as const,
+      };
     });
 
   return {
@@ -286,13 +338,15 @@ export function buildProjectReports(
   project: IProject,
   instances: IInstance[],
   opts: BuildReportsOptions,
+  manualItems: ManualBoqReportItem[] = [],
 ): ProjectReportsPayload {
   const rates = makeRateAccessors(
     project.rateLib as any,
     DEFAULT_PRICING,
     project.useRateAnalysis !== false,
   );
-  const materials = project.materials;
+  // BOM / report mixes are revision-gated (applied_*), not live draft edits.
+  const materials = materialsForBom(project.materials);
 
   let filtered = instances.filter((i) => Boolean(ELEMENT_ENGINES[i.elementKey]));
   if (opts.scope === 'floor') {
@@ -322,23 +376,89 @@ export function buildProjectReports(
     (e) => ELEMENT_ENGINES[e.elementKey]?.reportKind === 'structural',
   );
   const structuralAgg = aggregateStructural(structuralEntries, structuralCalculator);
-  const pricedTotal = byElement.reduce((s, be) => s + (be.cost.boq || 0), 0);
+  const modelledPriced = byElement.reduce((s, be) => s + (be.cost.boq || 0), 0);
 
-  return {
+  // Manual BOQ uses applied* rate snapshots (revision-gated), never live rateLib.
+  const manual = buildManualReportContribution(manualItems);
+
+  const modelledBoq = consolidateBoq(byElement, structuralAgg, rates);
+  const totIdx = modelledBoq.findIndex(
+    (l) => l.kind === 'total' && /PROJECT TOTAL/i.test(l.description),
+  );
+  const boq: ReportLine[] =
+    totIdx >= 0
+      ? [
+          ...modelledBoq.slice(0, totIdx),
+          ...manual.boq,
+          {
+            ...modelledBoq[totIdx],
+            amount: round(
+              (modelledBoq[totIdx].amount || 0) + manual.pricedTotal,
+              2,
+            ),
+          },
+        ]
+      : [...modelledBoq, ...manual.boq];
+
+  const bom = [
+    ...consolidateBom(byElement, structuralEntries, rates, materials),
+    ...manual.bom,
+  ];
+
+  const modelledLabour = consolidateLabour(byElement, structuralAgg, rates);
+  const labour = {
+    activities: [...modelledLabour.activities, ...manual.labour.activities],
+    trades: mergeTrades(modelledLabour.trades, manual.labour.trades),
+    totalManDays:
+      modelledLabour.totalManDays + manual.labour.totalManDays,
+    totalCost: round(
+      modelledLabour.totalCost + manual.labour.totalCost,
+      2,
+    ),
+  };
+
+  const payload: ProjectReportsPayload = {
     scope: opts.scope,
     floorId: opts.scope === 'floor' ? opts.floorId || null : null,
     currency: project.currency || 'USD',
+    unitSystem: 'metric',
     summary: {
       totalConcrete: structuralAgg.totalConcrete,
       totalFormwork: structuralAgg.totalFormwork,
       totalSteel: structuralAgg.totalSteel,
-      totalUnits: byElement.reduce((s, be) => s + be.units, 0),
-      pricedTotal: round(pricedTotal, 2),
+      totalUnits:
+        byElement.reduce((s, be) => s + be.units, 0) + manualItems.length,
+      pricedTotal: round(modelledPriced + manual.pricedTotal, 2),
       elementCount: byElement.length,
     },
-    boq: consolidateBoq(byElement, structuralAgg, rates),
-    bom: consolidateBom(byElement, structuralEntries, rates),
-    labour: consolidateLabour(byElement, structuralAgg, rates),
+    boq,
+    bom,
+    labour,
     byElement,
   };
+  return applyDisplayUnitsToReports(payload, project.units);
+}
+
+function mergeTrades(
+  a: TradeSummary[],
+  b: TradeSummary[],
+): TradeSummary[] {
+  const map = new Map<string, TradeSummary>();
+  for (const t of [...a, ...b]) {
+    const prev = map.get(t.trade);
+    if (!prev) {
+      map.set(t.trade, { ...t });
+      continue;
+    }
+    const manDays = prev.manDays + t.manDays;
+    const cost = prev.cost + t.cost;
+    map.set(t.trade, {
+      trade: t.trade,
+      manDays,
+      dayRate: manDays > 0 ? round(cost / manDays, 2) : prev.dayRate,
+      cost: round(cost, 2),
+      source: prev.source === 'MANUAL' || t.source === 'MANUAL' ? 'MANUAL' : 'MODELLED',
+    });
+  }
+  return [...map.values()].sort((x, y) => x.trade.localeCompare(y.trade));
 }

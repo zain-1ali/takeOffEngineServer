@@ -2,6 +2,7 @@
  * Pile-cap calculator. Plan geometry drives concrete/formwork; reinforcement
  * follows the established two-way mesh plus starter-bar allowance pattern.
  */
+import { withVerticalFormworkOnly } from './formworkSplit';
 import { round, unitWeightKgPerM } from './math';
 import { twoWayMesh } from './padFooting';
 import type {
@@ -154,12 +155,11 @@ export function pileCapRebar(f: PileCapInput, netVolumeM3: number) {
 export function calcPileCap(f: PileCapInput): StructuralCalcResult {
   const concrete = pileCapConcrete(f);
   const rebar = pileCapRebar(f, concrete.netVolumeM3);
-  const n = f.count || 1;
-  return {
+  return withVerticalFormworkOnly({
     perUnit: { concrete, rebar },
-    count: n,
-    totalVolumeM3: round(concrete.netVolumeM3 * n),
-    totalFormworkM2: round(concrete.formworkAreaM2 * n),
-    totalRebarKg: round(rebar.totalWeightKg * n),
-  };
+    count: f.count || 1,
+    volumeM3: concrete.netVolumeM3,
+    formworkM2: concrete.formworkAreaM2,
+    rebarKg: rebar.totalWeightKg,
+  });
 }

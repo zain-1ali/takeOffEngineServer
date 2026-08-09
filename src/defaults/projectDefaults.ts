@@ -1,7 +1,23 @@
 /** Factory defaults matching AgileQS-Takeoff.html state / FACTORY */
 
+import {
+  buildMixTable,
+  DEFAULT_MORTAR_MIX,
+} from './mixDefaults';
+
+const DEFAULT_CONCRETE_CLASSES = [
+  'C15/20',
+  'C20/25',
+  'C25/30',
+  'C30/37',
+  'C32/40',
+  'C35/45',
+];
+
+const defaultMixes = buildMixTable(DEFAULT_CONCRETE_CLASSES);
+
 export const DEFAULT_MATERIALS = {
-  concreteClasses: ['C15/20', 'C20/25', 'C25/30', 'C30/37', 'C32/40', 'C35/45'],
+  concreteClasses: [...DEFAULT_CONCRETE_CLASSES],
   defaultConcreteGrade: 'C25/30',
   stoneMortarRatio: '1:4',
   stoneMortarFraction: 0.3,
@@ -11,6 +27,22 @@ export const DEFAULT_MATERIALS = {
   paintCoats: 2,
   tileWastage: 0.1,
   earthworkBulkingFactor: 0.25,
+  /**
+   * Indicative formwork support allowances (kg per m² of applicable formwork).
+   * Draft in Project Settings; BOM uses applied_* until revision bump.
+   * Defaults are industry-typical placeholders — adjust per project.
+   */
+  verticalBracingRate: 5,
+  soffitPropRate: 12,
+  appliedVerticalBracingRate: 5,
+  appliedSoffitPropRate: 12,
+  /** Draft mixes (Project Settings). Applied to BOM only after revision bump. */
+  concreteMixes: JSON.parse(JSON.stringify(defaultMixes)) as typeof defaultMixes,
+  appliedConcreteMixes: JSON.parse(JSON.stringify(defaultMixes)) as typeof defaultMixes,
+  mortarMix: { ...DEFAULT_MORTAR_MIX },
+  appliedMortarMix: { ...DEFAULT_MORTAR_MIX },
+  appliedStoneMortarRatio: '1:4',
+  appliedStoneMortarFraction: 0.3,
 };
 
 export const DEFAULT_GRID = {
@@ -54,6 +86,8 @@ export const DEFAULT_PRICING = {
     aggregate: 28,
     water: 0.002,
     plywoodSheet: 18,
+    formworkBracingKg: 1.8,
+    formworkSoffitPropKg: 2.0,
     rebarKg: 1.15,
     tieWire: 2.2,
     stone: 26,
@@ -81,6 +115,20 @@ export const DEFAULT_RATE_LIB = {
     { code: 'WAT', desc: 'Water', unit: 'L', rate: 0.002, wastage: 0 },
     { code: 'PLY', desc: 'Plywood formwork sheet', unit: 'sheet', rate: 18, wastage: 0.1 },
     { code: 'TMB', desc: 'Timber bearers/props', unit: 'm', rate: 2.5, wastage: 0.1 },
+    {
+      code: 'BRCG',
+      desc: 'Formwork bracing timber/props/stakes (indicative)',
+      unit: 'kg',
+      rate: 1.8,
+      wastage: 0.05,
+    },
+    {
+      code: 'SPROP',
+      desc: 'Soffit falsework / props (indicative)',
+      unit: 'kg',
+      rate: 2.0,
+      wastage: 0.05,
+    },
     { code: 'STL', desc: 'Reinforcement bar', unit: 'kg', rate: 1.15, wastage: 0.03 },
     { code: 'WIR', desc: 'Tie wire', unit: 'kg', rate: 2.2, wastage: 0.05 },
     { code: 'STN', desc: 'Building stone (rubble)', unit: 'm³', rate: 26, wastage: 0.05 },

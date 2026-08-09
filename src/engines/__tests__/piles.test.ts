@@ -1,7 +1,30 @@
-import { calcPile, pileCrossSectionArea } from '../piles';
+import { calcPile, pileCrossSectionArea, pileLinkPerimeter } from '../piles';
 
 describe('piles', () => {
-  it('matches the approved square-driven hand calculation', () => {
+  it('CIRCULAR_BORED links match the approved bar-by-bar hand calculation', () => {
+    // linkCount=floor(10/0.2)+1=51; P=π×0.6; links=51×P×64/162 → 37.98 kg.
+    const r = calcPile({
+      shape: 'CIRCULAR_BORED',
+      diameter: 0.6,
+      pileLength: 10,
+      count: 1,
+      longBarCount: 0,
+      longBarDia: 16,
+      linkDia: 8,
+      linkSpacing: 200,
+    });
+    expect(pileLinkPerimeter({
+      shape: 'CIRCULAR_BORED',
+      diameter: 0.6,
+      pileLength: 10,
+    })).toBeCloseTo(Math.PI * 0.6, 10);
+    expect(r.totalRebarKg).toBe(37.98);
+    expect(r.totalVolumeM3).toBeCloseTo((Math.PI * 0.6 ** 2) / 4 * 10, 2);
+  });
+
+  it('SQUARE_DRIVEN matches approved volume and bar-by-bar links', () => {
+    // V=0.5²×10×4=10. Long: 4×10×256/162=63.21. Links: 51×2×64/162=40.30.
+    // Per pile 103.51; ×4 = 414.04 kg.
     const r = calcPile({
       shape: 'SQUARE_DRIVEN',
       side: 0.5,
@@ -10,41 +33,34 @@ describe('piles', () => {
       longBarCount: 4,
       longBarDia: 16,
       linkDia: 8,
-      linkKgPerM: 2,
+      linkSpacing: 200,
     });
-    expect(r.totalVolumeM3).toBe(10); // 0.5² × 10 × 4
-    // Long bars: 4 bars × 10 m × 16²/162 = 63.21 kg/pile.
-    // Links: 2 kg/m × 10 m = 20 kg/pile.
-    expect(r.totalRebarKg).toBe(332.84);
+    expect(r.totalVolumeM3).toBe(10);
+    expect(r.totalRebarKg).toBe(414.04);
   });
 
-  it('computes circular and H-section cross-sectional areas', () => {
-    expect(
-      pileCrossSectionArea({
-        shape: 'CIRCULAR_BORED',
-        diameter: 0.6,
-        pileLength: 10,
-        longBarCount: 0,
-        longBarDia: 0,
-        linkDia: 0,
-        linkKgPerM: 0,
-      }),
-    ).toBeCloseTo((Math.PI * 0.6 ** 2) / 4, 10);
-
-    // Two 0.3×0.05 m flanges plus a 0.02×0.4 m clear web.
-    expect(
-      pileCrossSectionArea({
-        shape: 'H_SECTION',
-        sectionDepth: 0.5,
-        flangeWidth: 0.3,
-        flangeThickness: 0.05,
-        webThickness: 0.02,
-        pileLength: 10,
-        longBarCount: 0,
-        longBarDia: 0,
-        linkDia: 0,
-        linkKgPerM: 0,
-      }),
-    ).toBe(0.038);
+  it('H_SECTION is structural steel only — no concrete, no RC cage', () => {
+    // 82 kg/m × 10 m × 2 piles = 1640 kg.
+    const r = calcPile({
+      shape: 'H_SECTION',
+      sectionDepth: 0.5,
+      flangeWidth: 0.3,
+      flangeThickness: 0.05,
+      webThickness: 0.02,
+      sectionKgPerM: 82,
+      pileLength: 10,
+      count: 2,
+    });
+    expect(r.totalVolumeM3).toBe(0);
+    expect(r.totalFormworkM2).toBe(0);
+    expect(r.totalRebarKg).toBe(1640);
+    expect(pileCrossSectionArea({
+      shape: 'H_SECTION',
+      sectionDepth: 0.5,
+      flangeWidth: 0.3,
+      flangeThickness: 0.05,
+      webThickness: 0.02,
+      pileLength: 10,
+    })).toBe(0.038);
   });
 });

@@ -1,5 +1,8 @@
 /** Structured report types (JSON instead of HTML strings). */
 
+/** Where a report line came from — modelled elements vs ad-hoc Manual BOQ. */
+export type ReportSource = 'MODELLED' | 'MANUAL';
+
 export type ReportLine = {
   kind: 'group' | 'item' | 'total';
   ref?: string;
@@ -10,6 +13,7 @@ export type ReportLine = {
   amount?: number | null;
   isRebar?: boolean;
   dec?: number;
+  source?: ReportSource;
 };
 
 export type LabourActivity = {
@@ -20,6 +24,7 @@ export type LabourActivity = {
   outputRate: string;
   gang: string;
   days: number;
+  source?: ReportSource;
 };
 
 export type TradeSummary = {
@@ -27,6 +32,7 @@ export type TradeSummary = {
   manDays: number;
   dayRate: number;
   cost: number;
+  source?: ReportSource;
 };
 
 export type ElementReportBundle = {
@@ -47,6 +53,8 @@ export type ProjectReportsPayload = {
   scope: 'floor' | 'project';
   floorId: string | null;
   currency: string;
+  /** Display unit system applied to geometric quantities in this payload. */
+  unitSystem?: 'metric' | 'imperial';
   summary: {
     totalConcrete: number;
     totalFormwork: number;

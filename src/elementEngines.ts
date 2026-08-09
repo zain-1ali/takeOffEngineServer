@@ -3,6 +3,10 @@ import {
   calcFooting,
   calcEarthwork,
   calcColumn,
+  calcBeam,
+  calcSlab,
+  calcStair,
+  calcRamp,
   calcPile,
   calcPileCap,
   calcRaft,
@@ -45,6 +49,10 @@ function structuralEngine(
     | 'PILE_CAP'
     | 'PILES'
     | 'COLUMNS'
+    | 'BEAMS'
+    | 'SLABS'
+    | 'STAIRS'
+    | 'RAMPS'
     | 'WALLS',
   calc: (flat: any) => StructuralCalcResult,
 ): ElementEngine {
@@ -55,8 +63,8 @@ function structuralEngine(
     label: meta.label,
     reportKind: 'structural',
     calc: (flat) => calc(flat),
-    buildReports: (entries, _materials, rates) =>
-      buildStructuralReports(meta, entries, rates, calculate),
+    buildReports: (entries, materials, rates) =>
+      buildStructuralReports(meta, entries, rates, calculate, materials),
   };
 }
 
@@ -94,6 +102,10 @@ export const ELEMENT_ENGINES: Record<string, ElementEngine> = {
       buildEarthworkReports(entries, materials, rates),
   },
   COLUMNS: structuralEngine('COLUMNS', calcColumn),
+  BEAMS: structuralEngine('BEAMS', calcBeam),
+  SLABS: structuralEngine('SLABS', calcSlab),
+  STAIRS: structuralEngine('STAIRS', calcStair),
+  RAMPS: structuralEngine('RAMPS', calcRamp),
   STONE_STRIP: {
     key: 'STONE_STRIP',
     label: ELEMENT_META.STONE_STRIP.label,

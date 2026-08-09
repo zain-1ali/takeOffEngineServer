@@ -1,4 +1,14 @@
-import { round, unitWeightKgPerM } from './math';
+/**
+ * Pile calculator.
+ *
+ * Circular-bored / Square-driven: reinforced concrete cages — bar-by-bar
+ * longitudinal steel plus links at spacing (dia²/162).
+ *
+ * H-section: structural steel pile only — weight from section kg/m × length.
+ * No concrete volume and no RC rebar cage.
+ */
+import { withVerticalFormworkOnly } from './formworkSplit';
+import { barCountForSpan, round, unitWeightKgPerM } from './math';
 import type { RebarGroup, StructuralCalcResult } from './types';
 
 export type PileShape = 'CIRCULAR_BORED' | 'SQUARE_DRIVEN' | 'H_SECTION';
@@ -13,12 +23,15 @@ export type PileInput = {
   flangeWidth?: number;
   flangeThickness?: number;
   webThickness?: number;
-  longBarCount: number;
-  longBarDia: number;
-  linkDia: number;
-  linkKgPerM: number;
+  /** Rolled-section unit weight for H-section piles (kg/m). */
+  sectionKgPerM?: number;
+  longBarCount?: number;
+  longBarDia?: number;
+  linkDia?: number;
+  linkSpacing?: number;
 };
 
+/** H-section steel area (m²) — geometry reference only; not used as concrete. */
 export function pileCrossSectionArea(f: PileInput): number {
   if (f.shape === 'CIRCULAR_BORED') {
     const diameter = f.diameter || 0;
@@ -38,27 +51,68 @@ export function pileCrossSectionArea(f: PileInput): number {
   );
 }
 
+export function pileLinkPerimeter(f: PileInput): number {
+  if (f.shape === 'CIRCULAR_BORED') {
+    return Math.PI * (f.diameter || 0);
+  }
+  if (f.shape === 'SQUARE_DRIVEN') {
+    return 4 * (f.side || 0);
+  }
+  return 0;
+}
+
 export function pileRebar(f: PileInput, volumeM3: number) {
+  if (f.shape === 'H_SECTION') {
+    const steelWeightKg = round(
+      (f.sectionKgPerM || 0) * f.pileLength,
+    );
+    const groups: RebarGroup[] = [
+      {
+        diameterMm: 0,
+        weightKg: steelWeightKg,
+        role: 'H-section steel pile',
+      },
+    ];
+    return {
+      longitudinalWeightKg: 0,
+      linkWeightKg: 0,
+      steelPileWeightKg: steelWeightKg,
+      groups,
+      totalWeightKg: steelWeightKg,
+      densityKgPerM3: 0,
+    };
+  }
+
+  const longBarCount = f.longBarCount || 0;
+  const longBarDia = f.longBarDia || 0;
+  const linkDia = f.linkDia || 0;
+  const linkSpacing = f.linkSpacing || 0;
   const longitudinalWeightKg = round(
-    f.longBarCount * f.pileLength * unitWeightKgPerM(f.longBarDia),
+    longBarCount * f.pileLength * unitWeightKgPerM(longBarDia),
   );
-  const linkWeightKg = round(f.linkKgPerM * f.pileLength);
+  const linkCount = barCountForSpan(f.pileLength, linkSpacing);
+  const linkPerimeterM = pileLinkPerimeter(f);
+  const linkWeightKg = round(
+    linkCount * linkPerimeterM * unitWeightKgPerM(linkDia),
+  );
   const groups: RebarGroup[] = [
     {
-      diameterMm: f.longBarDia,
+      diameterMm: longBarDia,
       weightKg: longitudinalWeightKg,
       role: 'Longitudinal cage',
     },
     {
-      diameterMm: f.linkDia,
+      diameterMm: linkDia,
       weightKg: linkWeightKg,
-      role: 'Helical/link allowance',
+      role: 'Links/helical ties',
     },
   ];
   const totalWeightKg = round(longitudinalWeightKg + linkWeightKg);
   return {
     longitudinalWeightKg,
     linkWeightKg,
+    linkCount,
+    linkPerimeterM: round(linkPerimeterM, 4),
     groups,
     totalWeightKg,
     densityKgPerM3: volumeM3 > 0 ? round(totalWeightKg / volumeM3) : 0,
@@ -66,6 +120,27 @@ export function pileRebar(f: PileInput, volumeM3: number) {
 }
 
 export function calcPile(f: PileInput): StructuralCalcResult {
+  const n = f.count || 1;
+
+  if (f.shape === 'H_SECTION') {
+    const rebar = pileRebar(f, 0);
+    const concrete = {
+      netVolumeM3: 0,
+      formworkAreaM2: 0,
+      breakdown: {
+        sectionKgPerM: round(f.sectionKgPerM || 0, 4),
+        steelAreaM2: round(pileCrossSectionArea(f), 6),
+      },
+    };
+    return withVerticalFormworkOnly({
+      perUnit: { concrete, rebar },
+      count: n,
+      volumeM3: 0,
+      formworkM2: 0,
+      rebarKg: rebar.totalWeightKg,
+    });
+  }
+
   const area = pileCrossSectionArea(f);
   const volume = round(area * f.pileLength);
   const concrete = {
@@ -74,12 +149,11 @@ export function calcPile(f: PileInput): StructuralCalcResult {
     breakdown: { crossSectionArea: round(area, 4) },
   };
   const rebar = pileRebar(f, volume);
-  const n = f.count || 1;
-  return {
+  return withVerticalFormworkOnly({
     perUnit: { concrete, rebar },
     count: n,
-    totalVolumeM3: round(volume * n),
-    totalFormworkM2: 0,
-    totalRebarKg: round(rebar.totalWeightKg * n),
-  };
+    volumeM3: volume,
+    formworkM2: 0,
+    rebarKg: rebar.totalWeightKg,
+  });
 }

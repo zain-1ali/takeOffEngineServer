@@ -2,6 +2,7 @@
  * Pad footing calculators — ported from AgileQS-Takeoff.html
  * (padConcrete, twoWayMesh, padRebar, calcFooting). Math unchanged.
  */
+import { withVerticalFormworkOnly } from './formworkSplit';
 import { barCountForSpan, round, unitWeightKgPerM } from './math';
 import type { BarSet, ConcreteResult, RebarGroup, StructuralCalcResult } from './types';
 
@@ -181,12 +182,11 @@ export function padRebar(f: PadFootingInput, netVolumeM3: number) {
 export function calcFooting(f: PadFootingInput): StructuralCalcResult {
   const concrete = padConcrete(f);
   const rebar = padRebar(f, concrete.netVolumeM3);
-  const n = f.count || 1;
-  return {
+  return withVerticalFormworkOnly({
     perUnit: { concrete, rebar },
-    count: n,
-    totalVolumeM3: round(concrete.netVolumeM3 * n),
-    totalFormworkM2: round(concrete.formworkAreaM2 * n),
-    totalRebarKg: round(rebar.totalWeightKg * n),
-  };
+    count: f.count || 1,
+    volumeM3: concrete.netVolumeM3,
+    formworkM2: concrete.formworkAreaM2,
+    rebarKg: rebar.totalWeightKg,
+  });
 }

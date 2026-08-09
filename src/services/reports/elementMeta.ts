@@ -70,7 +70,9 @@ export const ELEMENT_META: Record<string, ElementMeta> = {
       `Reinforced concrete, grade ${g}, in bored or driven piles; measured by pile volume`,
     formworkDesc: 'No separately measured formwork to piles',
     rebarDesc: (d) =>
-      `High-yield reinforcement bars, dia. ${d} mm, in pile cages including nominal links`,
+      d === 0
+        ? 'Structural steel H-section piles; supply, pitch and drive'
+        : `High-yield reinforcement bars, dia. ${d} mm, cut, bent and fixed in pile cages including links`,
   },
   EARTHWORKS: {
     key: 'EARTHWORKS',
@@ -107,6 +109,57 @@ export const ELEMENT_META: Record<string, ElementMeta> = {
     concreteDesc: (g) => `Reinforced in-situ concrete, grade ${g}, in walls; both faces formed`,
     formworkDesc: 'Formwork to walls; both faces; including striking',
     rebarDesc: (d) => `High-yield reinforcement bars, dia. ${d} mm, cut, bent and fixed in walls`,
+  },
+  BEAMS: {
+    key: 'BEAMS',
+    num: 9,
+    suffix: '',
+    label: 'Beams',
+    kind: 'structural',
+    concreteDesc: (g) =>
+      `Reinforced in-situ concrete, grade ${g}, in beams; all section shapes`,
+    formworkDesc: 'Formwork to beam soffits and exposed sides; including striking',
+    rebarDesc: (d) =>
+      `High-yield reinforcement bars, dia. ${d} mm, cut, bent and fixed in beams`,
+  },
+  SLABS: {
+    key: 'SLABS',
+    num: 10,
+    suffix: '',
+    label: 'Slabs',
+    kind: 'structural',
+    concreteDesc: (g) =>
+      `Reinforced in-situ concrete, grade ${g}, in slabs; including ribs and drop panels where applicable`,
+    formworkDesc:
+      'Formwork to slab soffits, exposed rib sides, drop-panel sides and edges; including striking',
+    rebarDesc: (d) =>
+      `High-yield reinforcement bars, dia. ${d} mm, cut and fixed in slabs`,
+  },
+  STAIRS: {
+    key: 'STAIRS',
+    num: 11,
+    suffix: '',
+    label: 'Stairs',
+    kind: 'structural',
+    concreteDesc: (g) =>
+      `Reinforced in-situ concrete, grade ${g}, in stairs; including waist slabs and steps`,
+    formworkDesc:
+      'Formwork to stair soffits, risers and exposed sides; including striking',
+    rebarDesc: (d) =>
+      `High-yield reinforcement bars, dia. ${d} mm, cut and fixed in stairs`,
+  },
+  RAMPS: {
+    key: 'RAMPS',
+    num: 12,
+    suffix: '',
+    label: 'Ramps',
+    kind: 'structural',
+    concreteDesc: (g) =>
+      `Reinforced in-situ concrete, grade ${g}, in inclined and helical ramps`,
+    formworkDesc:
+      'Formwork to ramp soffits and exposed sides; including striking',
+    rebarDesc: (d) =>
+      `High-yield reinforcement bars, dia. ${d} mm, cut and fixed in ramps`,
   },
   FLOOR_FINISH: {
     key: 'FLOOR_FINISH',
