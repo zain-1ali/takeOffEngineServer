@@ -94,5 +94,6 @@ export type RateAccessors = ReturnType<typeof makeRateAccessors>;
 
 export function lineAmount(qty: number, rate: number | null | undefined): number | null {
   if (rate == null || isNaN(rate) || rate <= 0 || isNaN(qty)) return null;
-  return qty * rate;
+  // QS practice: price each line to 2 decimal places (matches client Cost Plan PDF).
+  return round(qty * rate);
 }

@@ -5,6 +5,8 @@ import {
   DEFAULT_MATERIALS,
   DEFAULT_RATE_LIB,
 } from '../defaults/projectDefaults';
+import { DEFAULT_CASCADE_PERCENTS } from '../services/costPlan/cascade';
+import { DEFAULT_REPORT_THEME } from '../services/costPlan/reportThemes';
 
 export type AxisLine = { label: string; spacing: number };
 
@@ -56,6 +58,15 @@ export interface IProject extends Document {
   preparedBy: string;
   revision: string;
   date: string;
+  /** Gross Floor Area (m²) for Cost Plan Rate/m². Null = omit the column. */
+  gfaM2: number | null;
+  /** Cost Plan cascade — percentage points (6 = 6%). */
+  designAllowancePercent: number;
+  overheadPercent: number;
+  profitPercent: number;
+  inflationPercent: number;
+  /** Cost Plan / bill PDF color theme id. */
+  reportTheme: string;
   materials: ProjectMaterials;
   rateLib: typeof DEFAULT_RATE_LIB;
   useRateAnalysis: boolean;
@@ -146,6 +157,28 @@ const projectSchema = new Schema<IProject>(
     preparedBy: { type: String, default: '' },
     revision: { type: String, default: 'A' },
     date: { type: String, default: () => new Date().toISOString().slice(0, 10) },
+    gfaM2: { type: Number, default: null, min: 0 },
+    designAllowancePercent: {
+      type: Number,
+      default: DEFAULT_CASCADE_PERCENTS.designAllowancePercent,
+      min: 0,
+    },
+    overheadPercent: {
+      type: Number,
+      default: DEFAULT_CASCADE_PERCENTS.overheadPercent,
+      min: 0,
+    },
+    profitPercent: {
+      type: Number,
+      default: DEFAULT_CASCADE_PERCENTS.profitPercent,
+      min: 0,
+    },
+    inflationPercent: {
+      type: Number,
+      default: DEFAULT_CASCADE_PERCENTS.inflationPercent,
+      min: 0,
+    },
+    reportTheme: { type: String, default: DEFAULT_REPORT_THEME },
     materials: {
       type: materialsSchema,
       default: () => JSON.parse(JSON.stringify(DEFAULT_MATERIALS)),

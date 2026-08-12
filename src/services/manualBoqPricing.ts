@@ -26,6 +26,9 @@ export type ManualBoqInput = {
   labourMode?: ManualBoqLabourMode;
   outputPerDay?: number | null;
   gangDescription?: string | null;
+  uniformatCode?: string | null;
+  /** Direct rate when linkKind is none (lump-sum Item lines). */
+  unitRate?: number | null;
 };
 
 export type ManualRateSnapshot = {
@@ -46,12 +49,18 @@ export type ManualBoqReportItem = {
   appliedUnitRate: number | null;
   appliedBomUnitLines: AppliedBomUnitLine[];
   appliedLabUnitLines: AppliedLabUnitLine[];
+  uniformatCode?: string | null;
 };
 
 export function resolveManualRateSnapshot(
   input: Pick<
     ManualBoqInput,
-    'linkKind' | 'analysisCode' | 'resourceGroup' | 'resourceCode' | 'labourMode'
+    | 'linkKind'
+    | 'analysisCode'
+    | 'resourceGroup'
+    | 'resourceCode'
+    | 'labourMode'
+    | 'unitRate'
   >,
   rateLib: RateLib,
   revision: string | null | undefined,
@@ -62,7 +71,11 @@ export function resolveManualRateSnapshot(
   let appliedBomUnitLines: AppliedBomUnitLine[] = [];
   let appliedLabUnitLines: AppliedLabUnitLine[] = [];
 
-  if (linkKind === 'analysis' && input.analysisCode) {
+  if (linkKind === 'none') {
+    if (input.unitRate != null && Number.isFinite(Number(input.unitRate))) {
+      appliedUnitRate = round(Number(input.unitRate), 2);
+    }
+  } else if (linkKind === 'analysis' && input.analysisCode) {
     const a = analyseRate(input.analysisCode, rateLib);
     if (a) {
       appliedUnitRate = round(a.rate, 2);

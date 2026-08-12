@@ -43,6 +43,14 @@ function parseBody(body: any): ManualBoqInput {
       labourMode === 'outputRate' && body?.gangDescription
         ? String(body.gangDescription).trim()
         : null,
+    uniformatCode:
+      body?.uniformatCode != null && String(body.uniformatCode).trim() !== ''
+        ? String(body.uniformatCode).trim().toUpperCase()
+        : null,
+    unitRate:
+      body?.unitRate != null && body?.unitRate !== ''
+        ? Number(body.unitRate)
+        : null,
   };
 }
 
@@ -80,9 +88,10 @@ router.post(
         req.project!.rateLib as RateLib,
         req.project!.revision,
       );
+      const { unitRate: _unitRate, ...fields } = input;
       const doc = await ManualBoqItem.create({
         projectId: req.project!._id,
-        ...input,
+        ...fields,
         ...snap,
       });
       res.status(201).json({ item: publicManualBoqItem(doc as any) });
@@ -134,6 +143,7 @@ router.patch(
       item.labourMode = input.labourMode || 'none';
       item.outputPerDay = input.outputPerDay ?? null;
       item.gangDescription = input.gangDescription ?? null;
+      item.uniformatCode = input.uniformatCode ?? null;
 
       // Re-seed applied snapshot only when the link / labour path changes
       // (new selection). RateLib price edits wait for a revision bump.
@@ -154,6 +164,14 @@ router.patch(
         item.appliedBomUnitLines = snap.appliedBomUnitLines as any;
         item.appliedLabUnitLines = snap.appliedLabUnitLines as any;
         item.appliedAtRevision = snap.appliedAtRevision;
+      } else if (
+        (item.linkKind || 'none') === 'none' &&
+        input.unitRate != null &&
+        Number.isFinite(Number(input.unitRate))
+      ) {
+        // Direct lump-sum rate edit (no linked rate).
+        item.appliedUnitRate = Number(input.unitRate);
+        item.appliedAtRevision = String(req.project!.revision);
       }
 
       await item.save();

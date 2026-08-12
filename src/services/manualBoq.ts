@@ -29,6 +29,7 @@ export function toManualBoqReportItem(doc: IManualBoqItem): ManualBoqReportItem 
     appliedUnitRate: doc.appliedUnitRate ?? null,
     appliedBomUnitLines: [...(doc.appliedBomUnitLines || [])],
     appliedLabUnitLines: [...(doc.appliedLabUnitLines || [])],
+    uniformatCode: doc.uniformatCode ?? null,
   };
 }
 
@@ -51,6 +52,7 @@ export function publicManualBoqItem(doc: IManualBoqItem) {
     appliedBomUnitLines: [...(doc.appliedBomUnitLines || [])],
     appliedLabUnitLines: [...(doc.appliedLabUnitLines || [])],
     appliedAtRevision: doc.appliedAtRevision,
+    uniformatCode: doc.uniformatCode ?? null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

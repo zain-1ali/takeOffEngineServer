@@ -10,6 +10,19 @@ import { buildProjectReports } from '../services/reports';
 import { REPORTABLE_KEYS } from '../services/reports/elementMeta';
 import ratePdfImportRouter from './ratePdfImport';
 import manualBoqItemsRouter from './manualBoqItems';
+import ifcImportRouter from './ifcImport';
+import { buildCostPlan } from '../services/costPlan/buildCostPlan';
+import {
+  DEFAULT_CASCADE_PERCENTS,
+  normalizeCascadePercent,
+} from '../services/costPlan/cascade';
+import { normalizeReportTheme } from '../services/costPlan/reportThemes';
+import {
+  defaultLocationForElement,
+  LOCATION_DEPENDENT_ELEMENTS,
+  LOCATION_OPTIONS,
+  normalizeLocation,
+} from '../services/costPlan/uniformat';
 import {
   applyDraftMixesToRevision,
   ensureMaterialsMixes,
@@ -30,6 +43,7 @@ const router = Router();
 
 router.use('/:projectId/rate-lib/import-pdf', ratePdfImportRouter);
 router.use('/:projectId/manual-boq', manualBoqItemsRouter);
+router.use('/:projectId/ifc-import', ifcImportRouter);
 
 function publicProject(p: IProject) {
   return {
@@ -44,6 +58,24 @@ function publicProject(p: IProject) {
     preparedBy: p.preparedBy,
     revision: p.revision,
     date: p.date,
+    gfaM2: p.gfaM2 == null || !(Number(p.gfaM2) > 0) ? null : Number(p.gfaM2),
+    designAllowancePercent: normalizeCascadePercent(
+      p.designAllowancePercent,
+      DEFAULT_CASCADE_PERCENTS.designAllowancePercent,
+    ),
+    overheadPercent: normalizeCascadePercent(
+      p.overheadPercent,
+      DEFAULT_CASCADE_PERCENTS.overheadPercent,
+    ),
+    profitPercent: normalizeCascadePercent(
+      p.profitPercent,
+      DEFAULT_CASCADE_PERCENTS.profitPercent,
+    ),
+    inflationPercent: normalizeCascadePercent(
+      p.inflationPercent,
+      DEFAULT_CASCADE_PERCENTS.inflationPercent,
+    ),
+    reportTheme: normalizeReportTheme(p.reportTheme),
     materials: ensureMaterialsMixes(
       (p.materials || {}) as Parameters<typeof ensureMaterialsMixes>[0],
     ),
@@ -87,9 +119,25 @@ function publicInstance(inst: IInstance) {
     concreteGrade: inst.concreteGrade,
     reinforcement: inst.reinforcement,
     spec: inst.spec,
+    location: inst.location ?? null,
     createdAt: inst.createdAt,
     updatedAt: inst.updatedAt,
   };
+}
+
+function resolveInstanceLocation(
+  elementKey: string,
+  floorId: string,
+  raw: unknown,
+): string | null {
+  if (!LOCATION_DEPENDENT_ELEMENTS.has(elementKey)) return null;
+  if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+    return (
+      normalizeLocation(elementKey, String(raw)) ||
+      defaultLocationForElement(elementKey, floorId)
+    );
+  }
+  return defaultLocationForElement(elementKey, floorId);
 }
 
 /* ---------- Project CRUD ---------- */
@@ -246,11 +294,36 @@ router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response
     // Currency must change only via POST /convert-currency (explicit FX + audit log).
     const fields = [
       'name', 'number', 'client', 'contractor', 'location', 'units',
-      'preparedBy', 'revision', 'date', 'materials', 'rateLib', 'grid', 'useRateAnalysis',
+      'preparedBy', 'revision', 'date', 'gfaM2',
+      'designAllowancePercent', 'overheadPercent', 'profitPercent', 'inflationPercent',
+      'reportTheme',
+      'materials', 'rateLib', 'grid', 'useRateAnalysis',
     ] as const;
+    const cascadeKeys = new Set([
+      'designAllowancePercent',
+      'overheadPercent',
+      'profitPercent',
+      'inflationPercent',
+    ]);
     for (const key of fields) {
       if (req.body?.[key] !== undefined) {
-        (p as any)[key] = req.body[key];
+        if (key === 'gfaM2') {
+          const raw = req.body.gfaM2;
+          if (raw === null || raw === '' || raw === undefined) {
+            p.gfaM2 = null;
+          } else {
+            const n = Number(raw);
+            p.gfaM2 = Number.isFinite(n) && n > 0 ? n : null;
+          }
+        } else if (cascadeKeys.has(key)) {
+          const fallback =
+            DEFAULT_CASCADE_PERCENTS[key as keyof typeof DEFAULT_CASCADE_PERCENTS];
+          (p as any)[key] = normalizeCascadePercent(req.body[key], fallback);
+        } else if (key === 'reportTheme') {
+          p.reportTheme = normalizeReportTheme(req.body.reportTheme);
+        } else {
+          (p as any)[key] = req.body[key];
+        }
       }
     }
     // Normalise mix tables; if revision bumped, apply draft mixes + manual BOQ rate snapshots.
@@ -534,6 +607,7 @@ router.post(
         concreteGrade: req.body?.concreteGrade ?? null,
         reinforcement: req.body?.reinforcement ?? null,
         spec: req.body?.spec ?? null,
+        location: resolveInstanceLocation(elementKey, floorId, req.body?.location),
       });
       res.status(201).json({ instance: publicInstance(inst) });
     } catch (err) {
@@ -593,6 +667,17 @@ router.patch(
       if (req.body?.concreteGrade !== undefined) inst.concreteGrade = req.body.concreteGrade;
       if (req.body?.reinforcement !== undefined) inst.reinforcement = req.body.reinforcement;
       if (req.body?.spec !== undefined) inst.spec = req.body.spec;
+      if (req.body?.location !== undefined || req.body?.floorId !== undefined || req.body?.elementKey !== undefined) {
+        const ek = inst.elementKey;
+        const fid = inst.floorId;
+        if (LOCATION_DEPENDENT_ELEMENTS.has(ek)) {
+          const raw =
+            req.body?.location !== undefined ? req.body.location : inst.location;
+          inst.location = resolveInstanceLocation(ek, fid, raw);
+        } else {
+          inst.location = null;
+        }
+      }
 
       await inst.save();
       res.json({ instance: publicInstance(inst) });
@@ -616,6 +701,70 @@ router.delete(
         return;
       }
       res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/* ---------- Cost Plan (UniFormat II) ---------- */
+
+router.get(
+  '/:projectId/cost-plan',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const scopeRaw = String(req.query.scope ?? 'project').trim().toLowerCase();
+      const scope = scopeRaw === 'floor' ? 'floor' : 'project';
+      const floorId = req.query.floorId != null ? String(req.query.floorId).trim() : '';
+
+      if (scope === 'floor') {
+        if (!floorId) {
+          res.status(400).json({ error: 'floorId is required when scope=floor' });
+          return;
+        }
+        const floor = await Floor.findOne({ projectId: req.project!._id, floorId });
+        if (!floor) {
+          res.status(400).json({ error: 'floorId does not exist on this project' });
+          return;
+        }
+      }
+
+      const filter: Record<string, unknown> = { projectId: req.project!._id };
+      if (scope === 'floor') filter.floorId = floorId;
+
+      const instances = await Instance.find(filter).sort({
+        elementKey: 1,
+        floorId: 1,
+        mark: 1,
+        createdAt: 1,
+      });
+
+      const manualFilter: Record<string, unknown> = {
+        projectId: req.project!._id,
+      };
+      if (scope === 'floor') {
+        manualFilter.$or = [{ floorId }, { floorId: null }];
+      }
+      const manualItems = await ManualBoqItem.find(manualFilter).sort({ createdAt: 1 });
+
+      const costPlan = buildCostPlan(
+        req.project!,
+        instances,
+        {
+          scope,
+          floorId: scope === 'floor' ? floorId : null,
+        },
+        manualItems.map((m) => ({
+          ...toManualBoqReportItem(m as any),
+          uniformatCode: (m as any).uniformatCode ?? null,
+        })),
+      );
+
+      res.json({
+        ...costPlan,
+        locationOptions: LOCATION_OPTIONS,
+      });
     } catch (err) {
       next(err);
     }

@@ -50,6 +50,9 @@ export interface IManualBoqItem extends Document {
   appliedLabUnitLines: AppliedLabUnitLine[];
   appliedAtRevision?: string | null;
 
+  /** Optional UniFormat II code for Cost Plan grouping (e.g. A1010). */
+  uniformatCode?: string | null;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -113,6 +116,7 @@ const manualBoqItemSchema = new Schema(
     appliedBomUnitLines: { type: [bomUnitLineSchema], default: [] },
     appliedLabUnitLines: { type: [labUnitLineSchema], default: [] },
     appliedAtRevision: { type: String, default: null },
+    uniformatCode: { type: String, default: null, trim: true },
   },
   { timestamps: true },
 );

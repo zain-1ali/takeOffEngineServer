@@ -12,6 +12,11 @@ export interface IInstance extends Document {
   concreteGrade: string | null;
   reinforcement: Record<string, unknown> | null;
   spec: string | null;
+  /**
+   * UniFormat location context (Walls / Slabs / Doors / Wall finishes).
+   * Null for elements with a fixed UniFormat mapping.
+   */
+  location: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +33,7 @@ const instanceSchema = new Schema<IInstance>(
     concreteGrade: { type: String, default: null },
     reinforcement: { type: Schema.Types.Mixed, default: null },
     spec: { type: String, default: null },
+    location: { type: String, default: null, trim: true },
   },
   { timestamps: true },
 );
