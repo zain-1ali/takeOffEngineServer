@@ -455,7 +455,8 @@ export function buildFinishReports(
   let paintL = 0;
   let tiles = 0;
   let units = 0;
-  const bySpec: Record<string, number> = {};
+  /** roomLabel (trimmed) → spec → area m². Empty key = ungrouped. */
+  const byRoomSpec: Record<string, Record<string, number>> = {};
 
   entries.forEach(({ flat, inst }) => {
     const c = calcFinish(finishKind, flat as any, materials);
@@ -466,7 +467,11 @@ export function buildFinishReports(
     tiles += c.totalTilesM2;
     units += inst.count || 1;
     const spec = String(inst.spec || flat.spec || 'Finish');
-    bySpec[spec] = (bySpec[spec] || 0) + c.totalAreaM2;
+    const roomRaw = flat.roomLabel ?? (inst as { geometry?: { roomLabel?: unknown } }).geometry?.roomLabel;
+    const room =
+      typeof roomRaw === 'string' && roomRaw.trim() ? roomRaw.trim() : '';
+    if (!byRoomSpec[room]) byRoomSpec[room] = {};
+    byRoomSpec[room][spec] = (byRoomSpec[room][spec] || 0) + c.totalAreaM2;
   });
   area = round(area);
   screed = round(screed);
@@ -482,12 +487,41 @@ export function buildFinishReports(
   let boqTot = 0;
   boq.push(group(`A — ${meta.label}`));
   let i = 0;
-  Object.keys(bySpec).forEach((spec) => {
-    i++;
-    const q = round(bySpec[spec]);
-    boq.push(item(`A${i}`, `${meta.label} — ${spec}`, q, 'm²', areaRate));
-    const a = lineAmount(q, areaRate);
-    if (a != null) boqTot += a;
+  const roomKeys = Object.keys(byRoomSpec).sort((a, b) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  });
+
+  roomKeys.forEach((room) => {
+    const specs = byRoomSpec[room];
+    let roomAmt = 0;
+    let roomArea = 0;
+    if (room) {
+      boq.push(group(`Room — ${room}`));
+    }
+    Object.keys(specs).forEach((spec) => {
+      i++;
+      const q = round(specs[spec]);
+      roomArea += q;
+      const desc = room
+        ? `${meta.label} — ${room} — ${spec}`
+        : `${meta.label} — ${spec}`;
+      boq.push(item(`A${i}`, desc, q, 'm²', areaRate));
+      const a = lineAmount(q, areaRate);
+      if (a != null) {
+        boqTot += a;
+        roomAmt += a;
+      }
+    });
+    if (room) {
+      boq.push(
+        total(
+          `${room} — room total (${round(roomArea)} m²)`,
+          round(roomAmt),
+        ),
+      );
+    }
   });
   boq.push(total(`${meta.label} total`, boqTot));
 

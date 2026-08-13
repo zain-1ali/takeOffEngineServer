@@ -22,8 +22,11 @@ export type LabourActivity = {
   qty: number;
   unit: string;
   outputRate: string;
+  /** Crew composition, e.g. "1 Mason + 2 Labourer". */
   gang: string;
   days: number;
+  /** Floor business id when resource loading is split by floor. */
+  floorId?: string | null;
   source?: ReportSource;
 };
 
@@ -33,6 +36,15 @@ export type TradeSummary = {
   dayRate: number;
   cost: number;
   source?: ReportSource;
+};
+
+/** Per-floor labour resource loading (activities + trade roll-up). */
+export type LabourFloorLoad = {
+  floorId: string;
+  activities: LabourActivity[];
+  trades: TradeSummary[];
+  totalManDays: number;
+  totalCost: number;
 };
 
 export type ElementReportBundle = {
@@ -66,7 +78,14 @@ export type ProjectReportsPayload = {
   /** Consolidated tables across scope */
   boq: ReportLine[];
   bom: ReportLine[];
-  labour: { activities: LabourActivity[]; trades: TradeSummary[]; totalManDays: number; totalCost: number };
+  labour: {
+    activities: LabourActivity[];
+    trades: TradeSummary[];
+    totalManDays: number;
+    totalCost: number;
+    /** Resource loading split by floor (empty when scope is a single floor with one id). */
+    byFloor: LabourFloorLoad[];
+  };
   /** Per-element bundles (for element tabs / drill-down) */
   byElement: ElementReportBundle[];
 };

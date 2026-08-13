@@ -31,6 +31,7 @@ import {
 import type {
   ElementReportBundle,
   LabourActivity,
+  LabourFloorLoad,
   ProjectReportsPayload,
   ReportLine,
   TradeSummary,
@@ -241,11 +242,52 @@ function consolidateBom(
     );
   }
 
+  const masonryBundles = byElement
+    .filter((be) => be.kind === 'masonry')
+    .sort((a, b) => a.num - b.num);
+  if (masonryBundles.some((be) => bomMaterialItems(be).length)) {
+    lines.push(group('D — Blockwork / Brickwork materials'));
+    let di = 0;
+    masonryBundles.forEach((be) => {
+      bomMaterialItems(be).forEach((l) => {
+        if (l.kind !== 'item') return;
+        di++;
+        lines.push({
+          ...l,
+          ref: `D${di}`,
+          description: `${be.label}: ${l.description}`,
+          source: l.source || 'MODELLED',
+        });
+      });
+    });
+  }
+
+  const finishBundles = byElement
+    .filter((be) => be.kind === 'finish')
+    .sort((a, b) => a.num - b.num);
+  if (finishBundles.some((be) => bomMaterialItems(be).length)) {
+    lines.push(group('E — Finishes materials'));
+    let ei = 0;
+    finishBundles.forEach((be) => {
+      bomMaterialItems(be).forEach((l) => {
+        if (l.kind !== 'item') return;
+        ei++;
+        lines.push({
+          ...l,
+          ref: `E${ei}`,
+          description: `${be.label}: ${l.description}`,
+          source: l.source || 'MODELLED',
+        });
+      });
+    });
+  }
+
+  // Remaining non-structural (e.g. earthworks) — keep labeled if they ever emit BOM
   byElement
     .slice()
     .sort((a, b) => a.num - b.num)
     .forEach((be) => {
-      if (be.kind === 'structural') return;
+      if (be.kind === 'structural' || be.kind === 'masonry' || be.kind === 'finish') return;
       const materialLines = bomMaterialItems(be);
       if (!materialLines.length) return;
       lines.push(group(`${be.num}${be.suffix || ''}. ${be.label} — materials`));
@@ -255,57 +297,12 @@ function consolidateBom(
   return lines;
 }
 
-function consolidateLabour(
-  byElement: ElementReportBundle[],
-  structuralAgg: ReturnType<typeof aggregateStructural>,
+function tradesFromManDays(
+  manDays: Record<string, number>,
   rates: ReturnType<typeof makeRateAccessors>,
-): ProjectReportsPayload['labour'] {
-  const manDays: Record<string, number> = {};
-  const activities: LabourActivity[] = [];
-
-  const addGang = (gang: [string, number][], days: number) => {
-    gang.forEach(([role, cnt]) => {
-      manDays[role] = (manDays[role] || 0) + days * cnt;
-    });
-  };
-
-  let ref = 0;
-  const pushStructural = (key: keyof typeof LABOUR_RATES, qty: number) => {
-    if (!(qty > 0)) return;
-    const r = LABOUR_RATES[key];
-    const days = Math.ceil(qty / r.perDay);
-    addGang(r.gang, days);
-    ref++;
-    activities.push({
-      ref: `L${ref}`,
-      activity: r.label,
-      qty,
-      unit: r.unit,
-      outputRate: `${r.perDay} ${r.unit}/day`,
-      gang: r.gang.map(([role, cnt]) => `${cnt} ${role}`).join(' + '),
-      days,
-      source: 'MODELLED',
-    });
-  };
-  pushStructural('concrete', structuralAgg.totalConcrete);
-  pushStructural('formwork', structuralAgg.totalFormwork);
-  pushStructural('reinforcement', structuralAgg.totalSteel);
-
-  byElement
-    .slice()
-    .sort((a, b) => a.num - b.num)
-    .forEach((be) => {
-      if (be.kind === 'structural') return;
-      be.labour.activities.forEach((a) => {
-        ref++;
-        activities.push({ ...a, ref: `L${ref}`, source: a.source || 'MODELLED' });
-      });
-      be.labour.trades.forEach((t) => {
-        manDays[t.trade] = (manDays[t.trade] || 0) + t.manDays;
-      });
-    });
-
-  const trades: TradeSummary[] = Object.keys(manDays)
+  source: TradeSummary['source'] = 'MODELLED',
+): TradeSummary[] {
+  return Object.keys(manDays)
     .sort()
     .map((trade) => {
       const md = manDays[trade];
@@ -315,15 +312,123 @@ function consolidateLabour(
         manDays: md,
         dayRate,
         cost: md * dayRate,
-        source: 'MODELLED' as const,
+        source,
       };
     });
+}
 
+/**
+ * Build labour with resource loading per floor and per activity (crew/gang on each line).
+ */
+function consolidateLabour(
+  entries: ReportEntry[],
+  materials: IProject['materials'],
+  rates: ReturnType<typeof makeRateAccessors>,
+): ProjectReportsPayload['labour'] {
+  const floorIds = [
+    ...new Set(entries.map((e) => e.floorId).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+  const allActivities: LabourActivity[] = [];
+  const allManDays: Record<string, number> = {};
+  const byFloor: LabourFloorLoad[] = [];
+  let ref = 0;
+
+  const addGang = (
+    target: Record<string, number>,
+    gang: [string, number][],
+    days: number,
+  ) => {
+    gang.forEach(([role, cnt]) => {
+      target[role] = (target[role] || 0) + days * cnt;
+    });
+  };
+
+  for (const floorId of floorIds) {
+    const floorEntries = entries.filter((e) => e.floorId === floorId);
+    const floorManDays: Record<string, number> = {};
+    const floorActivities: LabourActivity[] = [];
+
+    const structuralEntries = floorEntries.filter(
+      (e) => ELEMENT_ENGINES[e.elementKey]?.reportKind === 'structural',
+    );
+    if (structuralEntries.length) {
+      const agg = aggregateStructural(structuralEntries, structuralCalculator);
+      (
+        [
+          ['concrete', agg.totalConcrete],
+          ['formwork', agg.totalFormwork],
+          ['reinforcement', agg.totalSteel],
+        ] as const
+      ).forEach(([key, qty]) => {
+        if (!(qty > 0)) return;
+        const r = LABOUR_RATES[key];
+        const days = Math.ceil(qty / r.perDay);
+        addGang(floorManDays, r.gang, days);
+        addGang(allManDays, r.gang, days);
+        ref++;
+        const act: LabourActivity = {
+          ref: `L${ref}`,
+          activity: r.label,
+          qty,
+          unit: r.unit,
+          outputRate: `${r.perDay} ${r.unit}/day`,
+          gang: r.gang.map(([role, cnt]) => `${cnt} ${role}`).join(' + '),
+          days,
+          floorId,
+          source: 'MODELLED',
+        };
+        floorActivities.push(act);
+        allActivities.push(act);
+      });
+    }
+
+    const byKey: Record<string, ReportEntry[]> = {};
+    floorEntries.forEach((e) => {
+      if (ELEMENT_ENGINES[e.elementKey]?.reportKind === 'structural') return;
+      if (!byKey[e.elementKey]) byKey[e.elementKey] = [];
+      byKey[e.elementKey].push(e);
+    });
+
+    Object.keys(byKey)
+      .sort((a, b) => (ELEMENT_META[a]?.num || 0) - (ELEMENT_META[b]?.num || 0))
+      .forEach((key) => {
+        const bundle = ELEMENT_ENGINES[key]?.buildReports(byKey[key], materials, rates);
+        if (!bundle) return;
+        bundle.labour.activities.forEach((a) => {
+          ref++;
+          const act: LabourActivity = {
+            ...a,
+            ref: `L${ref}`,
+            floorId,
+            source: a.source || 'MODELLED',
+          };
+          floorActivities.push(act);
+          allActivities.push(act);
+        });
+        bundle.labour.trades.forEach((t) => {
+          floorManDays[t.trade] = (floorManDays[t.trade] || 0) + t.manDays;
+          allManDays[t.trade] = (allManDays[t.trade] || 0) + t.manDays;
+        });
+      });
+
+    const trades = tradesFromManDays(floorManDays, rates);
+    byFloor.push({
+      floorId,
+      activities: floorActivities,
+      trades,
+      totalManDays: trades.reduce((s, t) => s + t.manDays, 0),
+      totalCost: trades.reduce((s, t) => s + t.cost, 0),
+    });
+  }
+
+  const trades = tradesFromManDays(allManDays, rates);
   return {
-    activities,
+    activities: allActivities,
     trades,
     totalManDays: trades.reduce((s, t) => s + t.manDays, 0),
     totalCost: trades.reduce((s, t) => s + t.cost, 0),
+    byFloor,
   };
 }
 
@@ -405,7 +510,27 @@ export function buildProjectReports(
     ...manual.bom,
   ];
 
-  const modelledLabour = consolidateLabour(byElement, structuralAgg, rates);
+  const modelledLabour = consolidateLabour(entries, materials, rates);
+  const byFloor = modelledLabour.byFloor.map((f) => ({
+    ...f,
+    activities: [...f.activities],
+    trades: f.trades.map((t) => ({ ...t })),
+  }));
+  for (const act of manual.labour.activities) {
+    const key = (act.floorId && String(act.floorId).trim()) || '';
+    let bucket = key ? byFloor.find((f) => f.floorId === key) : undefined;
+    if (!bucket) {
+      bucket = {
+        floorId: key || 'Ungrouped',
+        activities: [],
+        trades: [],
+        totalManDays: 0,
+        totalCost: 0,
+      };
+      byFloor.push(bucket);
+    }
+    bucket.activities.push({ ...act, floorId: key || null });
+  }
   const labour = {
     activities: [...modelledLabour.activities, ...manual.labour.activities],
     trades: mergeTrades(modelledLabour.trades, manual.labour.trades),
@@ -415,6 +540,7 @@ export function buildProjectReports(
       modelledLabour.totalCost + manual.labour.totalCost,
       2,
     ),
+    byFloor,
   };
 
   const payload: ProjectReportsPayload = {

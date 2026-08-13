@@ -236,6 +236,7 @@ export function buildManualReportContribution(
         outputRate: `${it.outputPerDay} ${it.unit || 'nr'}/day`,
         gang,
         days,
+        floorId: it.floorId ?? null,
         source: 'MANUAL',
       });
       if (!manDays[gang]) manDays[gang] = { md: 0, dayRate: 0 };
@@ -255,6 +256,7 @@ export function buildManualReportContribution(
           outputRate: `${round(1 / (line.manDaysPerUnit || 1), 3)} ${it.unit}/man-day`,
           gang: line.trade,
           days,
+          floorId: it.floorId ?? null,
           source: 'MANUAL',
         });
         if (!manDays[line.trade]) {

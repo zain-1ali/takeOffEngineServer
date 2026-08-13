@@ -40,6 +40,13 @@ export function applyDisplayUnitsToReports(
         const c = convertQuantity(a.qty, a.unit, system);
         return { ...a, qty: c.value, unit: c.unit };
       }),
+      byFloor: (reports.labour.byFloor || []).map((f) => ({
+        ...f,
+        activities: f.activities.map((a) => {
+          const c = convertQuantity(a.qty, a.unit, system);
+          return { ...a, qty: c.value, unit: c.unit };
+        }),
+      })),
     },
     byElement: reports.byElement.map((be) => ({
       ...be,

@@ -17,6 +17,7 @@ import {
   normalizeCascadePercent,
 } from '../services/costPlan/cascade';
 import { normalizeReportTheme } from '../services/costPlan/reportThemes';
+import { duplicateToFloor } from '../services/duplicateToFloor';
 import {
   defaultLocationForElement,
   LOCATION_DEPENDENT_ELEMENTS,
@@ -481,6 +482,66 @@ router.post('/:projectId/floors', loadOwnedProject, async (req: Request, res: Re
     next(err);
   }
 });
+
+/**
+ * Duplicate instances onto a new or existing floor.
+ * Body (full floor): { sourceFloorId, newFloor? | targetFloorId }
+ * Body (selected):   { instanceIds, newFloor? | targetFloorId }
+ * Quantities are not copied — recalculated via /calculate on the target.
+ */
+router.post(
+  '/:projectId/floors/duplicate',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const instanceIds = Array.isArray(req.body?.instanceIds)
+        ? req.body.instanceIds.map((id: unknown) => String(id))
+        : undefined;
+      const selectedMode = Boolean(instanceIds?.length);
+      const result = await duplicateToFloor({
+        projectId: req.project!._id,
+        sourceFloorId: req.body?.sourceFloorId,
+        instanceIds,
+        targetFloorId: req.body?.targetFloorId,
+        newFloor: req.body?.newFloor,
+        requireEmptyTarget: !selectedMode,
+      });
+
+      // Fresh engine calc on copied geometry (current project materials) — not stored qty.
+      const byElement = new Map<string, typeof result.instances>();
+      for (const inst of result.instances) {
+        const list = byElement.get(inst.elementKey) || [];
+        list.push(inst);
+        byElement.set(inst.elementKey, list);
+      }
+      const materials = req.project!.materials as any;
+      const calcResults: { elementKey: string; results: ReturnType<typeof calculateInstances> }[] =
+        [];
+      for (const [elementKey, insts] of byElement) {
+        if (!SUPPORTED_ELEMENT_KEYS.includes(elementKey)) continue;
+        calcResults.push({
+          elementKey,
+          results: calculateInstances(elementKey, insts, materials),
+        });
+      }
+
+      res.status(201).json({
+        floor: publicFloor(result.floor),
+        targetFloorId: result.targetFloorId,
+        copiedCount: result.copiedCount,
+        sourceCount: result.sourceCount,
+        instances: result.instances.map(publicInstance),
+        calculated: calcResults,
+      });
+    } catch (err: any) {
+      if (err?.status) {
+        res.status(err.status).json({ error: err.message });
+        return;
+      }
+      next(err);
+    }
+  },
+);
 
 router.patch(
   '/:projectId/floors/:floorDocId',
