@@ -3,6 +3,8 @@
 import {
   buildMixTable,
   DEFAULT_MORTAR_MIX,
+  DEFAULT_PLASTER_MIX,
+  DEFAULT_SCREED_MIX,
 } from './mixDefaults';
 
 const DEFAULT_CONCRETE_CLASSES = [
@@ -41,6 +43,11 @@ export const DEFAULT_MATERIALS = {
   appliedConcreteMixes: JSON.parse(JSON.stringify(defaultMixes)) as typeof defaultMixes,
   mortarMix: { ...DEFAULT_MORTAR_MIX },
   appliedMortarMix: { ...DEFAULT_MORTAR_MIX },
+  /** Indicative screed/plaster mixes — verify before procurement. */
+  screedMix: { ...DEFAULT_SCREED_MIX },
+  appliedScreedMix: { ...DEFAULT_SCREED_MIX },
+  plasterMix: { ...DEFAULT_PLASTER_MIX },
+  appliedPlasterMix: { ...DEFAULT_PLASTER_MIX },
   appliedStoneMortarRatio: '1:4',
   appliedStoneMortarFraction: 0.3,
 };
@@ -75,6 +82,10 @@ export const DEFAULT_PRICING = {
     stoneMasonry: 55,
     blinding: 110,
     floorFinish: 28,
+    /** Cement/sand screed — priced per m³ (split from multi-material floor finishes). */
+    floorScreed: 160,
+    /** Floor tiling — priced per m² (split from multi-material floor finishes). */
+    floorTiling: 22,
     wallFinish: 18,
     ceilingFinish: 22,
     excavation: 12,
@@ -188,6 +199,20 @@ export const DEFAULT_RATE_LIB = {
         'Lay cement/sand screed to falls and cure; fix tiles with adhesive and grout, or trowel granolithic to a smooth even surface.',
     },
     {
+      code: 'M-FIN-SCR',
+      title: 'Floor screed',
+      standard: 'BS 8204',
+      statement:
+        'Lay cement/sand screed to the specified thickness and falls; compact, finish and cure before applying finishes.',
+    },
+    {
+      code: 'M-FIN-TIL',
+      title: 'Floor tiling',
+      standard: 'BS 5385',
+      statement:
+        'Fix ceramic/porcelain tiles with adhesive and grout on a prepared screed; leave expansion joints as specified.',
+    },
+    {
       code: 'M-FIN-WL',
       title: 'Wall finishes',
       standard: 'BS EN 13914 / BS 5385',
@@ -294,6 +319,37 @@ export const DEFAULT_RATE_LIB = {
       materials: [
         { ref: 'CEM', coeff: 0.5 },
         { ref: 'SND', coeff: 0.05 },
+        { ref: 'TIL', coeff: 1.1 },
+        { ref: 'ADH', coeff: 4 },
+      ],
+      labour: [
+        { ref: 'TILR', coeff: 0.05 },
+        { ref: 'LAB', coeff: 0.05 },
+      ],
+      equipment: [{ ref: 'HTL', coeff: 0.01 }],
+    },
+    floorScreed: {
+      label: 'Floor screed',
+      unit: 'm³',
+      method: 'M-FIN-SCR',
+      ohp: 0.15,
+      materials: [
+        { ref: 'CEM', coeff: 6.5 },
+        { ref: 'SND', coeff: 0.5 },
+        { ref: 'WAT', coeff: 180 },
+      ],
+      labour: [
+        { ref: 'TILR', coeff: 0.4 },
+        { ref: 'LAB', coeff: 0.8 },
+      ],
+      equipment: [{ ref: 'MIX', coeff: 0.15 }],
+    },
+    floorTiling: {
+      label: 'Floor tiling',
+      unit: 'm²',
+      method: 'M-FIN-TIL',
+      ohp: 0.15,
+      materials: [
         { ref: 'TIL', coeff: 1.1 },
         { ref: 'ADH', coeff: 4 },
       ],

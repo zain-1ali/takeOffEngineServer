@@ -74,6 +74,8 @@ function bomMaterialItems(bundle: ElementReportBundle): ReportLine[] {
 function rateCodeForSummaryKey(elementKey: string, key: string): string {
   if (key === 'masonry') return 'stoneMasonry';
   if (key === 'blinding') return 'blinding';
+  if (key === 'screed') return 'floorScreed';
+  if (key === 'tiles') return 'floorTiling';
   if (key === 'area') {
     if (elementKey === 'FLOOR_FINISH') return 'floorFinish';
     if (elementKey === 'WALL_FINISH') return 'wallFinish';
@@ -98,18 +100,19 @@ function consolidateBoq(
       let n = 0;
       let elTot = 0;
 
-      if (be.kind === 'structural') {
+      if (be.kind === 'structural' || be.kind === 'finish') {
         be.boq.forEach((line) => {
           if (line.kind !== 'item') return;
           n++;
           lines.push({ ...line, ref: `${be.num}.${n}`, source: line.source || 'MODELLED' });
           if (line.amount != null) elTot += line.amount;
         });
+        elTot = be.cost.boq;
       } else {
         Object.keys(be.summary).forEach((k) => {
           if (k === 'mortar') return;
           n++;
-          const unit = k === 'area' ? 'm²' : 'm³';
+          const unit = k === 'area' || k === 'tiles' ? 'm²' : 'm³';
           const lbl = `${be.label} — ${k.charAt(0).toUpperCase()}${k.slice(1)}`;
           const rate = rates.boqRate(rateCodeForSummaryKey(be.elementKey, k));
           const qty = be.summary[k];

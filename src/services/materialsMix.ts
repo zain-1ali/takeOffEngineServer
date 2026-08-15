@@ -1,19 +1,36 @@
 /**
- * Draft vs applied concrete/mortar mixes.
+ * Draft vs applied concrete/mortar/screed/plaster mixes.
  * BOM reads applied_*; Project Settings edits draft_*; bumping revision copies draft → applied.
  */
 import {
   buildMixTable,
   cloneMixTable,
   DEFAULT_MORTAR_MIX,
+  DEFAULT_PLASTER_MIX,
+  DEFAULT_SCREED_MIX,
   defaultMixForGrade,
+  LEGACY_C20_FINISH_MIX,
   type ConcreteMix,
+  type FinishWetMix,
   type MortarMix,
 } from '../defaults/mixDefaults';
 import { DEFAULT_MATERIALS } from '../defaults/projectDefaults';
 import type { ProjectMaterials } from '../models/Project';
 
-export type { ConcreteMix, MortarMix };
+export type { ConcreteMix, FinishWetMix, MortarMix };
+
+function hasFinishWetMix(
+  mix: FinishWetMix | undefined | null,
+): mix is FinishWetMix {
+  return mix != null && mix.cementKgPerM3 != null && mix.sandM3PerM3 != null;
+}
+
+function normalizeFinishWetMix(mix: FinishWetMix): FinishWetMix {
+  return {
+    cementKgPerM3: Number(mix.cementKgPerM3) || 0,
+    sandM3PerM3: Number(mix.sandM3PerM3) || 0,
+  };
+}
 
 export function syncDraftMixRows(materials: ProjectMaterials): ProjectMaterials {
   const classes = materials.concreteClasses?.length
@@ -65,6 +82,22 @@ export function ensureMaterialsMixes(materials: ProjectMaterials): ProjectMateri
       m.appliedMortarMix?.sandM3PerM3 ?? m.mortarMix.sandM3PerM3,
   };
 
+  // Screed / plaster: draft gets new indicative defaults; applied missing on
+  // legacy projects keeps C20/25 parity until revision bump (no silent BOM change).
+  m.screedMix = hasFinishWetMix(m.screedMix)
+    ? normalizeFinishWetMix(m.screedMix)
+    : { ...DEFAULT_SCREED_MIX };
+  m.appliedScreedMix = hasFinishWetMix(m.appliedScreedMix)
+    ? normalizeFinishWetMix(m.appliedScreedMix)
+    : { ...LEGACY_C20_FINISH_MIX };
+
+  m.plasterMix = hasFinishWetMix(m.plasterMix)
+    ? normalizeFinishWetMix(m.plasterMix)
+    : { ...DEFAULT_PLASTER_MIX };
+  m.appliedPlasterMix = hasFinishWetMix(m.appliedPlasterMix)
+    ? normalizeFinishWetMix(m.appliedPlasterMix)
+    : { ...LEGACY_C20_FINISH_MIX };
+
   if (m.appliedStoneMortarRatio == null) {
     m.appliedStoneMortarRatio =
       m.stoneMortarRatio || DEFAULT_MATERIALS.stoneMortarRatio;
@@ -101,6 +134,8 @@ export function applyDraftMixesToRevision(
     cementBagsPerM3: m.mortarMix.cementBagsPerM3,
     sandM3PerM3: m.mortarMix.sandM3PerM3,
   };
+  m.appliedScreedMix = normalizeFinishWetMix(m.screedMix);
+  m.appliedPlasterMix = normalizeFinishWetMix(m.plasterMix);
   m.appliedStoneMortarRatio = m.stoneMortarRatio;
   m.appliedStoneMortarFraction = m.stoneMortarFraction;
   m.appliedVerticalBracingRate = m.verticalBracingRate;
@@ -131,6 +166,18 @@ export function mixesArePending(materials: ProjectMaterials): boolean {
   ) {
     return true;
   }
+  if (
+    m.screedMix.cementKgPerM3 !== m.appliedScreedMix.cementKgPerM3 ||
+    m.screedMix.sandM3PerM3 !== m.appliedScreedMix.sandM3PerM3
+  ) {
+    return true;
+  }
+  if (
+    m.plasterMix.cementKgPerM3 !== m.appliedPlasterMix.cementKgPerM3 ||
+    m.plasterMix.sandM3PerM3 !== m.appliedPlasterMix.sandM3PerM3
+  ) {
+    return true;
+  }
   if (m.stoneMortarRatio !== m.appliedStoneMortarRatio) return true;
   if (m.stoneMortarFraction !== m.appliedStoneMortarFraction) return true;
   if (m.verticalBracingRate !== m.appliedVerticalBracingRate) return true;
@@ -149,6 +196,8 @@ export function materialsForBom(materials: ProjectMaterials): ProjectMaterials {
     soffitPropRate: m.appliedSoffitPropRate,
     concreteMixes: cloneMixTable(m.appliedConcreteMixes),
     mortarMix: { ...m.appliedMortarMix },
+    screedMix: { ...m.appliedScreedMix },
+    plasterMix: { ...m.appliedPlasterMix },
   };
 }
 

@@ -7,6 +7,10 @@ import {
   type MaterialsConfig,
   type StructuralCalcResult,
 } from '../../engines';
+import {
+  DEFAULT_PLASTER_MIX,
+  DEFAULT_SCREED_MIX,
+} from '../../defaults/mixDefaults';
 import type { IInstance } from '../../models/Instance';
 import { flattenInstance } from '../flattenInstance';
 import { ELEMENT_META, type ElementMeta } from './elementMeta';
@@ -455,8 +459,11 @@ export function buildFinishReports(
   let paintL = 0;
   let tiles = 0;
   let units = 0;
-  /** roomLabel (trimmed) → spec → area m². Empty key = ungrouped. */
-  const byRoomSpec: Record<string, Record<string, number>> = {};
+  /** roomLabel → spec → measured quantities. */
+  const byRoomSpec: Record<
+    string,
+    Record<string, { area: number; screed: number; tiles: number }>
+  > = {};
 
   entries.forEach(({ flat, inst }) => {
     const c = calcFinish(finishKind, flat as any, materials);
@@ -471,7 +478,12 @@ export function buildFinishReports(
     const room =
       typeof roomRaw === 'string' && roomRaw.trim() ? roomRaw.trim() : '';
     if (!byRoomSpec[room]) byRoomSpec[room] = {};
-    byRoomSpec[room][spec] = (byRoomSpec[room][spec] || 0) + c.totalAreaM2;
+    const prev = byRoomSpec[room][spec] || { area: 0, screed: 0, tiles: 0 };
+    byRoomSpec[room][spec] = {
+      area: prev.area + c.totalAreaM2,
+      screed: prev.screed + c.totalScreedM3,
+      tiles: prev.tiles + c.totalTilesM2,
+    };
   });
   area = round(area);
   screed = round(screed);
@@ -482,6 +494,8 @@ export function buildFinishReports(
   const areaRateCode =
     finishKind === 'FLOOR' ? 'floorFinish' : finishKind === 'WALL' ? 'wallFinish' : 'ceilingFinish';
   const areaRate = rates.boqRate(areaRateCode);
+  const screedRate = rates.boqRate('floorScreed');
+  const tilingRate = rates.boqRate('floorTiling');
 
   const boq: ReportLine[] = [];
   let boqTot = 0;
@@ -493,6 +507,19 @@ export function buildFinishReports(
     return a.localeCompare(b, undefined, { sensitivity: 'base' });
   });
 
+  const pushBoqItem = (
+    description: string,
+    qty: number,
+    unit: string,
+    rate: number | null,
+  ) => {
+    i++;
+    boq.push(item(`A${i}`, description, qty, unit, rate));
+    const a = lineAmount(qty, rate);
+    if (a != null) boqTot += a;
+    return a || 0;
+  };
+
   roomKeys.forEach((room) => {
     const specs = byRoomSpec[room];
     let roomAmt = 0;
@@ -501,17 +528,25 @@ export function buildFinishReports(
       boq.push(group(`Room — ${room}`));
     }
     Object.keys(specs).forEach((spec) => {
-      i++;
-      const q = round(specs[spec]);
-      roomArea += q;
-      const desc = room
-        ? `${meta.label} — ${room} — ${spec}`
-        : `${meta.label} — ${spec}`;
-      boq.push(item(`A${i}`, desc, q, 'm²', areaRate));
-      const a = lineAmount(q, areaRate);
-      if (a != null) {
-        boqTot += a;
-        roomAmt += a;
+      const q = specs[spec];
+      roomArea += q.area;
+      const prefix = room ? `${meta.label} — ${room} — ${spec}` : `${meta.label} — ${spec}`;
+      // Multi-material floor (screed + tiles): two independent BOQ lines
+      if (finishKind === 'FLOOR' && q.screed > 0 && q.tiles > 0) {
+        roomAmt += pushBoqItem(
+          `${prefix} — Screed`,
+          round(q.screed),
+          'm³',
+          screedRate,
+        );
+        roomAmt += pushBoqItem(
+          `${prefix} — Tiles`,
+          round(q.tiles),
+          'm²',
+          tilingRate,
+        );
+      } else {
+        roomAmt += pushBoqItem(prefix, round(q.area), 'm²', areaRate);
       }
     });
     if (room) {
@@ -523,9 +558,16 @@ export function buildFinishReports(
       );
     }
   });
-  boq.push(total(`${meta.label} total`, boqTot));
+  boq.push(total(`${meta.label} total`, round(boqTot)));
+  boqTot = round(boqTot);
 
-  const plMix = mixFor('C20/25', materials as any);
+  // Summary keys drive Cost Plan / project BOQ for non-finish paths; for
+  // screed+tiles floors expose both measured quantities (not blended area).
+  const summary: Record<string, number> =
+    finishKind === 'FLOOR' && screed > 0 && tiles > 0
+      ? { screed, tiles }
+      : { area };
+
   const bom: ReportLine[] = [];
   let bomTot = 0;
   let bi = 0;
@@ -537,13 +579,31 @@ export function buildFinishReports(
     if (a != null) bomTot += a;
   };
   bom.push(group('A — Materials'));
+  const screedMix =
+    (materials as { screedMix?: { cementKgPerM3: number; sandM3PerM3: number } })
+      .screedMix || DEFAULT_SCREED_MIX;
+  const plasterMix =
+    (materials as { plasterMix?: { cementKgPerM3: number; sandM3PerM3: number } })
+      .plasterMix || DEFAULT_PLASTER_MIX;
   if (screed > 0) {
-    pushBom(`Cement for screed (${CEMENT_BAG_KG}kg bags)`, (screed * plMix.cement) / CEMENT_BAG_KG, 'bags', 'cementBag', 1);
-    pushBom('Sand for screed', screed * plMix.sand, 'm³', 'sand', 2);
+    pushBom(
+      `Cement for screed (${CEMENT_BAG_KG}kg bags)`,
+      (screed * screedMix.cementKgPerM3) / CEMENT_BAG_KG,
+      'bags',
+      'cementBag',
+      1,
+    );
+    pushBom('Sand for screed', screed * screedMix.sandM3PerM3, 'm³', 'sand', 2);
   }
   if (plaster > 0) {
-    pushBom(`Cement for plaster (${CEMENT_BAG_KG}kg bags)`, (plaster * plMix.cement) / CEMENT_BAG_KG, 'bags', 'cementBag', 1);
-    pushBom('Sand for plaster', plaster * plMix.sand, 'm³', 'sand', 2);
+    pushBom(
+      `Cement for plaster (${CEMENT_BAG_KG}kg bags)`,
+      (plaster * plasterMix.cementKgPerM3) / CEMENT_BAG_KG,
+      'bags',
+      'cementBag',
+      1,
+    );
+    pushBom('Sand for plaster', plaster * plasterMix.sandM3PerM3, 'm³', 'sand', 2);
   }
   if (paintL > 0) pushBom('Emulsion paint', paintL, 'L', 'paint', 1);
   if (tiles > 0) {
@@ -586,7 +646,7 @@ export function buildFinishReports(
     boq,
     bom,
     labour,
-    summary: { area },
+    summary,
     cost: { boq: boqTot, bom: bomTot, labour: labour.totalCost },
   };
 }

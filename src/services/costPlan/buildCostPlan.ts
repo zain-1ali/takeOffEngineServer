@@ -64,7 +64,7 @@ export function classifyWorkCategory(
 
   const key = (line.summaryKey || '').toLowerCase();
   if (key === 'masonry' || key === 'mortar') return 'Masonry';
-  if (key === 'area') return 'Finishes';
+  if (key === 'area' || key === 'screed' || key === 'tiles') return 'Finishes';
   if (key === 'blinding' || key === 'concrete') return 'Concrete';
 
   const el = (line.elementKey || '').toUpperCase();
@@ -358,18 +358,23 @@ export function buildCostPlan(
           const bundle = buildBundleForInstances(elementKey, insts, project);
           if (!bundle) continue;
 
-          if (bundle.kind === 'structural') {
+          if (bundle.kind === 'structural' || bundle.kind === 'finish') {
             for (const line of bundle.boq) {
               if (line.kind !== 'item') continue;
               const row = itemFromReport(line, def.code, elementKey);
               row.workCategory = classifyWorkCategory({
                 ...row,
                 elementKey,
+                summaryKey: /screed/i.test(line.description || '')
+                  ? 'screed'
+                  : /tile/i.test(line.description || '')
+                    ? 'tiles'
+                    : 'area',
               });
               collected.push(row);
             }
           } else {
-            // finish / masonry / earthworks — one priced summary line per summary key
+            // masonry / earthworks — one priced summary line per summary key
             const rates = makeRateAccessors(
               project.rateLib as any,
               DEFAULT_PRICING,
@@ -378,10 +383,12 @@ export function buildCostPlan(
             for (const k of Object.keys(bundle.summary)) {
               if (k === 'mortar') continue;
               const qty = bundle.summary[k];
-              const unit = k === 'area' ? 'm²' : 'm³';
+              const unit = k === 'area' || k === 'tiles' ? 'm²' : 'm³';
               let rateCode = k;
               if (k === 'masonry') rateCode = 'stoneMasonry';
               if (k === 'blinding') rateCode = 'blinding';
+              if (k === 'screed') rateCode = 'floorScreed';
+              if (k === 'tiles') rateCode = 'floorTiling';
               if (k === 'area') {
                 if (elementKey === 'FLOOR_FINISH') rateCode = 'floorFinish';
                 else if (elementKey === 'WALL_FINISH') rateCode = 'wallFinish';

@@ -46,4 +46,43 @@ describe('materialsMix revision gate', () => {
     expect(bom.stoneMortarRatio).toBe('1:3');
     expect(bom.stoneMortarFraction).toBe(0.25);
   });
+
+  it('seeds legacy applied screed/plaster (C20/25) until revision bump', () => {
+    const legacy = ensureMaterialsMixes({
+      concreteClasses: [...DEFAULT_MATERIALS.concreteClasses],
+      defaultConcreteGrade: 'C25/30',
+      stoneMortarRatio: '1:4',
+      stoneMortarFraction: 0.3,
+      blindingThickness: 0.05,
+      screedThickness: 0.05,
+      plasterThickness: 0.015,
+      paintCoats: 2,
+      tileWastage: 0.1,
+      earthworkBulkingFactor: 0.25,
+      verticalBracingRate: 5,
+      soffitPropRate: 12,
+      appliedVerticalBracingRate: 5,
+      appliedSoffitPropRate: 12,
+      concreteMixes: {},
+      appliedConcreteMixes: {},
+      mortarMix: { cementBagsPerM3: 7.2, sandM3PerM3: 1.0 },
+      appliedMortarMix: { cementBagsPerM3: 7.2, sandM3PerM3: 1.0 },
+      appliedStoneMortarRatio: '1:4',
+      appliedStoneMortarFraction: 0.3,
+    } as any);
+    expect(legacy.screedMix.cementKgPerM3).toBe(360);
+    expect(legacy.screedMix.sandM3PerM3).toBe(0.8);
+    expect(legacy.appliedScreedMix.cementKgPerM3).toBe(280);
+    expect(legacy.appliedScreedMix.sandM3PerM3).toBe(0.48);
+    expect(legacy.appliedPlasterMix.cementKgPerM3).toBe(280);
+    expect(legacy.appliedPlasterMix.sandM3PerM3).toBe(0.48);
+    expect(mixesArePending(legacy)).toBe(true);
+    expect(materialsForBom(legacy).screedMix.cementKgPerM3).toBe(280);
+
+    const applied = applyDraftMixesToRevision(legacy);
+    expect(mixesArePending(applied)).toBe(false);
+    expect(materialsForBom(applied).screedMix.cementKgPerM3).toBe(360);
+    expect(materialsForBom(applied).screedMix.sandM3PerM3).toBe(0.8);
+    expect(materialsForBom(applied).plasterMix.sandM3PerM3).toBe(1.0);
+  });
 });

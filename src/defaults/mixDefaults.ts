@@ -15,6 +15,15 @@ export type MortarMix = {
   sandM3PerM3: number;
 };
 
+/**
+ * Screed / plaster BOM coefficients per m³ of finished material
+ * (cement kg + sand m³ — same dimensional style as concrete mixes).
+ */
+export type FinishWetMix = {
+  cementKgPerM3: number;
+  sandM3PerM3: number;
+};
+
 export const SPEC_CONCRETE_MIXES: Record<string, ConcreteMix> = {
   'C15/20': { cement: 220, sand: 0.52, agg: 0.9, water: 185 },
   'C16/20': { cement: 240, sand: 0.5, agg: 0.9, water: 180 },
@@ -30,6 +39,33 @@ export const SPEC_CONCRETE_MIXES: Record<string, ConcreteMix> = {
 export const DEFAULT_MORTAR_MIX: MortarMix = {
   cementBagsPerM3: 7.2,
   sandM3PerM3: 1.0,
+};
+
+/**
+ * Indicative cement:sand floor screed ~1:4 by volume (BS 8204-1 band 1:3–1:4.5).
+ * Verify before procurement.
+ */
+export const DEFAULT_SCREED_MIX: FinishWetMix = {
+  cementKgPerM3: 360,
+  sandM3PerM3: 0.8,
+};
+
+/**
+ * Indicative cement:sand plaster ~1:4–1:5 by volume.
+ * Verify before procurement.
+ */
+export const DEFAULT_PLASTER_MIX: FinishWetMix = {
+  cementKgPerM3: 280,
+  sandM3PerM3: 1.0,
+};
+
+/**
+ * Pre-fix finish BOM used mixFor('C20/25'). Seed applied_* to these so
+ * existing projects do not silently change until revision bump.
+ */
+export const LEGACY_C20_FINISH_MIX: FinishWetMix = {
+  cementKgPerM3: 280,
+  sandM3PerM3: 0.48,
 };
 
 export function defaultMixForGrade(grade: string): ConcreteMix {

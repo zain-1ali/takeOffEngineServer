@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
-import type { ConcreteMix, MortarMix } from '../defaults/mixDefaults';
+import type { ConcreteMix, FinishWetMix, MortarMix } from '../defaults/mixDefaults';
 import {
   DEFAULT_GRID,
   DEFAULT_MATERIALS,
@@ -30,6 +30,10 @@ export type ProjectMaterials = {
   appliedConcreteMixes: Record<string, ConcreteMix>;
   mortarMix: MortarMix;
   appliedMortarMix: MortarMix;
+  screedMix: FinishWetMix;
+  appliedScreedMix: FinishWetMix;
+  plasterMix: FinishWetMix;
+  appliedPlasterMix: FinishWetMix;
   appliedStoneMortarRatio: string;
   appliedStoneMortarFraction: number;
 };
@@ -92,6 +96,14 @@ const mortarMixSchema = new Schema(
   { _id: false },
 );
 
+const finishWetMixSchema = new Schema(
+  {
+    cementKgPerM3: { type: Number, required: true },
+    sandM3PerM3: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
 const materialsSchema = new Schema(
   {
     concreteClasses: { type: [String], default: DEFAULT_MATERIALS.concreteClasses },
@@ -132,6 +144,10 @@ const materialsSchema = new Schema(
     appliedConcreteMixes: { type: Schema.Types.Mixed, default: undefined },
     mortarMix: { type: mortarMixSchema, default: undefined },
     appliedMortarMix: { type: mortarMixSchema, default: undefined },
+    screedMix: { type: finishWetMixSchema, default: undefined },
+    appliedScreedMix: { type: finishWetMixSchema, default: undefined },
+    plasterMix: { type: finishWetMixSchema, default: undefined },
+    appliedPlasterMix: { type: finishWetMixSchema, default: undefined },
     appliedStoneMortarRatio: {
       type: String,
       default: DEFAULT_MATERIALS.appliedStoneMortarRatio,
