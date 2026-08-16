@@ -40,6 +40,7 @@ export type ManualRateSnapshot = {
 
 /** Plain shape used for report building (avoids Mongoose DocumentArray typing). */
 export type ManualBoqReportItem = {
+  floorId?: string | null;
   description: string;
   unit: string;
   quantity: number;

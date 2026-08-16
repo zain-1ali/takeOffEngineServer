@@ -20,6 +20,7 @@ export {
 
 export function toManualBoqReportItem(doc: IManualBoqItem): ManualBoqReportItem {
   return {
+    floorId: doc.floorId ?? null,
     description: doc.description,
     unit: doc.unit,
     quantity: doc.quantity,
