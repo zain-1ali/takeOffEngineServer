@@ -48,8 +48,18 @@ export type {
 } from './beams';
 export { calcSlab, slabConcrete, slabRebar, waffleGrid } from './slabs';
 export type { SlabInput, SlabShape, WaffleGrid } from './slabs';
-export { calcStair, stairConcrete, stairDevelopment, stairRebar } from './stairs';
-export type { StairInput, StairShape, StairDevelopment } from './stairs';
+export { calcStair, stairConcrete, stairDevelopment, stairRebar, normalizeStairSegments, calcFlightQuantities, calcLandingQuantities } from './stairs';
+export type {
+  StairInput,
+  StairShape,
+  StairDevelopment,
+  StairSegment,
+  StairFlightSegment,
+  StairLandingSegment,
+  StairBreakdown,
+  FlightQuantities,
+  LandingQuantities,
+} from './stairs';
 export { calcRamp, rampConcrete, rampDevelopment, rampRebar } from './ramps';
 export type { RampInput, RampShape, RampDevelopment } from './ramps';
 export { calcWall, wallConcrete, wallRebar, wallCenterlineLength } from './walls';

@@ -174,9 +174,20 @@ describe('Reference PDF: Takeoff Studio · Zero QS', () => {
 
     const discrepancies: string[] = [];
 
-    const a1010 = plan.groups.flatMap((g) => g.codes).find((c) => c.code === 'A1010');
-    const b2010 = plan.groups.flatMap((g) => g.codes).find((c) => c.code === 'B2010');
-    const z9990 = plan.groups.flatMap((g) => g.codes).find((c) => c.code === 'Z9990');
+    const sumByUniformat = (code: string) =>
+      round(
+        plan.lines
+          .filter(
+            (l) =>
+              l.kind === 'item' &&
+              (l.uniformatCode || '').toUpperCase() === code,
+          )
+          .reduce((s, l) => s + (l.amount || 0), 0),
+      );
+
+    const a1010Sub = sumByUniformat('A1010');
+    const b2010Sub = sumByUniformat('B2010');
+    const z9990Sub = sumByUniformat('Z9990');
 
     const checkExact = (label: string, actual: number | undefined | null, expected: number) => {
       if (actual !== expected) {
@@ -185,9 +196,9 @@ describe('Reference PDF: Takeoff Studio · Zero QS', () => {
     };
 
     // Exact (no rounding) — surfaces float/lineAmount drift vs PDF printed figures
-    checkExact('A1010 subtotal (exact)', a1010?.subtotal, REF.subtotals.A1010);
-    checkExact('B2010 subtotal (exact)', b2010?.subtotal, REF.subtotals.B2010);
-    checkExact('Z9990 subtotal (exact)', z9990?.subtotal, REF.subtotals.Z9990);
+    checkExact('A1010 items subtotal (exact)', a1010Sub, REF.subtotals.A1010);
+    checkExact('B2010 items subtotal (exact)', b2010Sub, REF.subtotals.B2010);
+    checkExact('Z9990 items subtotal (exact)', z9990Sub, REF.subtotals.Z9990);
     checkExact('grandTotal (exact)', plan.grandTotal, REF.subtotals.elemental);
     checkExact('cascade.elementalCost', plan.cascade.elementalCost, REF.subtotals.elemental);
     checkExact(

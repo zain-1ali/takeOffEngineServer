@@ -2,11 +2,13 @@ import { round } from '../../engines/math';
 import {
   calcEarthwork,
   calcFinish,
+  calcStair,
   calcStone,
   type FinishKind,
   type MaterialsConfig,
   type StructuralCalcResult,
 } from '../../engines';
+import type { StairBreakdown, StairInput } from '../../engines/stairs';
 import {
   DEFAULT_PLASTER_MIX,
   DEFAULT_SCREED_MIX,
@@ -14,6 +16,7 @@ import {
 import type { IInstance } from '../../models/Instance';
 import { flattenInstance } from '../flattenInstance';
 import { ELEMENT_META, type ElementMeta } from './elementMeta';
+import { finishBoqDesc } from './finishBoqDesc';
 import {
   CEMENT_BAG_KG,
   FORMWORK_WASTE,
@@ -338,6 +341,307 @@ export function buildStructuralReports(
   };
 }
 
+/**
+ * Stairs BOQ: Flight / Landing / Stair beam concrete;
+ * formwork = Soffit (m²) + Riser (lm) + Side (lm).
+ * Riser/side lm use Assumption 2 — labeled indicative pending client confirmation.
+ */
+export function buildStairReports(
+  entries: ReportEntry[],
+  rates: RateAccessors,
+  materials?: MaterialsConfig | null,
+): ElementReportBundle {
+  const meta = ELEMENT_META.STAIRS;
+  let units = 0;
+  let totalConcrete = 0;
+  let totalSoffit = 0;
+  let totalVertical = 0;
+  let totalFormwork = 0;
+  let totalSteel = 0;
+  const concreteByGrade: Record<string, number> = {};
+  const steelByDia: Record<string, number> = {};
+  const flightLines: { label: string; qty: number }[] = [];
+  const landingLines: { label: string; qty: number }[] = [];
+  const stairBeamLines: { label: string; qty: number }[] = [];
+  let riserLm = 0;
+  let sideLm = 0;
+  let landingEdgeLm = 0;
+  let soffitM2 = 0;
+
+  entries.forEach(({ flat, inst }) => {
+    const result = calcStair(flat as unknown as StairInput);
+    const n = inst.count || 1;
+    units += n;
+    const grade = String(inst.concreteGrade || flat.concreteGrade || 'C25/30');
+    totalConcrete += result.totalVolumeM3;
+    totalFormwork += result.totalFormworkM2;
+    totalSoffit += result.totalSoffitFormworkM2;
+    totalVertical += result.totalVerticalFormworkM2;
+    totalSteel += result.totalRebarKg;
+    concreteByGrade[grade] =
+      (concreteByGrade[grade] || 0) + result.totalVolumeM3;
+    const bd = result.stairBreakdown as StairBreakdown;
+    for (const fl of bd.flights) {
+      flightLines.push({ label: fl.label, qty: round(fl.volumeM3 * n) });
+      riserLm += fl.riserLm * n;
+      sideLm += fl.sideLm * n;
+      soffitM2 += fl.soffitM2 * n;
+    }
+    for (const ld of bd.landings) {
+      landingLines.push({ label: ld.label, qty: round(ld.volumeM3 * n) });
+      landingEdgeLm += ld.edgeLm * n;
+      soffitM2 += (ld.soffitM2 + ld.stairBeamSoffitM2) * n;
+      if (ld.stairBeamVolumeM3 > 0) {
+        stairBeamLines.push({
+          label: ld.label,
+          qty: round(ld.stairBeamVolumeM3 * n),
+        });
+      }
+    }
+    for (const g of result.perUnit.rebar.groups) {
+      const key = String(g.diameterMm);
+      steelByDia[key] = (steelByDia[key] || 0) + g.weightKg * n;
+    }
+  });
+
+  riserLm = round(riserLm);
+  sideLm = round(sideLm);
+  landingEdgeLm = round(landingEdgeLm);
+  soffitM2 = round(soffitM2);
+
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  let ai = 0;
+  const push = (
+    description: string,
+    qty: number,
+    unit: string,
+    rate: number | null,
+    dec = 2,
+  ) => {
+    if (!(qty > 0)) return;
+    ai++;
+    boq.push(item(`A${ai}`, description, qty, unit, rate, { dec }));
+    const a = lineAmount(qty, rate);
+    if (a != null) boqTot += a;
+  };
+
+  boq.push(group('A — In-situ concrete'));
+  const concRate = rates.boqRate('concrete');
+  for (const fl of flightLines) {
+    push(
+      `Reinforced in-situ concrete in stair flights — ${fl.label}; waist slab and steps`,
+      fl.qty,
+      'm³',
+      concRate,
+    );
+  }
+  for (const ld of landingLines) {
+    push(
+      `Reinforced in-situ concrete in stair landing — ${ld.label}`,
+      ld.qty,
+      'm³',
+      concRate,
+    );
+  }
+  for (const sb of stairBeamLines) {
+    push(
+      `Reinforced in-situ concrete in stair beam at ${sb.label}`,
+      sb.qty,
+      'm³',
+      concRate,
+    );
+  }
+
+  boq.push(group('B — Formwork'));
+  const fwRate = rates.boqRate('formwork');
+  const fwLmRate = rates.boqRate('formworkLm') ?? fwRate;
+  push(
+    'Formwork to soffits of stair flights and landings; including striking',
+    soffitM2,
+    'm²',
+    fwRate,
+  );
+  push(
+    'Formwork to risers of stairs (lm) — indicative, verify before procurement',
+    riserLm,
+    'lm',
+    fwLmRate,
+  );
+  push(
+    'Formwork to exposed sides of stair flights (lm) — indicative, verify before procurement',
+    sideLm,
+    'lm',
+    fwLmRate,
+  );
+  if (landingEdgeLm > 0) {
+    push(
+      'Formwork to edges of stair landings (lm) — indicative, verify before procurement',
+      landingEdgeLm,
+      'lm',
+      fwLmRate,
+    );
+  }
+
+  boq.push(group('C — Reinforcement / steel'));
+  let ci = 0;
+  Object.keys(steelByDia)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .forEach((dia) => {
+      const kg = steelByDia[String(dia)];
+      if (!(kg > 0)) return;
+      ci++;
+      const t = kg / 1000;
+      const rate = rates.boqRate('rebar');
+      boq.push(
+        item(
+          `C${ci}`,
+          `High-yield reinforcement bars, dia. ${dia} mm, cut and fixed in stairs`,
+          t,
+          't',
+          rate,
+          { isRebar: true, dec: 3 },
+        ),
+      );
+      const a = lineAmount(t, rate);
+      if (a != null) boqTot += a;
+    });
+
+  boq.push(total('Element total (excl. prelims & OH&P)', round(boqTot)));
+  boqTot = round(boqTot);
+
+  const labour = structuralLabour(
+    totalConcrete,
+    totalFormwork,
+    totalSteel,
+    rates,
+  );
+
+  // BOM via materials from grade totals (same as structural)
+  const bom: ReportLine[] = [];
+  let bomTot = 0;
+  let cement = 0;
+  let sand = 0;
+  let aggr = 0;
+  let water = 0;
+  Object.entries(concreteByGrade).forEach(([grade, vol]) => {
+    const m = mixFor(grade, materials as any);
+    cement += vol * m.cement;
+    sand += vol * m.sand;
+    aggr += vol * m.agg;
+    water += vol * m.water;
+  });
+  const pushBom = (
+    ref: string,
+    desc: string,
+    qty: number,
+    unit: string,
+    code: string,
+    dec: number,
+    isRebar = false,
+  ) => {
+    const rate = rates.matRate(code);
+    bom.push(item(ref, desc, qty, unit, rate, { dec, isRebar }));
+    const a = lineAmount(qty, rate);
+    if (a != null) bomTot += a;
+  };
+  bom.push(group('A — Concrete materials'));
+  pushBom(
+    'A1',
+    `Cement (${CEMENT_BAG_KG}kg bags)`,
+    cement / CEMENT_BAG_KG,
+    'bags',
+    'cementBag',
+    1,
+  );
+  pushBom('A2', 'Sand (fine aggregate)', sand, 'm³', 'sand', 2);
+  pushBom('A3', 'Coarse aggregate', aggr, 'm³', 'aggregate', 2);
+  pushBom('A4', 'Water', water, 'L', 'water', 0);
+  const sheets = Math.ceil(
+    (totalFormwork * (1 + FORMWORK_WASTE)) / PLY_SHEET_M2,
+  );
+  bom.push(group('B — Formwork materials'));
+  pushBom(
+    'B1',
+    'Plywood formwork sheets (2440×1220mm), incl. 15% wastage',
+    sheets,
+    'nos',
+    'plywoodSheet',
+    0,
+  );
+  const bracingRate =
+    (materials as { verticalBracingRate?: number } | null | undefined)
+      ?.verticalBracingRate ?? 0;
+  const propRate =
+    (materials as { soffitPropRate?: number } | null | undefined)
+      ?.soffitPropRate ?? 0;
+  const bracingKg = round(totalVertical * bracingRate, 2);
+  const propKg = round(totalSoffit * propRate, 2);
+  if (bracingKg > 0) {
+    pushBom(
+      'B2',
+      'Vertical formwork bracing (timber/props/stakes) — indicative',
+      bracingKg,
+      'kg',
+      'formworkBracingKg',
+      2,
+    );
+  }
+  if (propKg > 0) {
+    pushBom(
+      'B3',
+      'Soffit falsework / props — indicative',
+      propKg,
+      'kg',
+      'formworkSoffitPropKg',
+      2,
+    );
+  }
+  bom.push(group('C — Reinforcement materials'));
+  let cbi = 0;
+  let totalSteelKg = 0;
+  Object.keys(steelByDia)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .forEach((dia) => {
+      cbi++;
+      const kg = steelByDia[String(dia)];
+      totalSteelKg += kg;
+      pushBom(`C${cbi}`, `Reinforcement bars, H${dia}`, kg, 'kg', 'rebarKg', 2, true);
+    });
+  pushBom(
+    `C${cbi + 1}`,
+    'Binding/tying wire',
+    totalSteelKg * TIE_WIRE,
+    'kg',
+    'tieWire',
+    2,
+    true,
+  );
+  bom.push(total('Materials total', bomTot));
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'structural',
+    units,
+    boq,
+    bom,
+    labour,
+    summary: {
+      concrete: round(totalConcrete),
+      formwork: soffitM2,
+      steel: round(totalSteel),
+      riserLm,
+      sideLm,
+    },
+    cost: { boq: boqTot, bom: bomTot, labour: labour.totalCost },
+  };
+}
+
 export function buildStoneReports(
   entries: ReportEntry[],
   materials: MaterialsConfig & { stoneMortarRatio?: string },
@@ -530,23 +834,35 @@ export function buildFinishReports(
     Object.keys(specs).forEach((spec) => {
       const q = specs[spec];
       roomArea += q.area;
-      const prefix = room ? `${meta.label} — ${room} — ${spec}` : `${meta.label} — ${spec}`;
+      const screedThk =
+        (materials as { screedThickness?: number }).screedThickness ?? 0.05;
       // Multi-material floor (screed + tiles): two independent BOQ lines
       if (finishKind === 'FLOOR' && q.screed > 0 && q.tiles > 0) {
         roomAmt += pushBoqItem(
-          `${prefix} — Screed`,
+          finishBoqDesc('FLOOR', spec, {
+            part: 'screed',
+            screedThicknessM: screedThk,
+          }),
           round(q.screed),
           'm³',
           screedRate,
         );
         roomAmt += pushBoqItem(
-          `${prefix} — Tiles`,
+          finishBoqDesc('FLOOR', spec, { part: 'tiles' }),
           round(q.tiles),
           'm²',
           tilingRate,
         );
       } else {
-        roomAmt += pushBoqItem(prefix, round(q.area), 'm²', areaRate);
+        roomAmt += pushBoqItem(
+          finishBoqDesc(finishKind, spec, {
+            part: 'area',
+            screedThicknessM: screedThk,
+          }),
+          round(q.area),
+          'm²',
+          areaRate,
+        );
       }
     });
     if (room) {

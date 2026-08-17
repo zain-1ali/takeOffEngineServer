@@ -78,6 +78,8 @@ export const DEFAULT_PRICING = {
   boq: {
     concrete: 145,
     formwork: 32,
+    /** Linear formwork (stair risers/sides) — indicative; verify before procurement. */
+    formworkLm: 18,
     rebar: 1450,
     stoneMasonry: 55,
     blinding: 110,

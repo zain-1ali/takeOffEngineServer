@@ -142,9 +142,9 @@ export const ELEMENT_META: Record<string, ElementMeta> = {
     label: 'Stairs',
     kind: 'structural',
     concreteDesc: (g) =>
-      `Reinforced in-situ concrete, grade ${g}, in stairs; including waist slabs and steps`,
+      `Reinforced in-situ concrete, grade ${g}, in stair flights, landings and stair beams`,
     formworkDesc:
-      'Formwork to stair soffits, risers and exposed sides; including striking',
+      'Formwork to stair soffits (m²); risers and exposed sides (lm, indicative — verify before procurement)',
     rebarDesc: (d) =>
       `High-yield reinforcement bars, dia. ${d} mm, cut and fixed in stairs`,
   },

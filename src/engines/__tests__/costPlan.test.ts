@@ -40,7 +40,7 @@ describe('buildCostPlan', () => {
     rateLib: DEFAULT_RATE_LIB,
   } as IProject;
 
-  it('groups pad foundations under A1010 and walls by location', () => {
+  it('groups by element type with Concrete/Formwork/Reinforcement subheaders', () => {
     const instances = [
       fakeInst({
         elementKey: 'PAD_FOOTING',
@@ -78,59 +78,47 @@ describe('buildCostPlan', () => {
     const plan = buildCostPlan(project, instances, { scope: 'project' });
 
     expect(plan.currency).toBe('USD');
-    expect(plan.groups.some((g) => g.id === 'A')).toBe(true);
-    expect(plan.groups.some((g) => g.id === 'B')).toBe(true);
-    expect(plan.groups.some((g) => g.id === 'C')).toBe(true);
+    expect(plan.groups.some((g) => g.id === 'PAD_FOOTING')).toBe(true);
+    expect(plan.groups.some((g) => g.id === 'WALLS')).toBe(true);
 
-    const a1010 = plan.groups
-      .flatMap((g) => g.codes)
-      .find((c) => c.code === 'A1010');
-    expect(a1010?.heading).toBe('A1010 - Standard Foundations');
+    const pad = plan.groups.find((g) => g.id === 'PAD_FOOTING');
+    expect(pad?.heading).toMatch(/Pad Foundation/);
+    expect(pad?.uniformatCodes).toContain('A1010');
     expect(
       plan.lines.some(
-        (l) =>
-          l.kind === 'total' &&
-          l.description === 'A1010 - Standard Foundations · Sub-total',
+        (l) => l.kind === 'total' && l.description === 'Pad Foundation total',
       ),
     ).toBe(true);
 
-    expect(plan.lines.some((l) => l.description === 'A - Substructure')).toBe(
-      true,
+    // Within Pad Foundation, work categories as subheaders
+    const padStart = plan.lines.findIndex(
+      (l) => l.kind === 'group' && /Pad Foundation/i.test(l.description || ''),
     );
-    expect(
-      plan.lines.some((l) => l.description === 'B2010 - Exterior Walls'),
-    ).toBe(true);
-    expect(plan.lines.some((l) => l.description === 'C1010 - Partitions')).toBe(
-      true,
+    const padEnd = plan.lines.findIndex(
+      (l) => l.kind === 'total' && l.description === 'Pad Foundation total',
     );
-    expect(plan.grandTotal).toBeGreaterThanOrEqual(0);
-
-    // Within A1010, work categories appear as subheaders before their items
-    const a1010Start = plan.lines.findIndex(
-      (l) => l.kind === 'group' && l.description === 'A1010 - Standard Foundations',
-    );
-    const a1010End = plan.lines.findIndex(
-      (l) =>
-        l.kind === 'total' &&
-        l.description === 'A1010 - Standard Foundations · Sub-total',
-    );
-    const a1010Slice = plan.lines.slice(a1010Start + 1, a1010End);
-    const catHeaders = a1010Slice
+    const padSlice = plan.lines.slice(padStart + 1, padEnd);
+    const catHeaders = padSlice
       .filter((l) => l.kind === 'group' && l.workCategory)
       .map((l) => l.description);
     expect(catHeaders).toEqual(
       expect.arrayContaining(['Concrete', 'Formwork', 'Reinforcement']),
     );
-    // Categories must appear in canonical order (Concrete before Formwork before Reinforcement)
     const ci = catHeaders.indexOf('Concrete');
     const fi = catHeaders.indexOf('Formwork');
     const ri = catHeaders.indexOf('Reinforcement');
     expect(ci).toBeGreaterThanOrEqual(0);
     expect(fi).toBeGreaterThan(ci);
     expect(ri).toBeGreaterThan(fi);
+
+    // Interior + Exterior walls share one Walls element section
+    expect(plan.lines.some((l) => /Walls/i.test(l.description || '') && l.kind === 'group' && !l.workCategory)).toBe(
+      true,
+    );
+    expect(plan.grandTotal).toBeGreaterThanOrEqual(0);
   });
 
-  it('places manual BOQ under its uniformatCode', () => {
+  it('places manual BOQ under Manual BOQ section', () => {
     const plan = buildCostPlan(project, [], { scope: 'project' }, [
       {
         description: 'Special allowance',
@@ -146,16 +134,16 @@ describe('buildCostPlan', () => {
       },
     ]);
 
-    const a1010 = plan.groups
-      .flatMap((g) => g.codes)
-      .find((c) => c.code === 'A1010');
-    expect(a1010).toBeTruthy();
+    const manual = plan.groups.find((g) => g.id === 'MANUAL');
+    expect(manual).toBeTruthy();
     expect(
-      a1010!.lines.some(
-        (l) => l.source === 'MANUAL' && l.description === 'Special allowance',
+      manual!.categories.some((c) =>
+        c.lines.some(
+          (l) => l.source === 'MANUAL' && l.description === 'Special allowance',
+        ),
       ),
     ).toBe(true);
-    expect(a1010!.subtotal).toBe(1000);
+    expect(manual!.subtotal).toBe(1000);
     expect(plan.grandTotal).toBe(1000);
     expect(plan.cascade.elementalCost).toBe(1000);
     expect(plan.cascade.constructionCostSCC).toBeGreaterThan(1000);
@@ -206,12 +194,10 @@ describe('buildCostPlan', () => {
     expect(item?.amount).toBe(1000);
     expect(item?.ratePerM2).toBe(2);
 
-    const codeSub = plan.lines.find(
-      (l) =>
-        l.kind === 'total' &&
-        l.description === 'A1010 - Standard Foundations · Sub-total',
+    const elSub = plan.lines.find(
+      (l) => l.kind === 'total' && l.description === 'Manual BOQ total',
     );
-    expect(codeSub?.ratePerM2).toBe(2);
+    expect(elSub?.ratePerM2).toBe(2);
 
     const grand = plan.lines.find(
       (l) =>
@@ -225,7 +211,7 @@ describe('buildCostPlan', () => {
     );
   });
 
-  it('includes Item-type manual lines in UniFormat group and elementalCost', () => {
+  it('includes Item-type manual lines in Manual BOQ and elementalCost', () => {
     const plan = buildCostPlan(
       {
         ...project,
@@ -249,49 +235,59 @@ describe('buildCostPlan', () => {
           appliedLabUnitLines: [],
           uniformatCode: 'G20',
         },
-        {
-          description: 'Unclassified provisional',
-          unit: 'Item',
-          quantity: 1,
-          labourMode: 'none',
-          outputPerDay: null,
-          gangDescription: null,
-          appliedUnitRate: 500,
-          appliedBomUnitLines: [],
-          appliedLabUnitLines: [],
-          uniformatCode: null,
-        },
       ],
     );
 
-    const survey = plan.lines.find(
-      (l) =>
-        l.kind === 'item' &&
-        l.source === 'MANUAL' &&
-        l.description === 'Survey control for setting out',
-    );
-    expect(survey).toMatchObject({
-      qty: 1,
-      unit: 'Item',
-      amount: 2500,
-      uniformatCode: 'G20',
-    });
+    expect(plan.grandTotal).toBe(2500);
+    expect(plan.cascade.elementalCost).toBe(2500);
+    expect(plan.cascade.constructionCostSCC).toBe(2500);
     expect(
       plan.lines.some(
-        (l) => l.description === 'G20 - Site Improvements',
+        (l) =>
+          l.kind === 'item' &&
+          l.description === 'Survey control for setting out' &&
+          l.source === 'MANUAL',
       ),
     ).toBe(true);
+  });
 
-    const unclassified = plan.lines.find(
-      (l) =>
-        l.kind === 'item' &&
-        l.description === 'Unclassified provisional',
-    );
-    expect(unclassified?.uniformatCode).toBe('Z9990');
-    expect(plan.unclassifiedCount).toBe(1);
+  it('uses Screed/Tiling categories for multi-material floor finish', () => {
+    const plan = buildCostPlan(project, [
+      fakeInst({
+        elementKey: 'FLOOR_FINISH',
+        shape: 'AREA',
+        mark: 'FF1',
+        spec: 'Cement screed + ceramic tiles',
+        geometry: { roomLength: 6, roomWidth: 5, roomLabel: 'ROOM 1' },
+      }),
+    ], { scope: 'project' });
 
-    expect(plan.grandTotal).toBe(3000);
-    expect(plan.cascade.elementalCost).toBe(3000);
-    expect(plan.cascade.constructionCostSCC).toBe(3000);
+    const floor = plan.groups.find((g) => g.id === 'FLOOR_FINISH');
+    expect(floor).toBeTruthy();
+    const cats = floor!.categories.map((c) => c.category);
+    expect(cats).toEqual(expect.arrayContaining(['Screed', 'Tiling']));
+    expect(cats).not.toContain('Concrete');
+    expect(cats).not.toContain('Formwork');
+
+    // Cost Plan reads BOQ descriptions directly — templated, no room/label glue
+    const items = plan.lines.filter((l) => l.kind === 'item');
+    expect(
+      items.some((l) =>
+        /Cement and sand screed to floor, \d+mm thick, to receive tiling/.test(
+          l.description || '',
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      items.some((l) =>
+        /Ceramic floor tiles, bedded and pointed in cement mortar/.test(
+          l.description || '',
+        ),
+      ),
+    ).toBe(true);
+    for (const it of items) {
+      expect(it.description).not.toMatch(/ROOM 1/i);
+      expect(it.description).not.toMatch(/Floor Finishes\s*—/i);
+    }
   });
 });

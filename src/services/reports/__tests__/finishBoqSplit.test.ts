@@ -63,10 +63,14 @@ describe('buildFinishReports multi-material BOQ', () => {
 
     const items = bundle.boq.filter((l) => l.kind === 'item');
     expect(items).toHaveLength(2);
-    expect(items[0].description).toMatch(/Screed/);
+    expect(items[0].description).toBe(
+      'Cement and sand screed to floor, 50mm thick, to receive tiling',
+    );
     expect(items[0].unit).toBe('m³');
     expect(items[0].qty).toBe(calc.totalScreedM3);
-    expect(items[1].description).toMatch(/Tiles/);
+    expect(items[1].description).toBe(
+      'Ceramic floor tiles, bedded and pointed in cement mortar',
+    );
     expect(items[1].unit).toBe('m²');
     expect(items[1].qty).toBe(calc.totalTilesM2);
 
@@ -125,7 +129,85 @@ describe('buildFinishReports multi-material BOQ', () => {
     const items = bundle.boq.filter((l) => l.kind === 'item');
     expect(items).toHaveLength(1);
     expect(items[0].unit).toBe('m²');
+    expect(items[0].description).toBe(
+      'Granolithic screed to floor, 50mm thick, trowelled smooth',
+    );
     expect(bundle.summary).toEqual({ area: 12 });
+  });
+
+  it('keeps room as group header only — not in item description', () => {
+    const inst = fakeInst({
+      spec: 'Cement screed + ceramic tiles',
+      roomLength: 6,
+      roomWidth: 5,
+      roomLabel: 'ROOM 1',
+    });
+    const bundle = buildFinishReports(
+      'FLOOR_FINISH',
+      'FLOOR',
+      makeEntries([inst]),
+      materials,
+      rates,
+    );
+    expect(
+      bundle.boq.some(
+        (l) => l.kind === 'group' && l.description === 'Room — ROOM 1',
+      ),
+    ).toBe(true);
+    const items = bundle.boq.filter((l) => l.kind === 'item');
+    for (const it of items) {
+      expect(it.description).not.toMatch(/ROOM 1/i);
+      expect(it.description).not.toMatch(/Floor Finishes\s*—/i);
+    }
+  });
+
+  it('wall and ceiling use trade templates without element/room prefix', () => {
+    const wall = {
+      _id: new Types.ObjectId(),
+      projectId: new Types.ObjectId(),
+      floorId: 'GF',
+      elementKey: 'WALL_FINISH',
+      shape: 'AREA',
+      mark: 'WF1',
+      count: 1,
+      geometry: { wallLength: 10, wallHeight: 3, roomLabel: 'Lobby' },
+      concreteGrade: null,
+      reinforcement: null,
+      spec: 'Cement/sand plaster + emulsion paint',
+      location: null,
+    } as unknown as IInstance;
+
+    const wallBundle = buildFinishReports(
+      'WALL_FINISH',
+      'WALL',
+      makeEntries([wall]),
+      materials,
+      rates,
+    );
+    const wallItem = wallBundle.boq.find((l) => l.kind === 'item');
+    expect(wallItem?.description).toBe(
+      'Cement and sand plaster to walls, including emulsion paint finish',
+    );
+    expect(wallItem?.description).not.toMatch(/Lobby|Wall Finishes/i);
+
+    const ceil = {
+      ...wall,
+      elementKey: 'CEILING_FINISH',
+      mark: 'CF1',
+      geometry: { roomLength: 5, roomWidth: 4, roomLabel: 'Office' },
+      spec: 'Suspended grid (mineral tile)',
+    } as unknown as IInstance;
+
+    const ceilBundle = buildFinishReports(
+      'CEILING_FINISH',
+      'CEILING',
+      makeEntries([ceil]),
+      materials,
+      rates,
+    );
+    const ceilItem = ceilBundle.boq.find((l) => l.kind === 'item');
+    expect(ceilItem?.description).toMatch(/Suspended ceiling grid/i);
+    expect(ceilItem?.description).not.toMatch(/Office|Ceiling Finishes/i);
   });
 
   it('screed BOM uses screedMix (10.8 bags / 1.20 m³ sand for 1.5 m³ @ 360/0.8)', () => {

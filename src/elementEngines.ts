@@ -22,6 +22,7 @@ import {
   buildEarthworkReports,
   buildStoneReports,
   buildStructuralReports,
+  buildStairReports,
   type ReportEntry,
   type StructuralCalculator,
 } from './services/reports/builders';
@@ -104,7 +105,14 @@ export const ELEMENT_ENGINES: Record<string, ElementEngine> = {
   COLUMNS: structuralEngine('COLUMNS', calcColumn),
   BEAMS: structuralEngine('BEAMS', calcBeam),
   SLABS: structuralEngine('SLABS', calcSlab),
-  STAIRS: structuralEngine('STAIRS', calcStair),
+  STAIRS: {
+    key: 'STAIRS',
+    label: ELEMENT_META.STAIRS.label,
+    reportKind: 'structural',
+    calc: (flat) => calcStair(flat as any),
+    buildReports: (entries, materials, rates) =>
+      buildStairReports(entries, rates, materials),
+  },
   RAMPS: structuralEngine('RAMPS', calcRamp),
   STONE_STRIP: {
     key: 'STONE_STRIP',
