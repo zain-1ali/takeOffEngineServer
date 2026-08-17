@@ -14,13 +14,26 @@ declare global {
   }
 }
 
+/** Cookie (preferred when same-site) or Authorization: Bearer <jwt>. */
+function extractToken(req: Request): string | undefined {
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  if (typeof cookieToken === 'string' && cookieToken) return cookieToken;
+
+  const header = req.headers.authorization;
+  if (typeof header === 'string' && header.toLowerCase().startsWith('bearer ')) {
+    const bearer = header.slice(7).trim();
+    if (bearer) return bearer;
+  }
+  return undefined;
+}
+
 export async function requireAuth(
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
   try {
-    const token = req.cookies?.[COOKIE_NAME];
+    const token = extractToken(req);
     if (!token) {
       res.status(401).json({ error: 'Authentication required' });
       return;

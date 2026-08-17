@@ -12,7 +12,20 @@ dotenv.config();
 
 const PORT = Number(process.env.PORT) || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/takeoff-engine';
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+
+/** Comma-separated allowlist, e.g. https://app.vercel.app,http://localhost:5173 */
+function parseCorsOrigins(): string[] {
+  const raw =
+    process.env.FRONTEND_ORIGINS ||
+    process.env.FRONTEND_ORIGIN ||
+    'http://localhost:5173';
+  return raw
+    .split(',')
+    .map((s) => s.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+}
+
+const CORS_ORIGINS = parseCorsOrigins();
 
 async function start() {
   if (!process.env.JWT_SECRET) {
@@ -25,8 +38,21 @@ async function start() {
 
   app.use(
     cors({
-      origin: FRONTEND_ORIGIN,
+      origin(origin, cb) {
+        // Same-origin / server-to-server / curl (no Origin header)
+        if (!origin) {
+          cb(null, true);
+          return;
+        }
+        const normalized = origin.replace(/\/$/, '');
+        if (CORS_ORIGINS.includes(normalized)) {
+          cb(null, true);
+          return;
+        }
+        cb(null, false);
+      },
       credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization'],
     }),
   );
   app.use(express.json({ limit: '2mb' }));
@@ -60,7 +86,9 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
-    console.log(`CORS origin: ${FRONTEND_ORIGIN} (credentials: true)`);
+    console.log(
+      `CORS origins: ${CORS_ORIGINS.join(', ') || '(none)'} (credentials: true)`,
+    );
   });
 }
 

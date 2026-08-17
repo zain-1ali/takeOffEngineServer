@@ -50,7 +50,7 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
     });
     setAuthCookie(res, token);
 
-    res.status(201).json({ user: publicUser(user) });
+    res.status(201).json({ user: publicUser(user), token });
   } catch (err) {
     next(err);
   }
@@ -84,13 +84,14 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     });
     setAuthCookie(res, token);
 
-    res.json({ user: publicUser(user) });
+    res.json({ user: publicUser(user), token });
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/logout', requireAuth, (_req: Request, res: Response) => {
+/** Always clears cookie; auth optional so logout works when cookies were blocked. */
+router.post('/logout', (_req: Request, res: Response) => {
   clearAuthCookie(res);
   res.json({ ok: true });
 });
