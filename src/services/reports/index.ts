@@ -72,14 +72,24 @@ function bomMaterialItems(bundle: ElementReportBundle): ReportLine[] {
 }
 
 function rateCodeForSummaryKey(elementKey: string, key: string): string {
-  if (key === 'masonry') return 'stoneMasonry';
+  if (key === 'masonry') {
+    return elementKey === 'MASONRY' ? 'masonryWall' : 'stoneMasonry';
+  }
   if (key === 'blinding') return 'blinding';
   if (key === 'screed') return 'floorScreed';
   if (key === 'tiles') return 'floorTiling';
   if (key === 'area') {
     if (elementKey === 'FLOOR_FINISH') return 'floorFinish';
     if (elementKey === 'WALL_FINISH') return 'wallFinish';
+    if (elementKey === 'MASONRY') return 'masonryWall';
+    if (elementKey === 'SKIRTING') return 'skirting';
+    if (elementKey === 'DOORS_WINDOWS') return 'doorsWindows';
     return 'ceilingFinish';
+  }
+  if (key === 'length' || key === 'nos' || key === 'perimeter') {
+    if (elementKey === 'SKIRTING') return 'skirting';
+    if (elementKey === 'DOORS_WINDOWS') return 'doorsWindows';
+    if (elementKey === 'LINTELS') return 'lintels';
   }
   return key;
 }
@@ -100,7 +110,7 @@ function consolidateBoq(
       let n = 0;
       let elTot = 0;
 
-      if (be.kind === 'structural' || be.kind === 'finish') {
+      if (be.kind === 'structural' || be.kind === 'finish' || be.kind === 'mep') {
         be.boq.forEach((line) => {
           if (line.kind !== 'item') return;
           n++;
@@ -290,7 +300,7 @@ function consolidateBom(
     .slice()
     .sort((a, b) => a.num - b.num)
     .forEach((be) => {
-      if (be.kind === 'structural' || be.kind === 'masonry' || be.kind === 'finish') return;
+      if (be.kind === 'structural' || be.kind === 'masonry' || be.kind === 'finish' || be.kind === 'mep') return;
       const materialLines = bomMaterialItems(be);
       if (!materialLines.length) return;
       lines.push(group(`${be.num}${be.suffix || ''}. ${be.label} — materials`));

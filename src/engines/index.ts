@@ -66,6 +66,30 @@ export { calcWall, wallConcrete, wallRebar, wallCenterlineLength } from './walls
 export { calcStone, stoneMasonryVolume } from './stoneStrip';
 export { calcFinish, finishNetArea } from './finishes';
 export type { FinishKind, FinishInput, FinishCalcResult } from './finishes';
+export { calcSkirting, doorWidthDeductionLm, skirtingGrossPerimeter } from './skirting';
+export type { SkirtingInput, SkirtingCalcResult } from './skirting';
+export { calcMasonry, masonryNetFaceM2 } from './masonry';
+export type { MasonryInput, MasonryCalcResult } from './masonry';
+export { calcDoorsWindows } from './doorsWindows';
+export type { DoorsWindowsInput, DoorsWindowsCalcResult } from './doorsWindows';
+export { calcLintel, lintelConcrete, lintelLengthM, lintelRebar } from './lintels';
+export type { LintelInput, LintelShape } from './lintels';
+export { calcDuct, ductSurfaceM2, ductJoints } from './ducts';
+export type { DuctInput, DuctCalcResult, DuctSection } from './ducts';
+export { calcPipe } from './pipes';
+export type { PipeInput, PipeCalcResult } from './pipes';
+export { calcElectrical } from './electrical';
+export type {
+  ElectricalInput,
+  ElectricalCalcResult,
+  ElectricalShape,
+} from './electrical';
+export {
+  calcDuctFitting,
+  resolveEquivalentLength,
+  DEFAULT_EQ_LENGTH,
+} from './ductFittings';
+export type { DuctFittingInput, DuctFittingCalcResult } from './ductFittings';
 export { analyseRate, libIndex, methodByCode } from './rateAnalysis';
 export type { RateLib, AnalysedRate } from './rateAnalysis';
 export type * from './types';

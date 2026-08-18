@@ -2,13 +2,22 @@ import { round } from '../../engines/math';
 import {
   calcEarthwork,
   calcFinish,
+  calcDoorsWindows,
+  calcMasonry,
+  calcSkirting,
   calcStair,
   calcStone,
+  calcDuct,
+  calcPipe,
+  calcElectrical,
+  calcDuctFitting,
   type FinishKind,
   type MaterialsConfig,
   type StructuralCalcResult,
 } from '../../engines';
 import type { StairBreakdown, StairInput } from '../../engines/stairs';
+import type { LintelInput } from '../../engines/lintels';
+import { calcLintel } from '../../engines/lintels';
 import {
   DEFAULT_PLASTER_MIX,
   DEFAULT_SCREED_MIX,
@@ -1045,6 +1054,716 @@ export function buildEarthworkReports(
       bom: 0,
       labour: labour.totalCost,
     },
+  };
+}
+
+export function buildSkirtingReports(
+  entries: ReportEntry[],
+  rates: RateAccessors,
+): ElementReportBundle {
+  const meta = ELEMENT_META.SKIRTING;
+  let length = 0;
+  let units = 0;
+  const byRoomSpec: Record<string, Record<string, number>> = {};
+
+  entries.forEach(({ flat, inst }) => {
+    const c = calcSkirting(flat as any);
+    length += c.totalLengthM;
+    units += inst.count || 1;
+    const spec = String(inst.spec || flat.spec || 'Skirting');
+    const roomRaw =
+      flat.roomLabel ??
+      (inst as { geometry?: { roomLabel?: unknown } }).geometry?.roomLabel;
+    const room =
+      typeof roomRaw === 'string' && roomRaw.trim() ? roomRaw.trim() : '';
+    if (!byRoomSpec[room]) byRoomSpec[room] = {};
+    byRoomSpec[room][spec] = (byRoomSpec[room][spec] || 0) + c.totalLengthM;
+  });
+  length = round(length);
+  const rate = rates.boqRate('skirting');
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  boq.push(group(`A — ${meta.label}`));
+  let i = 0;
+  const roomKeys = Object.keys(byRoomSpec).sort((a, b) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  });
+  roomKeys.forEach((room) => {
+    if (room) boq.push(group(`Room — ${room}`));
+    Object.entries(byRoomSpec[room]).forEach(([spec, qty]) => {
+      if (!(qty > 0)) return;
+      i++;
+      boq.push(
+        item(
+          `A${i}`,
+          `${spec} skirting / baseboard; fixed`,
+          round(qty),
+          'm',
+          rate,
+        ),
+      );
+      const a = lineAmount(qty, rate);
+      if (a != null) boqTot += a;
+    });
+  });
+  boq.push(total('Element total (excl. prelims & OH&P)', round(boqTot)));
+
+  const days = Math.ceil(length / 40) || (length > 0 ? 1 : 0);
+  const labour =
+    length > 0
+      ? labourBundle(
+          [
+            {
+              ref: 'L1',
+              activity: 'Fix skirting',
+              qty: length,
+              unit: 'm',
+              outputRate: '40 m/day',
+              gang: '1 Carpenter + 1 Labourer',
+              days,
+            },
+          ],
+          { Carpenter: days, Labourer: days },
+          rates.labRate,
+        )
+      : labourBundle([], {}, rates.labRate);
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'finish',
+    units,
+    boq,
+    bom: [],
+    labour,
+    summary: { length },
+    cost: { boq: boqTot, bom: 0, labour: labour.totalCost },
+  };
+}
+
+export function buildMasonryWallReports(
+  entries: ReportEntry[],
+  materials: MaterialsConfig & { stoneMortarRatio?: string },
+  rates: RateAccessors,
+): ElementReportBundle {
+  const meta = ELEMENT_META.MASONRY;
+  let area = 0;
+  let mas = 0;
+  let mortar = 0;
+  let units = 0;
+  entries.forEach(({ flat, inst }) => {
+    const c = calcMasonry(flat as any, materials);
+    area += c.totalAreaM2;
+    mas += c.totalMasonryM3;
+    mortar += c.totalMortarM3;
+    units += inst.count || 1;
+  });
+  area = round(area);
+  mas = round(mas);
+  mortar = round(mortar);
+
+  const mortarMix =
+    (materials as { mortarMix?: { cementBagsPerM3: number; sandM3PerM3: number } })
+      .mortarMix || { cementBagsPerM3: 7.2, sandM3PerM3: 1.0 };
+  const cementBags = mortar * mortarMix.cementBagsPerM3;
+  const sand = mortar * mortarMix.sandM3PerM3;
+  const ratio = materials.stoneMortarRatio || '1:4';
+
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  boq.push(group('A — Masonry / infill'));
+  {
+    const rate = rates.boqRate('masonryWall');
+    boq.push(
+      item(
+        'A1',
+        `Block / brick masonry in cement mortar (${ratio}); measured as net face area`,
+        area,
+        'm²',
+        rate,
+      ),
+    );
+    const a = lineAmount(area, rate);
+    if (a != null) boqTot += a;
+  }
+  boq.push(total('Masonry total', boqTot));
+
+  const bom: ReportLine[] = [];
+  let bomTot = 0;
+  const pushBom = (
+    ref: string,
+    desc: string,
+    qty: number,
+    unit: string,
+    code: string,
+    dec: number,
+  ) => {
+    const rate = rates.matRate(code);
+    bom.push(item(ref, desc, qty, unit, rate, { dec }));
+    const a = lineAmount(qty, rate);
+    if (a != null) bomTot += a;
+  };
+  bom.push(group('A — Units & mortar'));
+  pushBom('A1', 'Masonry units (block/brick equivalent volume)', mas, 'm³', 'stone', 2);
+  pushBom(
+    'A2',
+    `Cement for mortar (${CEMENT_BAG_KG}kg bags)`,
+    cementBags,
+    'bags',
+    'cementBag',
+    1,
+  );
+  pushBom('A3', 'Sand for mortar', sand, 'm³', 'sand', 2);
+  bom.push(total('Materials total', bomTot));
+
+  const masDays = Math.ceil(mas / 1.5) || (mas > 0 ? 1 : 0);
+  const labour =
+    mas > 0
+      ? labourBundle(
+          [
+            {
+              ref: 'L1',
+              activity: 'Lay block / brick masonry',
+              qty: mas,
+              unit: 'm³',
+              outputRate: '1.5 m³/day',
+              gang: '1 Mason + 2 Labourer',
+              days: masDays,
+            },
+          ],
+          { Mason: masDays, Labourer: masDays * 2 },
+          rates.labRate,
+        )
+      : labourBundle([], {}, rates.labRate);
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'masonry',
+    units,
+    boq,
+    bom,
+    labour,
+    summary: { area },
+    cost: { boq: boqTot, bom: bomTot, labour: labour.totalCost },
+  };
+}
+
+export function buildDoorsWindowsReports(
+  entries: ReportEntry[],
+  rates: RateAccessors,
+): ElementReportBundle {
+  const meta = ELEMENT_META.DOORS_WINDOWS;
+  let nos = 0;
+  let area = 0;
+  let peri = 0;
+  let units = 0;
+  const byType: Record<string, { nos: number; area: number }> = {};
+
+  entries.forEach(({ flat, inst }) => {
+    const c = calcDoorsWindows(flat as any);
+    nos += c.totalNos;
+    area += c.totalOpeningAreaM2;
+    peri += c.totalPerimeterM;
+    units += inst.count || 1;
+    const typ = String(
+      flat.openingType || inst.spec || flat.spec || 'Opening',
+    );
+    const prev = byType[typ] || { nos: 0, area: 0 };
+    byType[typ] = {
+      nos: prev.nos + c.totalNos,
+      area: prev.area + c.totalOpeningAreaM2,
+    };
+  });
+  nos = round(nos, 0);
+  area = round(area);
+  peri = round(peri);
+
+  const rate = rates.boqRate('doorsWindows');
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  boq.push(group(`A — ${meta.label}`));
+  let i = 0;
+  Object.keys(byType)
+    .sort()
+    .forEach((typ) => {
+      const q = byType[typ];
+      if (!(q.nos > 0)) return;
+      i++;
+      const w = entries.find(
+        (e) => String(e.flat.openingType || e.inst.spec) === typ,
+      );
+      const width = Number(w?.flat.width) || 0;
+      const height = Number(w?.flat.height) || 0;
+      const size =
+        width > 0 && height > 0
+          ? ` ${width.toFixed(2)}×${height.toFixed(2)}m`
+          : '';
+      boq.push(
+        item(
+          `A${i}`,
+          `${typ}${size}; supply and fix`,
+          q.nos,
+          'nos',
+          rate,
+          { dec: 0 },
+        ),
+      );
+      const a = lineAmount(q.nos, rate);
+      if (a != null) boqTot += a;
+    });
+  if (area > 0) {
+    i++;
+    boq.push(
+      item(
+        `A${i}`,
+        'Opening area (informational)',
+        area,
+        'm²',
+        null,
+      ),
+    );
+  }
+  boq.push(total('Element total (excl. prelims & OH&P)', round(boqTot)));
+
+  const days = Math.ceil(nos / 8) || (nos > 0 ? 1 : 0);
+  const labour =
+    nos > 0
+      ? labourBundle(
+          [
+            {
+              ref: 'L1',
+              activity: 'Install doors / windows',
+              qty: nos,
+              unit: 'nos',
+              outputRate: '8 nos/day',
+              gang: '1 Carpenter + 1 Labourer',
+              days,
+            },
+          ],
+          { Carpenter: days, Labourer: days },
+          rates.labRate,
+        )
+      : labourBundle([], {}, rates.labRate);
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'finish',
+    units,
+    boq,
+    bom: [],
+    labour,
+    summary: { nos, area, perimeter: peri },
+    cost: { boq: boqTot, bom: 0, labour: labour.totalCost },
+  };
+}
+
+/** Lintels use structural BOQ via buildStructuralReports + calcLintel. */
+export function lintelCalculator(
+  _elementKey: string,
+  flat: Record<string, unknown>,
+): StructuralCalcResult {
+  return calcLintel(flat as unknown as LintelInput);
+}
+
+export function buildDuctReports(
+  entries: ReportEntry[],
+  rates: RateAccessors,
+): ElementReportBundle {
+  const meta = ELEMENT_META.DUCTS;
+  let length = 0;
+  let surface = 0;
+  let weight = 0;
+  let joints = 0;
+  let units = 0;
+  const bySystem: Record<string, number> = {};
+
+  entries.forEach(({ flat, inst }) => {
+    const c = calcDuct(flat as any);
+    length += c.totalLengthM;
+    surface += c.totalSurfaceM2;
+    weight += c.totalWeightKg;
+    joints += c.totalJoints;
+    units += inst.count || 1;
+    const sys = String(flat.system || inst.spec || 'Duct');
+    bySystem[sys] = (bySystem[sys] || 0) + c.totalLengthM;
+  });
+  length = round(length);
+  surface = round(surface);
+  weight = round(weight);
+
+  const rate = rates.boqRate('ducts');
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  boq.push(group(`A — ${meta.label}`));
+  let i = 0;
+  Object.keys(bySystem)
+    .sort()
+    .forEach((sys) => {
+      const qty = bySystem[sys];
+      if (!(qty > 0)) return;
+      i++;
+      boq.push(
+        item(
+          `A${i}`,
+          `Galvanised sheet ductwork, ${sys}; measured on centreline`,
+          round(qty),
+          'm',
+          rate,
+        ),
+      );
+      const a = lineAmount(qty, rate);
+      if (a != null) boqTot += a;
+    });
+  if (surface > 0) {
+    i++;
+    boq.push(item(`A${i}`, 'Duct surface area (informational)', surface, 'm²', null));
+  }
+  boq.push(total('Element total (excl. prelims & OH&P)', round(boqTot)));
+
+  const days = Math.ceil(length / 15) || (length > 0 ? 1 : 0);
+  const labour =
+    length > 0
+      ? labourBundle(
+          [
+            {
+              ref: 'L1',
+              activity: 'Install ductwork',
+              qty: length,
+              unit: 'm',
+              outputRate: '15 m/day',
+              gang: '2 Sheet-metal + 1 Labourer',
+              days,
+            },
+          ],
+          { Carpenter: days * 2, Labourer: days },
+          rates.labRate,
+        )
+      : labourBundle([], {}, rates.labRate);
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'mep',
+    units,
+    boq,
+    bom: [],
+    labour,
+    summary: { length, surface, weight, joints },
+    cost: { boq: boqTot, bom: 0, labour: labour.totalCost },
+  };
+}
+
+export function buildPipeReports(
+  entries: ReportEntry[],
+  rates: RateAccessors,
+): ElementReportBundle {
+  const meta = ELEMENT_META.PIPES;
+  let length = 0;
+  let insulation = 0;
+  let fittings = 0;
+  let units = 0;
+  const byMat: Record<string, number> = {};
+
+  entries.forEach(({ flat, inst }) => {
+    const c = calcPipe(flat as any);
+    length += c.totalLengthM;
+    insulation += c.totalInsulationM;
+    fittings += c.totalFittingsNos;
+    units += inst.count || 1;
+    const mat = String(flat.material || flat.system || inst.spec || 'Pipe');
+    byMat[mat] = (byMat[mat] || 0) + c.totalLengthM;
+  });
+  length = round(length);
+  insulation = round(insulation);
+
+  const rate = rates.boqRate('pipes');
+  const insRate = rates.boqRate('pipeInsulation');
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  boq.push(group(`A — ${meta.label}`));
+  let i = 0;
+  Object.keys(byMat)
+    .sort()
+    .forEach((mat) => {
+      const qty = byMat[mat];
+      if (!(qty > 0)) return;
+      i++;
+      boq.push(
+        item(
+          `A${i}`,
+          `${mat} pipework; measured on centreline`,
+          round(qty),
+          'm',
+          rate,
+        ),
+      );
+      const a = lineAmount(qty, rate);
+      if (a != null) boqTot += a;
+    });
+  if (insulation > 0) {
+    i++;
+    boq.push(
+      item(
+        `A${i}`,
+        'Pipe insulation; measured along pipe centreline',
+        insulation,
+        'm',
+        insRate,
+      ),
+    );
+    const a = lineAmount(insulation, insRate);
+    if (a != null) boqTot += a;
+  }
+  if (fittings > 0) {
+    i++;
+    boq.push(
+      item(
+        `A${i}`,
+        'Pipe fittings (enumerated)',
+        fittings,
+        'nos',
+        rates.boqRate('ductFittings'),
+        { dec: 0 },
+      ),
+    );
+    const a = lineAmount(fittings, rates.boqRate('ductFittings'));
+    if (a != null) boqTot += a;
+  }
+  boq.push(total('Element total (excl. prelims & OH&P)', round(boqTot)));
+
+  const days = Math.ceil(length / 20) || (length > 0 ? 1 : 0);
+  const labour =
+    length > 0
+      ? labourBundle(
+          [
+            {
+              ref: 'L1',
+              activity: 'Install pipework',
+              qty: length,
+              unit: 'm',
+              outputRate: '20 m/day',
+              gang: '1 Plumber + 1 Labourer',
+              days,
+            },
+          ],
+          { Carpenter: days, Labourer: days },
+          rates.labRate,
+        )
+      : labourBundle([], {}, rates.labRate);
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'mep',
+    units,
+    boq,
+    bom: [],
+    labour,
+    summary: { length, insulation, fittings },
+    cost: { boq: boqTot, bom: 0, labour: labour.totalCost },
+  };
+}
+
+export function buildElectricalReports(
+  entries: ReportEntry[],
+  rates: RateAccessors,
+): ElementReportBundle {
+  const meta = ELEMENT_META.ELECTRICAL;
+  let length = 0;
+  let cable = 0;
+  let units = 0;
+  const byShape: Record<string, number> = {};
+
+  entries.forEach(({ flat, inst }) => {
+    const c = calcElectrical(flat as any);
+    length += c.totalLengthM;
+    cable += c.totalCableM;
+    units += inst.count || 1;
+    const shape = String(flat.shape || 'CONDUIT');
+    byShape[shape] = (byShape[shape] || 0) + c.totalLengthM;
+  });
+  length = round(length);
+  cable = round(cable);
+
+  const rate = rates.boqRate('electrical');
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  boq.push(group(`A — ${meta.label}`));
+  let i = 0;
+  Object.keys(byShape)
+    .sort()
+    .forEach((shape) => {
+      const qty = byShape[shape];
+      if (!(qty > 0)) return;
+      i++;
+      const label =
+        shape === 'TRAY'
+          ? 'Cable tray'
+          : shape === 'CABLE'
+            ? 'Cable'
+            : 'Conduit';
+      boq.push(
+        item(
+          `A${i}`,
+          `${label}; measured on centreline`,
+          round(qty),
+          'm',
+          rate,
+        ),
+      );
+      const a = lineAmount(qty, rate);
+      if (a != null) boqTot += a;
+    });
+  if (cable > 0 && !byShape.CABLE) {
+    i++;
+    boq.push(
+      item(`A${i}`, 'Cable in tray (secondary)', cable, 'm', rate),
+    );
+    const a = lineAmount(cable, rate);
+    if (a != null) boqTot += a;
+  }
+  boq.push(total('Element total (excl. prelims & OH&P)', round(boqTot)));
+
+  const days = Math.ceil(length / 30) || (length > 0 ? 1 : 0);
+  const labour =
+    length > 0
+      ? labourBundle(
+          [
+            {
+              ref: 'L1',
+              activity: 'Install conduits / trays / cables',
+              qty: length,
+              unit: 'm',
+              outputRate: '30 m/day',
+              gang: '1 Electrician + 1 Labourer',
+              days,
+            },
+          ],
+          { Carpenter: days, Labourer: days },
+          rates.labRate,
+        )
+      : labourBundle([], {}, rates.labRate);
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'mep',
+    units,
+    boq,
+    bom: [],
+    labour,
+    summary: { length, cable },
+    cost: { boq: boqTot, bom: 0, labour: labour.totalCost },
+  };
+}
+
+export function buildDuctFittingReports(
+  entries: ReportEntry[],
+  rates: RateAccessors,
+): ElementReportBundle {
+  const meta = ELEMENT_META.DUCT_FITTINGS;
+  let nos = 0;
+  let eqLen = 0;
+  let units = 0;
+  const byType: Record<string, number> = {};
+
+  entries.forEach(({ flat, inst }) => {
+    const c = calcDuctFitting(flat as any);
+    nos += c.totalNos;
+    eqLen += c.totalEquivalentLengthM;
+    units += inst.count || 1;
+    const typ = String(flat.fittingType || inst.spec || 'Other');
+    byType[typ] = (byType[typ] || 0) + c.totalNos;
+  });
+  nos = round(nos, 0);
+  eqLen = round(eqLen);
+
+  const rate = rates.boqRate('ductFittings');
+  const boq: ReportLine[] = [];
+  let boqTot = 0;
+  boq.push(group(`A — ${meta.label}`));
+  let i = 0;
+  Object.keys(byType)
+    .sort()
+    .forEach((typ) => {
+      const qty = byType[typ];
+      if (!(qty > 0)) return;
+      i++;
+      boq.push(
+        item(
+          `A${i}`,
+          `Duct fitting / HVAC — ${typ}; supply and fix`,
+          qty,
+          'nos',
+          rate,
+          { dec: 0 },
+        ),
+      );
+      const a = lineAmount(qty, rate);
+      if (a != null) boqTot += a;
+    });
+  if (eqLen > 0) {
+    i++;
+    boq.push(
+      item(
+        `A${i}`,
+        'Equivalent duct length (informational)',
+        eqLen,
+        'm',
+        null,
+      ),
+    );
+  }
+  boq.push(total('Element total (excl. prelims & OH&P)', round(boqTot)));
+
+  const days = Math.ceil(nos / 12) || (nos > 0 ? 1 : 0);
+  const labour =
+    nos > 0
+      ? labourBundle(
+          [
+            {
+              ref: 'L1',
+              activity: 'Install duct fittings / HVAC',
+              qty: nos,
+              unit: 'nos',
+              outputRate: '12 nos/day',
+              gang: '2 Sheet-metal + 1 Labourer',
+              days,
+            },
+          ],
+          { Carpenter: days * 2, Labourer: days },
+          rates.labRate,
+        )
+      : labourBundle([], {}, rates.labRate);
+
+  return {
+    elementKey: meta.key,
+    num: meta.num,
+    suffix: meta.suffix,
+    label: meta.label,
+    kind: 'mep',
+    units,
+    boq,
+    bom: [],
+    labour,
+    summary: { nos, equivalentLength: eqLen },
+    cost: { boq: boqTot, bom: 0, labour: labour.totalCost },
   };
 }
 

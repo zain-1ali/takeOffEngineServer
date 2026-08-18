@@ -52,7 +52,7 @@ export type ElementReportBundle = {
   num: number;
   suffix: string;
   label: string;
-  kind: 'structural' | 'masonry' | 'finish' | 'earthworks';
+  kind: 'structural' | 'masonry' | 'finish' | 'earthworks' | 'mep';
   units: number;
   boq: ReportLine[];
   bom: ReportLine[];

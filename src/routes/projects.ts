@@ -51,8 +51,9 @@ function publicProject(p: IProject) {
     id: p._id.toString(),
     name: p.name,
     number: p.number,
-    client: p.client,
-    contractor: p.contractor,
+    client: p.client || '',
+    contractor: p.contractor || '',
+    consultant: p.consultant || '',
     location: p.location,
     currency: p.currency,
     units: p.units,
@@ -196,7 +197,9 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
           id: p._id.toString(),
           name: p.name,
           number: p.number,
-          client: p.client,
+          client: p.client || '',
+          contractor: p.contractor || '',
+          consultant: p.consultant || '',
           location: p.location || '',
           currency: p.currency || 'USD',
           defaultGrade: p.materials?.defaultConcreteGrade || 'C25/30',
@@ -244,14 +247,20 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
 
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const name = String(req.body?.name ?? '').trim() || 'Untitled Project';
+    const name = String(req.body?.name ?? '').trim();
+    if (!name) {
+      res.status(400).json({ error: 'Project name is required' });
+      return;
+    }
+    const optionalStr = (v: unknown) => String(v ?? '').trim();
     const project = await Project.create({
       userId: req.user!.userId,
       name,
       number: req.body?.number,
-      client: req.body?.client,
-      contractor: req.body?.contractor,
-      location: req.body?.location,
+      client: optionalStr(req.body?.client),
+      contractor: optionalStr(req.body?.contractor),
+      consultant: optionalStr(req.body?.consultant),
+      location: optionalStr(req.body?.location),
       currency: req.body?.currency,
       units: req.body?.units,
       preparedBy: req.body?.preparedBy,
@@ -294,7 +303,7 @@ router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response
     const prevRevision = p.revision;
     // Currency must change only via POST /convert-currency (explicit FX + audit log).
     const fields = [
-      'name', 'number', 'client', 'contractor', 'location', 'units',
+      'name', 'number', 'client', 'contractor', 'consultant', 'location', 'units',
       'preparedBy', 'revision', 'date', 'gfaM2',
       'designAllowancePercent', 'overheadPercent', 'profitPercent', 'inflationPercent',
       'reportTheme',

@@ -55,6 +55,7 @@ export interface IProject extends Document {
   number: string;
   client: string;
   contractor: string;
+  consultant: string;
   location: string;
   currency: string;
   /** Canonical: `metric` | `imperial` (legacy free-text still accepted via parseUnitSystem). */
@@ -167,6 +168,7 @@ const projectSchema = new Schema<IProject>(
     number: { type: String, default: 'PRJ-001' },
     client: { type: String, default: '' },
     contractor: { type: String, default: '' },
+    consultant: { type: String, default: '' },
     location: { type: String, default: '' },
     currency: { type: String, default: 'USD' },
     units: { type: String, default: 'metric' },

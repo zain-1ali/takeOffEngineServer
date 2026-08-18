@@ -13,6 +13,14 @@ import {
   calcStone,
   calcStrip,
   calcWall,
+  calcSkirting,
+  calcMasonry,
+  calcDoorsWindows,
+  calcLintel,
+  calcDuct,
+  calcPipe,
+  calcElectrical,
+  calcDuctFitting,
   type FinishKind,
   type MaterialsConfig,
   type StructuralCalcResult,
@@ -23,6 +31,13 @@ import {
   buildStoneReports,
   buildStructuralReports,
   buildStairReports,
+  buildSkirtingReports,
+  buildMasonryWallReports,
+  buildDoorsWindowsReports,
+  buildDuctReports,
+  buildPipeReports,
+  buildElectricalReports,
+  buildDuctFittingReports,
   type ReportEntry,
   type StructuralCalculator,
 } from './services/reports/builders';
@@ -54,7 +69,8 @@ function structuralEngine(
     | 'SLABS'
     | 'STAIRS'
     | 'RAMPS'
-    | 'WALLS',
+    | 'WALLS'
+    | 'LINTELS',
   calc: (flat: any) => StructuralCalcResult,
 ): ElementEngine {
   const meta = ELEMENT_META[key];
@@ -123,9 +139,66 @@ export const ELEMENT_ENGINES: Record<string, ElementEngine> = {
       buildStoneReports(entries, materials, rates),
   },
   WALLS: structuralEngine('WALLS', calcWall),
+  MASONRY: {
+    key: 'MASONRY',
+    label: ELEMENT_META.MASONRY.label,
+    reportKind: 'masonry',
+    calc: (flat, materials) => calcMasonry(flat as any, materials),
+    buildReports: (entries, materials, rates) =>
+      buildMasonryWallReports(entries, materials, rates),
+  },
+  DOORS_WINDOWS: {
+    key: 'DOORS_WINDOWS',
+    label: ELEMENT_META.DOORS_WINDOWS.label,
+    reportKind: 'finish',
+    calc: (flat) => calcDoorsWindows(flat as any),
+    buildReports: (entries, _materials, rates) =>
+      buildDoorsWindowsReports(entries, rates),
+  },
+  LINTELS: structuralEngine('LINTELS', calcLintel),
   FLOOR_FINISH: finishEngine('FLOOR_FINISH', 'FLOOR'),
   WALL_FINISH: finishEngine('WALL_FINISH', 'WALL'),
   CEILING_FINISH: finishEngine('CEILING_FINISH', 'CEILING'),
+  SKIRTING: {
+    key: 'SKIRTING',
+    label: ELEMENT_META.SKIRTING.label,
+    reportKind: 'finish',
+    calc: (flat) => calcSkirting(flat as any),
+    buildReports: (entries, _materials, rates) =>
+      buildSkirtingReports(entries, rates),
+  },
+  DUCTS: {
+    key: 'DUCTS',
+    label: ELEMENT_META.DUCTS.label,
+    reportKind: 'mep',
+    calc: (flat) => calcDuct(flat as any),
+    buildReports: (entries, _materials, rates) =>
+      buildDuctReports(entries, rates),
+  },
+  DUCT_FITTINGS: {
+    key: 'DUCT_FITTINGS',
+    label: ELEMENT_META.DUCT_FITTINGS.label,
+    reportKind: 'mep',
+    calc: (flat) => calcDuctFitting(flat as any),
+    buildReports: (entries, _materials, rates) =>
+      buildDuctFittingReports(entries, rates),
+  },
+  PIPES: {
+    key: 'PIPES',
+    label: ELEMENT_META.PIPES.label,
+    reportKind: 'mep',
+    calc: (flat) => calcPipe(flat as any),
+    buildReports: (entries, _materials, rates) =>
+      buildPipeReports(entries, rates),
+  },
+  ELECTRICAL: {
+    key: 'ELECTRICAL',
+    label: ELEMENT_META.ELECTRICAL.label,
+    reportKind: 'mep',
+    calc: (flat) => calcElectrical(flat as any),
+    buildReports: (entries, _materials, rates) =>
+      buildElectricalReports(entries, rates),
+  },
 };
 
 export const SUPPORTED_ELEMENT_KEYS = Object.keys(ELEMENT_ENGINES);

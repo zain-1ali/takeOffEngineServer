@@ -1,6 +1,6 @@
 /** Element metadata for reports (mirrors AgileQS-Takeoff.html element tree + boq descriptors). */
 
-export type ElementKind = 'structural' | 'masonry' | 'finish' | 'earthworks';
+export type ElementKind = 'structural' | 'masonry' | 'finish' | 'earthworks' | 'mep';
 
 export type ElementMeta = {
   key: string;
@@ -181,6 +181,68 @@ export const ELEMENT_META: Record<string, ElementMeta> = {
     suffix: '',
     label: 'Ceiling Finishes',
     kind: 'finish',
+  },
+  MASONRY: {
+    key: 'MASONRY',
+    num: 13,
+    suffix: '',
+    label: 'Masonry / Infill Walls',
+    kind: 'masonry',
+  },
+  DOORS_WINDOWS: {
+    key: 'DOORS_WINDOWS',
+    num: 14,
+    suffix: '',
+    label: 'Doors & Windows',
+    kind: 'finish',
+  },
+  LINTELS: {
+    key: 'LINTELS',
+    num: 15,
+    suffix: '',
+    label: 'Lintels',
+    kind: 'structural',
+    concreteDesc: (g) =>
+      `Reinforced / precast concrete, grade ${g}, in lintels over openings`,
+    formworkDesc:
+      'Formwork to soffits and sides of in-situ lintels; including striking',
+    rebarDesc: (d) =>
+      `High-yield reinforcement bars, dia. ${d} mm, cut and fixed in lintels`,
+  },
+  SKIRTING: {
+    key: 'SKIRTING',
+    num: 19,
+    suffix: '',
+    label: 'Skirting / Baseboards',
+    kind: 'finish',
+  },
+  DUCTS: {
+    key: 'DUCTS',
+    num: 20,
+    suffix: '',
+    label: 'Air Distribution Ducts',
+    kind: 'mep',
+  },
+  DUCT_FITTINGS: {
+    key: 'DUCT_FITTINGS',
+    num: 21,
+    suffix: '',
+    label: 'Duct Fittings & HVAC',
+    kind: 'mep',
+  },
+  PIPES: {
+    key: 'PIPES',
+    num: 22,
+    suffix: '',
+    label: 'Pipes & Plumbing',
+    kind: 'mep',
+  },
+  ELECTRICAL: {
+    key: 'ELECTRICAL',
+    num: 23,
+    suffix: '',
+    label: 'Conduits & Cable Trays',
+    kind: 'mep',
   },
 };
 

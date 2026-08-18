@@ -40,6 +40,7 @@ export type CostPlanWorkCategory =
   | 'Plaster'
   | 'Paint'
   | 'Finishes'
+  | 'MEP'
   | 'Excavation'
   | 'Disposal'
   | 'Other';
@@ -71,6 +72,7 @@ export const WORK_CATEGORY_ORDER: CostPlanWorkCategory[] = [
   'Plaster',
   'Paint',
   'Finishes',
+  'MEP',
   'Excavation',
   'Disposal',
   'Other',
@@ -101,6 +103,7 @@ const EARTHWORKS_CATEGORY_ORDER: CostPlanWorkCategory[] = [
   'Disposal',
   'Other',
 ];
+const MEP_CATEGORY_ORDER: CostPlanWorkCategory[] = ['MEP', 'Other'];
 
 export function categoryOrderForElement(
   elementKey?: string | null,
@@ -115,6 +118,8 @@ export function categoryOrderForElement(
       return FINISH_CATEGORY_ORDER;
     case 'earthworks':
       return EARTHWORKS_CATEGORY_ORDER;
+    case 'mep':
+      return MEP_CATEGORY_ORDER;
     default:
       return WORK_CATEGORY_ORDER;
   }
@@ -143,6 +148,7 @@ export function classifyWorkCategory(
   if (key === 'excavation') return 'Excavation';
   if (key === 'disposal') return 'Disposal';
   if (key === 'area') return 'Finishes';
+  if (key === 'mep') return 'MEP';
 
   const el = (line.elementKey || '').toUpperCase();
   const d = (line.description || '').toLowerCase();
@@ -173,13 +179,25 @@ export function classifyWorkCategory(
   if (
     el === 'FLOOR_FINISH' ||
     el === 'WALL_FINISH' ||
-    el === 'CEILING_FINISH'
+    el === 'CEILING_FINISH' ||
+    el === 'SKIRTING' ||
+    el === 'DOORS_WINDOWS'
   ) {
     return 'Finishes';
   }
   if (el === 'MASONRY' || el === 'STONE_STRIP') return 'Masonry';
+  if (
+    el === 'DUCTS' ||
+    el === 'DUCT_FITTINGS' ||
+    el === 'PIPES' ||
+    el === 'ELECTRICAL'
+  ) {
+    return 'MEP';
+  }
   if (el === 'EARTHWORKS') return 'Other';
-
+  if (el === 'LINTELS') {
+    if (line.unit === 'm' || line.unit === 'lm') return 'Concrete';
+  }
   if (line.unit === 'm³' || line.unit === 'm3') return 'Concrete';
   if (
     (line.unit === 'm²' ||
@@ -460,14 +478,15 @@ function collectFromBundle(
     return collected;
   }
 
-  if (bundle.kind === 'finish') {
+  if (bundle.kind === 'finish' || bundle.kind === 'mep') {
     for (const line of bundle.boq) {
       if (line.kind !== 'item') continue;
       const row = itemFromReport(line, defaultUniformat, elementKey);
       row.workCategory = classifyWorkCategory({
         ...row,
         elementKey,
-        summaryKey: finishSummaryKey(line),
+        summaryKey:
+          bundle.kind === 'mep' ? 'mep' : finishSummaryKey(line),
       });
       collected.push(row);
     }

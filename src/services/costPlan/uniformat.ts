@@ -68,6 +68,8 @@ const FIXED_ELEMENT_CODES: Record<string, string> = {
   RAMPS: 'C2010',
   FLOOR_FINISH: 'C3020',
   CEILING_FINISH: 'C3030',
+  SKIRTING: 'C3020',
+  LINTELS: 'B2010',
   EARTHWORKS: 'G20',
   PIPES: 'D20',
   DUCTS: 'D30',
