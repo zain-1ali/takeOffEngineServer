@@ -517,6 +517,7 @@ router.post(
       });
 
       // Fresh engine calc on copied geometry (current project materials) — not stored qty.
+      // Calc is best-effort: copy already succeeded; schedule will re-calc on open.
       const byElement = new Map<string, typeof result.instances>();
       for (const inst of result.instances) {
         const list = byElement.get(inst.elementKey) || [];
@@ -528,10 +529,14 @@ router.post(
         [];
       for (const [elementKey, insts] of byElement) {
         if (!SUPPORTED_ELEMENT_KEYS.includes(elementKey)) continue;
-        calcResults.push({
-          elementKey,
-          results: calculateInstances(elementKey, insts, materials),
-        });
+        try {
+          calcResults.push({
+            elementKey,
+            results: calculateInstances(elementKey, insts, materials),
+          });
+        } catch (calcErr) {
+          console.warn(`duplicate calc failed for ${elementKey}:`, calcErr);
+        }
       }
 
       res.status(201).json({
