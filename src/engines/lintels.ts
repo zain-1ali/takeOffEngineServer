@@ -20,6 +20,8 @@ export type LintelInput = {
   width?: number;
   depth?: number;
   cover?: number;
+  topBars?: { diameterMm: number; barCount: number }[];
+  bottomBars?: { diameterMm: number; barCount: number }[];
   topBarCount?: number;
   topBarDia?: number;
   bottomBarCount?: number;
@@ -72,6 +74,8 @@ export function lintelRebar(
     spanLength: length,
     width: f.width || 0.2,
     depth: f.depth || 0.15,
+    topBars: f.topBars,
+    bottomBars: f.bottomBars,
     topBarCount: f.topBarCount ?? 2,
     topBarDia: f.topBarDia ?? 12,
     bottomBarCount: f.bottomBarCount ?? 2,

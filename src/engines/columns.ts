@@ -1,6 +1,7 @@
 import { withVerticalFormworkOnly } from './formworkSplit';
 import { barCountForSpan, round, unitWeightKgPerM } from './math';
 import type {
+  BarSet,
   ConcreteResult,
   RebarGroup,
   StructuralCalcResult,
@@ -12,6 +13,12 @@ export type ColumnShape =
   | 'L_SHAPED'
   | 'T_SHAPED'
   | 'CRUCIFORM';
+
+/** One longitudinal bar group (same diameter). */
+export type LongBarGroup = {
+  diameterMm: number;
+  barCount: number;
+};
 
 export type ColumnInput = {
   shape: ColumnShape;
@@ -26,8 +33,11 @@ export type ColumnInput = {
   flangeThickness?: number;
   webThickness?: number;
   armThickness?: number;
-  longBarCount: number;
-  longBarDia: number;
+  /** Preferred: multiple diameter groups, e.g. 4×H16 + 4×H12. */
+  longBars?: LongBarGroup[];
+  /** Legacy single-group fields (used when longBars is absent/empty). */
+  longBarCount?: number;
+  longBarDia?: number;
   tieDia: number;
   tieSpacing: number;
 };
@@ -36,6 +46,22 @@ export type ColumnSection = {
   areaM2: number;
   perimeterM: number;
 };
+
+/** Resolve longitudinal groups; prefer longBars, fall back to legacy scalars. */
+export function resolveColumnLongBars(f: ColumnInput): LongBarGroup[] {
+  if (Array.isArray(f.longBars) && f.longBars.length > 0) {
+    return f.longBars
+      .map((g) => ({
+        diameterMm: Number(g.diameterMm) || 0,
+        barCount: Number(g.barCount) || 0,
+      }))
+      .filter((g) => g.diameterMm > 0 && g.barCount > 0);
+  }
+  const dia = Number(f.longBarDia) || 0;
+  const count = Number(f.longBarCount) || 0;
+  if (dia > 0 && count > 0) return [{ diameterMm: dia, barCount: count }];
+  return [];
+}
 
 export function columnSection(f: ColumnInput): ColumnSection {
   if (f.shape === 'CIRCULAR') {
@@ -99,32 +125,43 @@ export function columnConcrete(f: ColumnInput): ConcreteResult {
 
 export function columnRebar(f: ColumnInput, volumeM3: number) {
   const section = columnSection(f);
-  const longitudinalWeightKg = round(
-    f.longBarCount * f.clearHeight * unitWeightKgPerM(f.longBarDia),
-  );
+  const longBars = resolveColumnLongBars(f);
+
+  const longitudinalSets: BarSet[] = [];
+  const groups: RebarGroup[] = [];
+  let longitudinalWeightKg = 0;
+
+  for (const g of longBars) {
+    const weightKg = round(
+      g.barCount * f.clearHeight * unitWeightKgPerM(g.diameterMm),
+    );
+    longitudinalWeightKg = round(longitudinalWeightKg + weightKg);
+    longitudinalSets.push({
+      diameterMm: g.diameterMm,
+      barCount: g.barCount,
+      weightKg,
+    });
+    groups.push({
+      diameterMm: g.diameterMm,
+      weightKg,
+      role: `Longitudinal bars Ø${g.diameterMm}`,
+    });
+  }
+
   const tieCount = barCountForSpan(f.clearHeight, f.tieSpacing);
   const tieWeightKg = round(
     tieCount * section.perimeterM * unitWeightKgPerM(f.tieDia),
   );
-  const groups: RebarGroup[] = [
-    {
-      diameterMm: f.longBarDia,
-      weightKg: longitudinalWeightKg,
-      role: 'Longitudinal bars',
-    },
-    {
-      diameterMm: f.tieDia,
-      weightKg: tieWeightKg,
-      role: 'Transverse ties',
-    },
-  ];
+  groups.push({
+    diameterMm: f.tieDia,
+    weightKg: tieWeightKg,
+    role: 'Transverse ties',
+  });
+
   const totalWeightKg = round(longitudinalWeightKg + tieWeightKg);
   return {
-    longitudinalBars: {
-      diameterMm: f.longBarDia,
-      barCount: f.longBarCount,
-      weightKg: longitudinalWeightKg,
-    },
+    /** Multi-diameter longitudinal sets (preferred). */
+    longitudinalBars: longitudinalSets,
     ties: {
       diameterMm: f.tieDia,
       barCount: tieCount,

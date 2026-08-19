@@ -4,6 +4,10 @@
  */
 import { withVerticalFormworkOnly } from './formworkSplit';
 import { barCountForSpan, round, unitWeightKgPerM } from './math';
+import {
+  resolveMeshBarGroups,
+  type MeshBarGroup,
+} from './padFooting';
 import type { BarSet, ConcreteResult, RebarGroup, StructuralCalcResult } from './types';
 
 export type StripShape = 'FLAT' | 'TAPERED' | 'STEPPED';
@@ -20,10 +24,19 @@ export type StripFootingInput = {
   upperWidth?: number;
   upperHeight?: number;
   cover: number;
-  mainDia: number;
-  mainSpacing: number;
-  distDia: number;
-  distSpacing: number;
+  /** Transverse (main) / longitudinal (dist) — preferred arrays. */
+  mainBars?: MeshBarGroup[];
+  distBars?: MeshBarGroup[];
+  topMainBars?: MeshBarGroup[];
+  topDistBars?: MeshBarGroup[];
+  mainDia?: number;
+  mainSpacing?: number;
+  distDia?: number;
+  distSpacing?: number;
+  topMainDia?: number;
+  topMainSpacing?: number;
+  topDistDia?: number;
+  topDistSpacing?: number;
   topMeshEnabled?: boolean;
   startersEnabled?: boolean;
   starterDia?: number;
@@ -83,29 +96,101 @@ export function stripConcrete(f: StripFootingInput): ConcreteResult {
   };
 }
 
+function stripDirectionWeight(
+  barLengthM: number,
+  countSpanM: number,
+  groups: MeshBarGroup[],
+): { sets: BarSet[]; weightKg: number } {
+  const sets: BarSet[] = [];
+  let weightKg = 0;
+  for (const g of groups) {
+    const barCount = barCountForSpan(countSpanM, g.spacingMm);
+    const w = round(unitWeightKgPerM(g.diameterMm) * barLengthM * barCount);
+    weightKg = round(weightKg + w);
+    sets.push({ diameterMm: g.diameterMm, barCount, weightKg: w });
+  }
+  return { sets, weightKg };
+}
+
 export function stripRebar(f: StripFootingInput, netVolumeM3: number) {
   const c = f.cover / 1000;
   const L = f.length;
   const W = stripBaseWidth(f);
-  const transCount = barCountForSpan(L - 2 * c, f.mainSpacing);
-  const transLen = W - 2 * c;
-  const transW = round(unitWeightKgPerM(f.mainDia) * transLen * transCount);
-  const longCount = barCountForSpan(W - 2 * c, f.distSpacing);
-  const longLen = L - 2 * c;
-  const longW = round(unitWeightKgPerM(f.distDia) * longLen * longCount);
+  const mainGroups = resolveMeshBarGroups(f.mainBars, f.mainDia, f.mainSpacing);
+  const distGroups = resolveMeshBarGroups(f.distBars, f.distDia, f.distSpacing);
+  const main =
+    mainGroups.length > 0
+      ? mainGroups
+      : [{ diameterMm: 12, spacingMm: 150 }];
+  const dist =
+    distGroups.length > 0
+      ? distGroups
+      : [{ diameterMm: 12, spacingMm: 250 }];
 
-  const groups: RebarGroup[] = [
-    { diameterMm: f.mainDia, weightKg: transW, role: 'Transverse (main)' },
-    { diameterMm: f.distDia, weightKg: longW, role: 'Longitudinal (distribution)' },
-  ];
-  let topTransW = 0;
-  let topLongW = 0;
-  if (f.topMeshEnabled) {
-    topTransW = transW;
-    topLongW = longW;
-    groups.push({ diameterMm: f.mainDia, weightKg: topTransW, role: 'Top transverse' });
-    groups.push({ diameterMm: f.distDia, weightKg: topLongW, role: 'Top longitudinal' });
+  // Transverse (main): bars across width, counted along length
+  const trans = stripDirectionWeight(W - 2 * c, L - 2 * c, main);
+  // Longitudinal (dist): bars along length, counted across width
+  const long = stripDirectionWeight(L - 2 * c, W - 2 * c, dist);
+
+  const groups: RebarGroup[] = [];
+  for (const s of trans.sets) {
+    groups.push({
+      diameterMm: s.diameterMm,
+      weightKg: s.weightKg,
+      role:
+        trans.sets.length > 1
+          ? `Transverse (main) Ø${s.diameterMm}`
+          : 'Transverse (main)',
+    });
   }
+  for (const s of long.sets) {
+    groups.push({
+      diameterMm: s.diameterMm,
+      weightKg: s.weightKg,
+      role:
+        long.sets.length > 1
+          ? `Longitudinal (distribution) Ø${s.diameterMm}`
+          : 'Longitudinal (distribution)',
+    });
+  }
+
+  if (f.topMeshEnabled) {
+    const topMain = resolveMeshBarGroups(
+      f.topMainBars,
+      f.topMainDia,
+      f.topMainSpacing,
+    );
+    const topDist = resolveMeshBarGroups(
+      f.topDistBars,
+      f.topDistDia,
+      f.topDistSpacing,
+    );
+    const tm = topMain.length > 0 ? topMain : main;
+    const td = topDist.length > 0 ? topDist : dist;
+    const topTrans = stripDirectionWeight(W - 2 * c, L - 2 * c, tm);
+    const topLong = stripDirectionWeight(L - 2 * c, W - 2 * c, td);
+    for (const s of topTrans.sets) {
+      groups.push({
+        diameterMm: s.diameterMm,
+        weightKg: s.weightKg,
+        role:
+          topTrans.sets.length > 1
+            ? `Top transverse Ø${s.diameterMm}`
+            : 'Top transverse',
+      });
+    }
+    for (const s of topLong.sets) {
+      groups.push({
+        diameterMm: s.diameterMm,
+        weightKg: s.weightKg,
+        role:
+          topLong.sets.length > 1
+            ? `Top longitudinal Ø${s.diameterMm}`
+            : 'Top longitudinal',
+      });
+    }
+  }
+
   let starterBars: BarSet | null = null;
   if (f.startersEnabled) {
     const len = (f.starterProjection || 0) + (f.starterEmbedment || 0);
@@ -115,8 +200,10 @@ export function stripRebar(f: StripFootingInput, netVolumeM3: number) {
   }
   const totalWeightKg = round(groups.reduce((s, g) => s + g.weightKg, 0));
   return {
-    transBars: { diameterMm: f.mainDia, barCount: transCount, weightKg: transW },
-    longBars: { diameterMm: f.distDia, barCount: longCount, weightKg: longW },
+    transBars: trans.sets[0] || { diameterMm: 0, barCount: 0, weightKg: 0 },
+    longBars: long.sets[0] || { diameterMm: 0, barCount: 0, weightKg: 0 },
+    transSets: trans.sets,
+    longSets: long.sets,
     topMeshEnabled: !!f.topMeshEnabled,
     starterBars,
     groups,

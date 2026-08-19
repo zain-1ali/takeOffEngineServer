@@ -4,7 +4,11 @@
  */
 import { withVerticalFormworkOnly } from './formworkSplit';
 import { round, unitWeightKgPerM } from './math';
-import { twoWayMesh } from './padFooting';
+import {
+  resolveLayerMesh,
+  twoWayMesh,
+  type MeshBarGroup,
+} from './padFooting';
 import type {
   BarSet,
   ConcreteResult,
@@ -30,10 +34,12 @@ export type PileCapInput = {
   baseWidth?: number;
   topWidth?: number;
   cover: number;
-  bottomMainDia: number;
-  bottomMainSpacing: number;
-  bottomDistDia: number;
-  bottomDistSpacing: number;
+  bottomMainBars?: MeshBarGroup[];
+  bottomDistBars?: MeshBarGroup[];
+  bottomMainDia?: number;
+  bottomMainSpacing?: number;
+  bottomDistDia?: number;
+  bottomDistSpacing?: number;
   pileCount: number;
   starterBarsPerPile: number;
   starterDia: number;
@@ -104,15 +110,20 @@ export function pileCapConcrete(f: PileCapInput): ConcreteResult {
 
 export function pileCapRebar(f: PileCapInput, netVolumeM3: number) {
   const plan = pileCapPlan(f);
-  const bottomMesh = twoWayMesh(
-    plan.meshLength,
-    plan.meshWidth,
-    f.cover,
-    f.bottomMainDia,
-    f.bottomMainSpacing,
-    f.bottomDistDia,
-    f.bottomDistSpacing,
-  );
+  const bottomMesh =
+    resolveLayerMesh(
+      plan.meshLength,
+      plan.meshWidth,
+      f.cover,
+      f.bottomMainBars,
+      f.bottomDistBars,
+      f.bottomMainDia,
+      f.bottomMainSpacing,
+      f.bottomDistDia,
+      f.bottomDistSpacing,
+    ) ||
+    twoWayMesh(plan.meshLength, plan.meshWidth, f.cover, 16, 150, 16, 150);
+
   const starterLength = f.starterProjection + f.starterEmbedment;
   const starterCount = f.pileCount * f.starterBarsPerPile;
   const starterBars: BarSet = {
@@ -122,23 +133,32 @@ export function pileCapRebar(f: PileCapInput, netVolumeM3: number) {
       unitWeightKgPerM(f.starterDia) * starterLength * starterCount,
     ),
   };
-  const groups: RebarGroup[] = [
-    {
-      diameterMm: bottomMesh.mainBars.diameterMm,
-      weightKg: bottomMesh.mainBars.weightKg,
-      role: 'Bottom main',
-    },
-    {
-      diameterMm: bottomMesh.distBars.diameterMm,
-      weightKg: bottomMesh.distBars.weightKg,
-      role: 'Bottom distribution',
-    },
-    {
-      diameterMm: starterBars.diameterMm,
-      weightKg: starterBars.weightKg,
-      role: 'Pile starter bars',
-    },
-  ];
+  const groups: RebarGroup[] = [];
+  for (const s of bottomMesh.mainSets) {
+    groups.push({
+      diameterMm: s.diameterMm,
+      weightKg: s.weightKg,
+      role:
+        bottomMesh.mainSets.length > 1
+          ? `Bottom main Ø${s.diameterMm}`
+          : 'Bottom main',
+    });
+  }
+  for (const s of bottomMesh.distSets) {
+    groups.push({
+      diameterMm: s.diameterMm,
+      weightKg: s.weightKg,
+      role:
+        bottomMesh.distSets.length > 1
+          ? `Bottom distribution Ø${s.diameterMm}`
+          : 'Bottom distribution',
+    });
+  }
+  groups.push({
+    diameterMm: starterBars.diameterMm,
+    weightKg: starterBars.weightKg,
+    role: 'Pile starter bars',
+  });
   const totalWeightKg = round(
     bottomMesh.totalWeightKg + starterBars.weightKg,
   );

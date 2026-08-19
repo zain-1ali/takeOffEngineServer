@@ -14,53 +14,92 @@ export function appFrontendUrl(path: string): string {
   return `${base}${p}`;
 }
 
-function smtpConfigured(): boolean {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+/** Gmail app passwords are often copied with spaces — strip them. */
+function smtpPass(): string {
+  return String(process.env.SMTP_PASS || '').replace(/\s+/g, '');
+}
+
+function smtpFrom(): string {
+  const raw = String(
+    process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@takeoffengine.local',
+  ).trim();
+  // Strip wrapping quotes if present in .env
+  return raw.replace(/^["']|["']$/g, '');
+}
+
+export function smtpConfigured(): boolean {
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && smtpPass());
 }
 
 function createTransport() {
   const port = Number(process.env.SMTP_PORT || 587);
+  const secure =
+    String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port,
-    secure: port === 465,
+    secure,
+    requireTLS: !secure && port === 587,
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 30_000,
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      pass: smtpPass(),
     },
   });
 }
+
+export type SendMailResult = { sent: true } | { sent: false; reason: string };
 
 export async function sendAppEmail(opts: {
   to: string;
   subject: string;
   text: string;
   html: string;
-}): Promise<void> {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@takeoffengine.local';
+}): Promise<SendMailResult> {
+  const from = smtpFrom();
 
   if (!smtpConfigured()) {
-    // Dev / misconfigured: surface the message so flows remain testable.
-    console.warn('[mail] SMTP not configured — email not sent. Preview:');
+    const reason = 'SMTP not configured (set SMTP_HOST, SMTP_USER, SMTP_PASS)';
+    console.warn(`[mail] ${reason} — email not sent. Preview:`);
     console.warn(`  To: ${opts.to}`);
     console.warn(`  Subject: ${opts.subject}`);
     console.warn(`  ${opts.text}`);
-    return;
+    return { sent: false, reason };
   }
 
-  const transport = createTransport();
-  await transport.sendMail({
-    from,
-    to: opts.to,
-    subject: opts.subject,
-    text: opts.text,
-    html: opts.html,
-  });
+  try {
+    const transport = createTransport();
+    const info = await transport.sendMail({
+      from,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
+    });
+    console.log(
+      `[mail] sent to ${opts.to} subject="${opts.subject}" id=${info.messageId || 'n/a'}`,
+    );
+    return { sent: true };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(`[mail] FAILED to ${opts.to}: ${reason}`);
+    console.warn(`[mail] Fallback link preview:\n${opts.text}`);
+    return { sent: false, reason };
+  }
 }
 
-export async function sendVerificationEmail(to: string, token: string): Promise<void> {
+export async function sendVerificationEmail(
+  to: string,
+  token: string,
+): Promise<SendMailResult> {
   const url = appFrontendUrl(`/verify-email?token=${encodeURIComponent(token)}`);
-  await sendAppEmail({
+  // Always log in non-production so local testing works even when SMTP is slow/fails
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[mail] verification link for ${to}: ${url}`);
+  }
+  return sendAppEmail({
     to,
     subject: 'Verify your AgileQS email',
     text: `Verify your email by opening this link (expires in 24 hours):\n\n${url}\n`,
@@ -69,9 +108,15 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   });
 }
 
-export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
+export async function sendPasswordResetEmail(
+  to: string,
+  token: string,
+): Promise<SendMailResult> {
   const url = appFrontendUrl(`/reset-password?token=${encodeURIComponent(token)}`);
-  await sendAppEmail({
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[mail] password-reset link for ${to}: ${url}`);
+  }
+  return sendAppEmail({
     to,
     subject: 'Reset your AgileQS password',
     text: `Reset your password by opening this link (expires in 1 hour):\n\n${url}\n\nIf you did not request this, you can ignore this email.\n`,

@@ -7,7 +7,12 @@
  */
 import { withFormworkSplit } from './formworkSplit';
 import { round, unitWeightKgPerM } from './math';
-import { twoWayMesh } from './padFooting';
+import {
+  resolveLayerMesh,
+  resolveMeshBarGroups,
+  twoWayMesh,
+  type MeshBarGroup,
+} from './padFooting';
 import type {
   ConcreteResult,
   RebarGroup,
@@ -32,10 +37,18 @@ export type SlabInput = {
   dropWidth?: number;
   extraDropDepth?: number;
   cover: number;
-  bottomMainDia: number;
-  bottomMainSpacing: number;
-  bottomDistDia: number;
-  bottomDistSpacing: number;
+  bottomMainBars?: MeshBarGroup[];
+  bottomDistBars?: MeshBarGroup[];
+  topMainBars?: MeshBarGroup[];
+  topDistBars?: MeshBarGroup[];
+  bottomMainDia?: number;
+  bottomMainSpacing?: number;
+  bottomDistDia?: number;
+  bottomDistSpacing?: number;
+  topMainDia?: number;
+  topMainSpacing?: number;
+  topDistDia?: number;
+  topDistSpacing?: number;
   ribBarsPerRib: number;
 };
 
@@ -161,34 +174,62 @@ export function slabRebar(f: SlabInput, volumeM3: number) {
   let ribSteel: Record<string, unknown> | null = null;
   let totalWeightKg = 0;
 
+  const mainGroups = resolveMeshBarGroups(
+    f.bottomMainBars,
+    f.bottomMainDia,
+    f.bottomMainSpacing,
+  );
+  const distGroups = resolveMeshBarGroups(
+    f.bottomDistBars,
+    f.bottomDistDia,
+    f.bottomDistSpacing,
+  );
+  const mainDia = mainGroups[0]?.diameterMm || f.bottomMainDia || 12;
+  const distDia = distGroups[0]?.diameterMm || f.bottomDistDia || 12;
+
   if (f.shape === 'WAFFLE') {
     const cover = f.cover / 1000;
     const { ribsAlongLength: nX, ribsAlongWidth: nY } = waffleGrid(f);
-    const mainWeightKg = round(
-      unitWeightKgPerM(f.bottomMainDia) *
-        Math.max(0, f.length - 2 * cover) *
-        nX *
-        f.ribBarsPerRib,
-    );
-    const distWeightKg = round(
-      unitWeightKgPerM(f.bottomDistDia) *
-        Math.max(0, f.width - 2 * cover) *
-        nY *
-        f.ribBarsPerRib,
-    );
+    // Multi-dia ribs: sum weight for each main/dist diameter group (same rib counts).
+    let mainWeightKg = 0;
+    let distWeightKg = 0;
+    const mains = mainGroups.length > 0 ? mainGroups : [{ diameterMm: mainDia, spacingMm: 200 }];
+    const dists = distGroups.length > 0 ? distGroups : [{ diameterMm: distDia, spacingMm: 200 }];
+    for (const g of mains) {
+      const w = round(
+        unitWeightKgPerM(g.diameterMm) *
+          Math.max(0, f.length - 2 * cover) *
+          nX *
+          f.ribBarsPerRib,
+      );
+      mainWeightKg = round(mainWeightKg + w);
+      groups.push({
+        diameterMm: g.diameterMm,
+        weightKg: w,
+        role:
+          mains.length > 1
+            ? `Rib bars — length Ø${g.diameterMm}`
+            : 'Rib bars — length direction',
+      });
+    }
+    for (const g of dists) {
+      const w = round(
+        unitWeightKgPerM(g.diameterMm) *
+          Math.max(0, f.width - 2 * cover) *
+          nY *
+          f.ribBarsPerRib,
+      );
+      distWeightKg = round(distWeightKg + w);
+      groups.push({
+        diameterMm: g.diameterMm,
+        weightKg: w,
+        role:
+          dists.length > 1
+            ? `Rib bars — width Ø${g.diameterMm}`
+            : 'Rib bars — width direction',
+      });
+    }
     totalWeightKg = round(mainWeightKg + distWeightKg);
-    groups.push(
-      {
-        diameterMm: f.bottomMainDia,
-        weightKg: mainWeightKg,
-        role: 'Rib bars — length direction',
-      },
-      {
-        diameterMm: f.bottomDistDia,
-        weightKg: distWeightKg,
-        role: 'Rib bars — width direction',
-      },
-    );
     ribSteel = {
       ribsAlongLength: nX,
       ribsAlongWidth: nY,
@@ -197,51 +238,93 @@ export function slabRebar(f: SlabInput, volumeM3: number) {
       distWeightKg,
     };
   } else {
-    bottomMesh = twoWayMesh(
-      f.length,
-      f.width,
-      f.cover,
-      f.bottomMainDia,
-      f.bottomMainSpacing,
-      f.bottomDistDia,
-      f.bottomDistSpacing,
-    );
-    totalWeightKg = bottomMesh.totalWeightKg;
-    groups.push(
-      {
-        diameterMm: bottomMesh.mainBars.diameterMm,
-        weightKg: bottomMesh.mainBars.weightKg,
-        role: 'Bottom main',
-      },
-      {
-        diameterMm: bottomMesh.distBars.diameterMm,
-        weightKg: bottomMesh.distBars.weightKg,
-        role: 'Bottom distribution',
-      },
-    );
-    if (f.shape === 'DROP_PANEL') {
-      topDropMesh = twoWayMesh(
-        f.dropLength || 0,
-        f.dropWidth || 0,
+    bottomMesh =
+      resolveLayerMesh(
+        f.length,
+        f.width,
         f.cover,
+        f.bottomMainBars,
+        f.bottomDistBars,
         f.bottomMainDia,
         f.bottomMainSpacing,
         f.bottomDistDia,
         f.bottomDistSpacing,
-      );
+      ) || twoWayMesh(f.length, f.width, f.cover, 12, 200, 12, 200);
+    totalWeightKg = bottomMesh.totalWeightKg;
+    for (const s of bottomMesh.mainSets) {
+      groups.push({
+        diameterMm: s.diameterMm,
+        weightKg: s.weightKg,
+        role:
+          bottomMesh.mainSets.length > 1
+            ? `Bottom main Ø${s.diameterMm}`
+            : 'Bottom main',
+      });
+    }
+    for (const s of bottomMesh.distSets) {
+      groups.push({
+        diameterMm: s.diameterMm,
+        weightKg: s.weightKg,
+        role:
+          bottomMesh.distSets.length > 1
+            ? `Bottom distribution Ø${s.diameterMm}`
+            : 'Bottom distribution',
+      });
+    }
+    if (f.shape === 'DROP_PANEL') {
+      topDropMesh =
+        resolveLayerMesh(
+          f.dropLength || 0,
+          f.dropWidth || 0,
+          f.cover,
+          f.topMainBars,
+          f.topDistBars,
+          f.topMainDia,
+          f.topMainSpacing,
+          f.topDistDia,
+          f.topDistSpacing,
+        ) ||
+        resolveLayerMesh(
+          f.dropLength || 0,
+          f.dropWidth || 0,
+          f.cover,
+          f.bottomMainBars,
+          f.bottomDistBars,
+          f.bottomMainDia,
+          f.bottomMainSpacing,
+          f.bottomDistDia,
+          f.bottomDistSpacing,
+        ) ||
+        twoWayMesh(
+          f.dropLength || 0,
+          f.dropWidth || 0,
+          f.cover,
+          mainDia,
+          mainGroups[0]?.spacingMm || f.bottomMainSpacing || 200,
+          distDia,
+          distGroups[0]?.spacingMm || f.bottomDistSpacing || 200,
+        );
       totalWeightKg = round(totalWeightKg + topDropMesh.totalWeightKg);
-      groups.push(
-        {
-          diameterMm: topDropMesh.mainBars.diameterMm,
-          weightKg: topDropMesh.mainBars.weightKg,
-          role: 'Drop-panel top main',
-        },
-        {
-          diameterMm: topDropMesh.distBars.diameterMm,
-          weightKg: topDropMesh.distBars.weightKg,
-          role: 'Drop-panel top distribution',
-        },
-      );
+      for (const s of topDropMesh.mainSets) {
+        groups.push({
+          diameterMm: s.diameterMm,
+          weightKg: s.weightKg,
+          role:
+            topDropMesh.mainSets.length > 1
+              ? `Drop-panel top main Ø${s.diameterMm}`
+              : 'Drop-panel top main',
+        });
+      }
+      for (const s of topDropMesh.distSets) {
+        groups.push({
+          diameterMm: s.diameterMm,
+          weightKg: s.weightKg,
+          role:
+            topDropMesh.distSets.length > 1
+              ? `Drop-panel top distribution Ø${s.diameterMm}`
+              : 'Drop-panel top distribution',
+        });
+      }
     }
   }
 

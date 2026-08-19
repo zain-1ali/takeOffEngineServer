@@ -205,7 +205,7 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
           defaultGrade: p.materials?.defaultConcreteGrade || 'C25/30',
           floorCount: floors.length,
           elementCount: instanceCount,
-          pricedTotal: reports.summary.pricedTotal || 0,
+          pricedTotal: Number(reports.summary?.pricedTotal) || 0,
           unpricedCount,
           verified,
           updatedAt: p.updatedAt,

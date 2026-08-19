@@ -1,6 +1,7 @@
 import { withFormworkSplit } from './formworkSplit';
 import { barCountForSpan, round, unitWeightKgPerM } from './math';
 import type {
+  BarSet,
   ConcreteResult,
   RebarGroup,
   StructuralCalcResult,
@@ -12,6 +13,12 @@ export type BeamShape =
   | 'L_SECTION'
   | 'CANTILEVER_TAPERED'
   | 'GROUND_TIE';
+
+/** One same-diameter bar group (top or bottom). */
+export type BeamBarGroup = {
+  diameterMm: number;
+  barCount: number;
+};
 
 export type BeamInput = {
   shape: BeamShape;
@@ -25,10 +32,14 @@ export type BeamInput = {
   overallDepth?: number;
   supportDepth?: number;
   tipDepth?: number;
-  topBarCount: number;
-  topBarDia: number;
-  bottomBarCount: number;
-  bottomBarDia: number;
+  /** Preferred: multiple diameters per face. */
+  topBars?: BeamBarGroup[];
+  bottomBars?: BeamBarGroup[];
+  /** Legacy single-group fields. */
+  topBarCount?: number;
+  topBarDia?: number;
+  bottomBarCount?: number;
+  bottomBarDia?: number;
   linkDia: number;
   linkSpacing: number;
 };
@@ -41,6 +52,25 @@ export type BeamGeometry = {
   verticalFormworkM2: number;
   linkPerimeterM: number;
 };
+
+export function resolveBeamBarGroups(
+  groups: BeamBarGroup[] | undefined,
+  legacyCount: number | undefined,
+  legacyDia: number | undefined,
+): BeamBarGroup[] {
+  if (Array.isArray(groups) && groups.length > 0) {
+    return groups
+      .map((g) => ({
+        diameterMm: Number(g.diameterMm) || 0,
+        barCount: Number(g.barCount) || 0,
+      }))
+      .filter((g) => g.diameterMm > 0 && g.barCount > 0);
+  }
+  const dia = Number(legacyDia) || 0;
+  const count = Number(legacyCount) || 0;
+  if (dia > 0 && count > 0) return [{ diameterMm: dia, barCount: count }];
+  return [];
+}
 
 export function beamGeometry(f: BeamInput): BeamGeometry {
   const span = f.spanLength;
@@ -122,41 +152,55 @@ export function beamConcrete(f: BeamInput): ConcreteResult {
   };
 }
 
+function barSetsFromGroups(
+  groups: BeamBarGroup[],
+  spanLength: number,
+  rolePrefix: string,
+): { sets: BarSet[]; weightKg: number; rebarGroups: RebarGroup[] } {
+  const sets: BarSet[] = [];
+  const rebarGroups: RebarGroup[] = [];
+  let weightKg = 0;
+  for (const g of groups) {
+    const w = round(g.barCount * spanLength * unitWeightKgPerM(g.diameterMm));
+    weightKg = round(weightKg + w);
+    sets.push({ diameterMm: g.diameterMm, barCount: g.barCount, weightKg: w });
+    rebarGroups.push({
+      diameterMm: g.diameterMm,
+      weightKg: w,
+      role: `${rolePrefix} Ø${g.diameterMm}`,
+    });
+  }
+  return { sets, weightKg, rebarGroups };
+}
+
 export function beamRebar(f: BeamInput, volumeM3: number) {
   const geometry = beamGeometry(f);
-  const topWeightKg = round(
-    f.topBarCount * f.spanLength * unitWeightKgPerM(f.topBarDia),
+  const top = resolveBeamBarGroups(f.topBars, f.topBarCount, f.topBarDia);
+  const bottom = resolveBeamBarGroups(
+    f.bottomBars,
+    f.bottomBarCount,
+    f.bottomBarDia,
   );
-  const bottomWeightKg = round(
-    f.bottomBarCount * f.spanLength * unitWeightKgPerM(f.bottomBarDia),
-  );
+
+  const topResolved = barSetsFromGroups(top, f.spanLength, 'Top bars');
+  const bottomResolved = barSetsFromGroups(bottom, f.spanLength, 'Bottom bars');
+
   const linkCount = barCountForSpan(f.spanLength, f.linkSpacing);
   const linkWeightKg = round(
     linkCount * geometry.linkPerimeterM * unitWeightKgPerM(f.linkDia),
   );
+
   const groups: RebarGroup[] = [
-    { diameterMm: f.topBarDia, weightKg: topWeightKg, role: 'Top bars' },
-    {
-      diameterMm: f.bottomBarDia,
-      weightKg: bottomWeightKg,
-      role: 'Bottom bars',
-    },
+    ...topResolved.rebarGroups,
+    ...bottomResolved.rebarGroups,
     { diameterMm: f.linkDia, weightKg: linkWeightKg, role: 'Shear links' },
   ];
   const totalWeightKg = round(
-    topWeightKg + bottomWeightKg + linkWeightKg,
+    topResolved.weightKg + bottomResolved.weightKg + linkWeightKg,
   );
   return {
-    topBars: {
-      diameterMm: f.topBarDia,
-      barCount: f.topBarCount,
-      weightKg: topWeightKg,
-    },
-    bottomBars: {
-      diameterMm: f.bottomBarDia,
-      barCount: f.bottomBarCount,
-      weightKg: bottomWeightKg,
-    },
+    topBars: topResolved.sets,
+    bottomBars: bottomResolved.sets,
     links: {
       diameterMm: f.linkDia,
       barCount: linkCount,

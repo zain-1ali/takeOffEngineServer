@@ -33,6 +33,40 @@ describe('padFooting', () => {
     expect(bottom.mainBars.barCount).toBe(13);
   });
 
+  it('independent main≠dist: H16@150 main + H12@200 dist = 55.92 kg', () => {
+    // main: 13 × 1.9 × 16²/162 → 39.03
+    // dist: floor(1.9/0.2)+1=10; 10 × 1.9 × 12²/162 → 16.89
+    // total 55.92
+    const r = calcFooting({
+      ...basePad,
+      bottomMainDia: 16,
+      bottomMainSpacing: 150,
+      bottomDistDia: 12,
+      bottomDistSpacing: 200,
+    });
+    expect(r.totalRebarKg).toBe(55.92);
+  });
+
+  it('multi-group main direction: H16@150 + H12@200 main, H16@150 dist', () => {
+    // main H16@150: 39.03; main H12@200: 16.89; dist H16@150: 39.03 → 94.95
+    const r = calcFooting({
+      ...basePad,
+      bottomMainBars: [
+        { diameterMm: 16, spacingMm: 150 },
+        { diameterMm: 12, spacingMm: 200 },
+      ],
+      bottomDistBars: [{ diameterMm: 16, spacingMm: 150 }],
+    });
+    expect(r.totalRebarKg).toBe(94.95);
+    const groups = r.perUnit.rebar.groups;
+    expect(groups).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ diameterMm: 16, weightKg: 39.03 }),
+        expect.objectContaining({ diameterMm: 12, weightKg: 16.89 }),
+      ]),
+    );
+  });
+
   it('verified H16@150 pad + starters (1.2 m bars) = 89.91 kg', () => {
     // Spec figure: mesh 78.06 + 4×H20 starters at 1.2 m = 89.91 kg
     const r = calcFooting({

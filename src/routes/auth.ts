@@ -86,16 +86,14 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
       emailVerificationExpires: hoursFromNow(24),
     });
 
-    try {
-      await sendVerificationEmail(email, verifyToken);
-    } catch (mailErr) {
-      console.error('[auth] verification email failed', mailErr);
-    }
-
+    const mail = await sendVerificationEmail(email, verifyToken);
     res.status(201).json({
       needsVerification: true,
       email: user.email,
-      message: 'Check your email to verify your account before signing in.',
+      mailSent: mail.sent,
+      message: mail.sent
+        ? 'Check your email to verify your account before signing in.'
+        : 'Account created, but the verification email could not be sent. Use Resend on the sign-in page, or check the server logs for the link.',
     });
   } catch (err) {
     next(err);
@@ -244,19 +242,22 @@ router.post('/resend-verification', async (req: Request, res: Response, next: Ne
     }
 
     const user = await User.findOne({ email });
+    let mailSent = false;
     if (user && user.emailVerified === false && user.passwordHash) {
       const { token, hash } = createOpaqueToken();
       user.emailVerificationTokenHash = hash;
       user.emailVerificationExpires = hoursFromNow(24);
       await user.save();
-      try {
-        await sendVerificationEmail(email, token);
-      } catch (mailErr) {
-        console.error('[auth] resend verification failed', mailErr);
-      }
+      const mail = await sendVerificationEmail(email, token);
+      mailSent = mail.sent;
     }
 
-    res.json({ message: GENERIC_VERIFY_MSG });
+    res.json({
+      message: mailSent
+        ? 'If an unverified account exists for that email, we sent a verification link.'
+        : GENERIC_VERIFY_MSG,
+      mailSent,
+    });
   } catch (err) {
     next(err);
   }
@@ -271,19 +272,22 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
     }
 
     const user = await User.findOne({ email });
+    let mailSent = false;
     if (user?.passwordHash) {
       const { token, hash } = createOpaqueToken();
       user.passwordResetTokenHash = hash;
       user.passwordResetExpires = hoursFromNow(1);
       await user.save();
-      try {
-        await sendPasswordResetEmail(email, token);
-      } catch (mailErr) {
-        console.error('[auth] password reset email failed', mailErr);
-      }
+      const mail = await sendPasswordResetEmail(email, token);
+      mailSent = mail.sent;
     }
 
-    res.json({ message: GENERIC_RESET_MSG });
+    res.json({
+      message: mailSent
+        ? 'If an account exists for that email, we sent password reset instructions.'
+        : GENERIC_RESET_MSG,
+      mailSent,
+    });
   } catch (err) {
     next(err);
   }
