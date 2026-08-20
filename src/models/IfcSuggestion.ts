@@ -100,4 +100,4 @@ ifcSuggestionSchema.index({ jobId: 1, entityType: 1, confidence: 1 });
 export const IfcSuggestion = mongoose.model(
   'IfcSuggestion',
   ifcSuggestionSchema,
-) as mongoose.Model<IIfcSuggestion>;
+) as unknown as mongoose.Model<IIfcSuggestion>;

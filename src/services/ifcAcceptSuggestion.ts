@@ -3,7 +3,7 @@
  */
 import { Types } from 'mongoose';
 import { Floor } from '../models/Floor';
-import { Instance } from '../models/Instance';
+import { Instance, type IInstance } from '../models/Instance';
 import {
   IfcSuggestion,
   type IIfcSuggestion,
@@ -72,7 +72,7 @@ export async function acceptIfcSuggestion(opts: {
   mappedPatch?: Partial<IfcMappedInstanceData> | null;
 }): Promise<{
   suggestion: IIfcSuggestion;
-  instance: Awaited<ReturnType<typeof Instance.create>> | null;
+  instance: IInstance | null;
   skippedDuplicate: boolean;
 }> {
   const { suggestion, project, floorId } = opts;
@@ -191,7 +191,7 @@ export async function acceptIfcSuggestion(opts: {
 
   const grade = project.materials?.defaultConcreteGrade || 'C25/30';
 
-  let inst: Awaited<ReturnType<typeof Instance.create>>;
+  let inst: IInstance;
   try {
     inst = await Instance.create({
       projectId: project._id,

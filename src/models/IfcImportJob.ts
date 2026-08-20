@@ -133,4 +133,4 @@ const ifcImportJobSchema = new Schema(
 export const IfcImportJob = mongoose.model(
   'IfcImportJob',
   ifcImportJobSchema,
-) as mongoose.Model<IIfcImportJob>;
+) as unknown as mongoose.Model<IIfcImportJob>;

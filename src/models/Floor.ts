@@ -26,4 +26,4 @@ const floorSchema = new Schema(
 
 floorSchema.index({ projectId: 1, floorId: 1 }, { unique: true });
 
-export const Floor = mongoose.model('Floor', floorSchema) as mongoose.Model<IFloor>;
+export const Floor = mongoose.model('Floor', floorSchema) as unknown as mongoose.Model<IFloor>;

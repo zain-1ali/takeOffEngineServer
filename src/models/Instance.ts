@@ -63,4 +63,4 @@ instanceSchema.index(
 export const Instance = mongoose.model(
   'Instance',
   instanceSchema,
-) as mongoose.Model<IInstance>;
+) as unknown as mongoose.Model<IInstance>;
