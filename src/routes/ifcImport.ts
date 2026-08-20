@@ -1,6 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import fs from 'fs';
-import fsPromises from 'fs/promises';
 import multer from 'multer';
 import { Types } from 'mongoose';
 import { loadOwnedProject } from '../middleware/loadOwnedProject';
@@ -15,7 +13,10 @@ import {
 import { IfcSuggestion } from '../models/IfcSuggestion';
 import { parseIfc } from '../services/ifcImport';
 import { buildWallInstanceBodies } from '../services/ifcImportCommit';
-import { enqueueIfcImport } from '../services/ifcImportQueue';
+import {
+  enqueueIfcImport,
+  stashIfcUploadBuffer,
+} from '../services/ifcImportQueue';
 import {
   acceptIfcSuggestion,
   loadOwnedSuggestion,
@@ -24,30 +25,13 @@ import {
   rejectIfcSuggestion,
 } from '../services/ifcAcceptSuggestion';
 import {
-  ensureIfcUploadsDir,
   IFC_MAX_UPLOAD_BYTES,
   multerFileTooLargeMessage,
 } from '../services/ifcUploadLimits';
 import { mapIfcWallsToSuggestions } from '../services/ifcWallMap';
 
-ensureIfcUploadsDir();
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => {
-      try {
-        cb(null, ensureIfcUploadsDir());
-      } catch (err) {
-        cb(err as Error, '');
-      }
-    },
-    filename: (_req, file, cb) => {
-      const safe = String(file.originalname || 'model.ifc')
-        .replace(/[^a-zA-Z0-9._-]+/g, '_')
-        .slice(0, 80);
-      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safe}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: IFC_MAX_UPLOAD_BYTES },
   fileFilter: (_req, file, cb) => {
     const name = file.originalname.toLowerCase();
@@ -96,15 +80,6 @@ function uploadSingle(
     }
     next();
   });
-}
-
-async function unlinkQuiet(filePath: string | undefined | null): Promise<void> {
-  if (!filePath) return;
-  try {
-    await fsPromises.unlink(filePath);
-  } catch {
-    /* ignore */
-  }
 }
 
 async function loadOwnedJob(
@@ -185,17 +160,13 @@ function applySuggestionPatches(
 
 /**
  * POST /api/projects/:projectId/ifc-import
- * Upload IFC to disk → QUEUED job → background parse (p-queue).
+ * Upload IFC into memory → QUEUED job → background parse (p-queue).
+ * Bytes are never written to disk or MongoDB.
  */
 router.post('/', loadOwnedProject, uploadSingle, async (req: Request, res: Response) => {
-  const diskPath = req.file?.path;
   try {
-    if (!diskPath || !req.file) {
-      res.status(400).json({ error: 'IFC file is required (field name: file)' });
-      return;
-    }
-    if (!fs.existsSync(diskPath) || req.file.size <= 0) {
-      await unlinkQuiet(diskPath);
+    const buffer = req.file?.buffer;
+    if (!buffer?.length || !req.file) {
       res.status(400).json({ error: 'IFC file is required (field name: file)' });
       return;
     }
@@ -205,11 +176,11 @@ router.post('/', loadOwnedProject, uploadSingle, async (req: Request, res: Respo
       userId: req.user!.userId,
       fileName: req.file.originalname || 'model.ifc',
       status: 'QUEUED',
-      tempFilePath: diskPath,
       summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
       suggestions: [],
     });
 
+    stashIfcUploadBuffer(job._id.toString(), buffer);
     enqueueIfcImport(job._id.toString());
 
     res.status(201).json({
@@ -217,7 +188,6 @@ router.post('/', loadOwnedProject, uploadSingle, async (req: Request, res: Respo
       job: publicJob(job),
     });
   } catch (err) {
-    await unlinkQuiet(diskPath);
     const message = err instanceof Error ? err.message : 'IFC upload failed';
     res.status(422).json({ error: message });
   }
@@ -232,14 +202,9 @@ router.post(
   loadOwnedProject,
   uploadSingle,
   async (req: Request, res: Response) => {
-    const diskPath = req.file?.path;
     try {
-      if (!diskPath || !req.file) {
-        res.status(400).json({ error: 'IFC file is required (field name: file)' });
-        return;
-      }
-      const buffer = await fsPromises.readFile(diskPath);
-      if (!buffer.length) {
+      const buffer = req.file?.buffer;
+      if (!buffer?.length || !req.file) {
         res.status(400).json({ error: 'IFC file is required (field name: file)' });
         return;
       }
@@ -254,8 +219,6 @@ router.post(
     } catch (err) {
       const message = err instanceof Error ? err.message : 'IFC parse failed';
       res.status(422).json({ error: message });
-    } finally {
-      await unlinkQuiet(diskPath);
     }
   },
 );

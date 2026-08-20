@@ -40,8 +40,6 @@ export interface IIfcImportJob extends Document {
   fileName: string;
   status: IfcImportJobStatus;
   error?: string | null;
-  /** Server-local upload path; never exposed via publicJob. */
-  tempFilePath?: string | null;
   summary: {
     walls: number;
     slabs: number;
@@ -117,7 +115,6 @@ const ifcImportJobSchema = new Schema(
       index: true,
     },
     error: { type: String, default: null },
-    tempFilePath: { type: String, default: null },
     summary: {
       walls: { type: Number, default: 0 },
       slabs: { type: Number, default: 0 },

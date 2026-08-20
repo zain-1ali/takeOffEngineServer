@@ -6,9 +6,8 @@ import { IfcSuggestion } from '../../models/IfcSuggestion';
 import { acceptIfcSuggestion } from '../../services/ifcAcceptSuggestion';
 import { buildIfcSuggestionsFromParse } from '../../services/ifcBuildSuggestions';
 import { parseIfc } from '../../services/ifcImport';
-import { runIfcImportJob } from '../../services/ifcImportQueue';
+import { runIfcImportJob, stashIfcUploadBuffer } from '../../services/ifcImportQueue';
 import { IfcImportJob } from '../../models/IfcImportJob';
-import { ensureIfcUploadsDir } from '../../services/ifcUploadLimits';
 import type { IProject } from '../../models/Project';
 import {
   IFC_MAX_UPLOAD_BYTES,
@@ -190,27 +189,23 @@ describe('runIfcImportJob persists IfcSuggestion docs', () => {
     if (mongoose.connection.readyState !== 0) await mongoose.disconnect();
   });
 
-  it('writes PENDING suggestions and cleans temp file', async () => {
+  it('writes PENDING suggestions from an in-memory buffer', async () => {
     const fixture = path.join(__dirname, 'fixtures', 'minimal-wall.ifc');
-    const dir = ensureIfcUploadsDir();
-    const tempPath = path.join(dir, `sug-${Date.now()}.ifc`);
-    fs.copyFileSync(fixture, tempPath);
 
     const job = await IfcImportJob.create({
       projectId: new Types.ObjectId(),
       userId: new Types.ObjectId(),
       fileName: 'minimal-wall.ifc',
       status: 'QUEUED',
-      tempFilePath: tempPath,
       summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
       suggestions: [],
     });
 
+    stashIfcUploadBuffer(job._id.toString(), fs.readFileSync(fixture));
     await runIfcImportJob(job._id.toString());
 
     const updated = await IfcImportJob.findById(job._id);
     expect(updated!.status).toBe('SUCCEEDED');
-    expect(fs.existsSync(tempPath)).toBe(false);
 
     const docs = await IfcSuggestion.find({ jobId: job._id });
     expect(docs.length).toBeGreaterThanOrEqual(1);

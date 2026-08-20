@@ -1,10 +1,10 @@
 /**
- * In-process IFC parse queue (p-queue). Uploaded files live on disk until the
- * job runs, then are deleted. Concurrency 1 — IFC parse is memory-heavy.
+ * In-process IFC parse queue (p-queue). Upload bytes stay in RAM until the
+ * job runs, then are dropped — never written to disk or MongoDB.
+ * Concurrency 1 — IFC parse is memory-heavy.
  *
  * Results land as PENDING IfcSuggestion documents (not only embedded on the job).
  */
-import fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { IfcImportJob } from '../models/IfcImportJob';
 import { IfcSuggestion } from '../models/IfcSuggestion';
@@ -18,6 +18,20 @@ const PQueue = PQueueMod.default ?? PQueueMod;
 
 const queue = new PQueue({ concurrency: 1 });
 
+/** Ephemeral upload payloads keyed by job id (cleared after take / failure). */
+const pendingBuffers: Map<string, Buffer> = new Map();
+
+export function stashIfcUploadBuffer(jobId: string, buffer: Buffer): void {
+  pendingBuffers.set(jobId, buffer);
+}
+
+/** Removes and returns the buffer for a job, if any. */
+export function takeIfcUploadBuffer(jobId: string): Buffer | undefined {
+  const buf = pendingBuffers.get(jobId);
+  pendingBuffers.delete(jobId);
+  return buf;
+}
+
 export function enqueueIfcImport(jobId: string) {
   void queue.add(() => runIfcImportJob(jobId));
 }
@@ -25,10 +39,13 @@ export function enqueueIfcImport(jobId: string) {
 /** Exposed for tests — runs the worker body directly. */
 export async function runIfcImportJob(jobId: string): Promise<void> {
   const job = await IfcImportJob.findById(jobId);
-  if (!job) return;
+  if (!job) {
+    takeIfcUploadBuffer(jobId);
+    return;
+  }
 
-  const tempPath = job.tempFilePath ? String(job.tempFilePath) : '';
-  if (!tempPath) {
+  const buffer = takeIfcUploadBuffer(jobId);
+  if (!buffer?.length) {
     job.status = 'FAILED';
     job.error =
       'Uploaded IFC was lost before processing (server restart?)';
@@ -41,24 +58,6 @@ export async function runIfcImportJob(jobId: string): Promise<void> {
   await job.save();
 
   try {
-    let buffer: Buffer;
-    try {
-      buffer = await fs.readFile(tempPath);
-    } catch {
-      job.status = 'FAILED';
-      job.error =
-        'Uploaded IFC was lost before processing (server restart?)';
-      await job.save();
-      return;
-    }
-
-    if (!buffer.length) {
-      job.status = 'FAILED';
-      job.error = 'Uploaded IFC file was empty';
-      await job.save();
-      return;
-    }
-
     const result = await parseIfc(buffer);
     const built = buildIfcSuggestionsFromParse(result);
 
@@ -120,20 +119,5 @@ export async function runIfcImportJob(jobId: string): Promise<void> {
     job.status = 'FAILED';
     job.error = err instanceof Error ? err.message : 'IFC parse failed';
     await job.save();
-  } finally {
-    await cleanupTempFile(jobId, tempPath);
-  }
-}
-
-async function cleanupTempFile(jobId: string, tempPath: string): Promise<void> {
-  try {
-    await fs.unlink(tempPath);
-  } catch {
-    /* already gone */
-  }
-  try {
-    await IfcImportJob.findByIdAndUpdate(jobId, { $set: { tempFilePath: null } });
-  } catch {
-    /* ignore */
   }
 }

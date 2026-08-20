@@ -2,11 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import mongoose, { Types } from 'mongoose';
 import { IfcImportJob } from '../../models/IfcImportJob';
-import { runIfcImportJob } from '../../services/ifcImportQueue';
+import {
+  runIfcImportJob,
+  stashIfcUploadBuffer,
+} from '../../services/ifcImportQueue';
 import {
   IFC_MAX_UPLOAD_BYTES,
   IFC_MAX_UPLOAD_LABEL,
-  ensureIfcUploadsDir,
   multerFileTooLargeMessage,
 } from '../../services/ifcUploadLimits';
 
@@ -25,11 +27,7 @@ describe('ifcUploadLimits', () => {
 });
 
 describe('runIfcImportJob', () => {
-  const fixture = path.join(
-    __dirname,
-    'fixtures',
-    'minimal-wall.ifc',
-  );
+  const fixture = path.join(__dirname, 'fixtures', 'minimal-wall.ifc');
 
   beforeAll(async () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -45,25 +43,17 @@ describe('runIfcImportJob', () => {
     await mongoose.disconnect();
   });
 
-  it('parses a disk-backed fixture, fills suggestions, and deletes the temp file', async () => {
-    const dir = ensureIfcUploadsDir();
-    const tempPath = path.join(
-      dir,
-      `test-${Date.now()}-${Math.random().toString(36).slice(2)}.ifc`,
-    );
-    fs.copyFileSync(fixture, tempPath);
-    expect(fs.existsSync(tempPath)).toBe(true);
-
+  it('parses an in-memory buffer, fills suggestions, and drops the buffer', async () => {
     const job = await IfcImportJob.create({
       projectId: new Types.ObjectId(),
       userId: new Types.ObjectId(),
       fileName: 'minimal-wall.ifc',
       status: 'QUEUED',
-      tempFilePath: tempPath,
       summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
       suggestions: [],
     });
 
+    stashIfcUploadBuffer(job._id.toString(), fs.readFileSync(fixture));
     await runIfcImportJob(job._id.toString());
 
     const updated = await IfcImportJob.findById(job._id);
@@ -72,19 +62,16 @@ describe('runIfcImportJob', () => {
     expect(updated!.error).toBeNull();
     expect(updated!.summary.walls).toBeGreaterThanOrEqual(1);
     expect(updated!.suggestions.length).toBeGreaterThanOrEqual(1);
-    expect(updated!.tempFilePath).toBeNull();
-    expect(fs.existsSync(tempPath)).toBe(false);
 
     await IfcImportJob.deleteOne({ _id: job._id });
   }, 120000);
 
-  it('fails cleanly when the temp file is missing', async () => {
+  it('fails cleanly when the in-memory buffer is missing', async () => {
     const job = await IfcImportJob.create({
       projectId: new Types.ObjectId(),
       userId: new Types.ObjectId(),
       fileName: 'missing.ifc',
       status: 'QUEUED',
-      tempFilePath: path.join(ensureIfcUploadsDir(), 'does-not-exist.ifc'),
       summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
       suggestions: [],
     });
@@ -94,7 +81,6 @@ describe('runIfcImportJob', () => {
     const updated = await IfcImportJob.findById(job._id);
     expect(updated!.status).toBe('FAILED');
     expect(updated!.error).toMatch(/lost before processing/i);
-    expect(updated!.tempFilePath).toBeNull();
 
     await IfcImportJob.deleteOne({ _id: job._id });
   }, 30000);
