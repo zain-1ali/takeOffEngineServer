@@ -1,7 +1,12 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export type IfcSuggestionStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
-export type IfcImportJobStatus = 'SUCCEEDED' | 'FAILED' | 'COMMITTED';
+export type IfcImportJobStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'COMMITTED';
 export type IfcWallConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 
 export type IfcWallSuggestionGeometry = {
@@ -35,6 +40,8 @@ export interface IIfcImportJob extends Document {
   fileName: string;
   status: IfcImportJobStatus;
   error?: string | null;
+  /** Server-local upload path; never exposed via publicJob. */
+  tempFilePath?: string | null;
   summary: {
     walls: number;
     slabs: number;
@@ -88,7 +95,7 @@ const suggestionSchema = new Schema(
   { _id: false },
 );
 
-const ifcImportJobSchema = new Schema<IIfcImportJob>(
+const ifcImportJobSchema = new Schema(
   {
     projectId: {
       type: Schema.Types.ObjectId,
@@ -105,11 +112,12 @@ const ifcImportJobSchema = new Schema<IIfcImportJob>(
     fileName: { type: String, required: true },
     status: {
       type: String,
-      enum: ['SUCCEEDED', 'FAILED', 'COMMITTED'],
-      default: 'SUCCEEDED',
+      enum: ['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'COMMITTED'],
+      default: 'QUEUED',
       index: true,
     },
     error: { type: String, default: null },
+    tempFilePath: { type: String, default: null },
     summary: {
       walls: { type: Number, default: 0 },
       slabs: { type: Number, default: 0 },
@@ -122,7 +130,7 @@ const ifcImportJobSchema = new Schema<IIfcImportJob>(
   { timestamps: true },
 );
 
-export const IfcImportJob = mongoose.model<IIfcImportJob>(
+export const IfcImportJob = mongoose.model(
   'IfcImportJob',
   ifcImportJobSchema,
-);
+) as mongoose.Model<IIfcImportJob>;

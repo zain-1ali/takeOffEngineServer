@@ -12,7 +12,7 @@ export interface IFloor extends Document {
   updatedAt: Date;
 }
 
-const floorSchema = new Schema<IFloor>(
+const floorSchema = new Schema(
   {
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     floorId: { type: String, required: true, trim: true },
@@ -26,4 +26,4 @@ const floorSchema = new Schema<IFloor>(
 
 floorSchema.index({ projectId: 1, floorId: 1 }, { unique: true });
 
-export const Floor = mongoose.model<IFloor>('Floor', floorSchema);
+export const Floor = mongoose.model('Floor', floorSchema) as mongoose.Model<IFloor>;

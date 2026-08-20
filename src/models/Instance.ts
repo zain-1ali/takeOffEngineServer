@@ -17,11 +17,15 @@ export interface IInstance extends Document {
    * Null for elements with a fixed UniFormat mapping.
    */
   location: string | null;
+  /** Provenance: manual schedule add vs IFC import. */
+  source: 'MANUAL' | 'IFC_IMPORT' | null;
+  /** IFC GlobalId when source is IFC_IMPORT — used to prevent duplicate imports. */
+  sourceGlobalId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const instanceSchema = new Schema<IInstance>(
+const instanceSchema = new Schema(
   {
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     floorId: { type: String, required: true, trim: true, index: true },
@@ -34,10 +38,29 @@ const instanceSchema = new Schema<IInstance>(
     reinforcement: { type: Schema.Types.Mixed, default: null },
     spec: { type: String, default: null },
     location: { type: String, default: null, trim: true },
+    source: {
+      type: String,
+      enum: ['MANUAL', 'IFC_IMPORT', null],
+      default: null,
+    },
+    sourceGlobalId: { type: String, default: null, trim: true },
   },
   { timestamps: true },
 );
 
 instanceSchema.index({ projectId: 1, floorId: 1, elementKey: 1 });
+/** One IFC GlobalId per project when set (sparse — manual instances omit it). */
+instanceSchema.index(
+  { projectId: 1, sourceGlobalId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sourceGlobalId: { $type: 'string', $gt: '' },
+    },
+  },
+);
 
-export const Instance = mongoose.model<IInstance>('Instance', instanceSchema);
+export const Instance = mongoose.model(
+  'Instance',
+  instanceSchema,
+) as mongoose.Model<IInstance>;

@@ -1,4 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
 import multer from 'multer';
 import { Types } from 'mongoose';
 import { loadOwnedProject } from '../middleware/loadOwnedProject';
@@ -10,16 +12,43 @@ import {
   type IfcSuggestionStatus,
   type IfcWallSuggestionRow,
 } from '../models/IfcImportJob';
+import { IfcSuggestion } from '../models/IfcSuggestion';
 import { parseIfc } from '../services/ifcImport';
+import { buildWallInstanceBodies } from '../services/ifcImportCommit';
+import { enqueueIfcImport } from '../services/ifcImportQueue';
 import {
-  buildWallInstanceBodies,
-  toJobWallSuggestion,
-} from '../services/ifcImportCommit';
+  acceptIfcSuggestion,
+  loadOwnedSuggestion,
+  patchIfcSuggestionMappedData,
+  publicIfcSuggestion,
+  rejectIfcSuggestion,
+} from '../services/ifcAcceptSuggestion';
+import {
+  ensureIfcUploadsDir,
+  IFC_MAX_UPLOAD_BYTES,
+  multerFileTooLargeMessage,
+} from '../services/ifcUploadLimits';
 import { mapIfcWallsToSuggestions } from '../services/ifcWallMap';
 
+ensureIfcUploadsDir();
+
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 80 * 1024 * 1024 },
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      try {
+        cb(null, ensureIfcUploadsDir());
+      } catch (err) {
+        cb(err as Error, '');
+      }
+    },
+    filename: (_req, file, cb) => {
+      const safe = String(file.originalname || 'model.ifc')
+        .replace(/[^a-zA-Z0-9._-]+/g, '_')
+        .slice(0, 80);
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safe}`);
+    },
+  }),
+  limits: { fileSize: IFC_MAX_UPLOAD_BYTES },
   fileFilter: (_req, file, cb) => {
     const name = file.originalname.toLowerCase();
     const ok =
@@ -50,6 +79,32 @@ function publicJob(job: IIfcImportJob) {
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   };
+}
+
+function uploadSingle(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  upload.single('file')(req, res, (err: unknown) => {
+    if (err) {
+      const oversized = multerFileTooLargeMessage(err);
+      const message =
+        oversized || (err instanceof Error ? err.message : 'Upload failed');
+      res.status(400).json({ error: message });
+      return;
+    }
+    next();
+  });
+}
+
+async function unlinkQuiet(filePath: string | undefined | null): Promise<void> {
+  if (!filePath) return;
+  try {
+    await fsPromises.unlink(filePath);
+  } catch {
+    /* ignore */
+  }
 }
 
 async function loadOwnedJob(
@@ -130,50 +185,43 @@ function applySuggestionPatches(
 
 /**
  * POST /api/projects/:projectId/ifc-import
- * Upload IFC → persist job with PENDING wall suggestions (no Instance commit).
+ * Upload IFC to disk → QUEUED job → background parse (p-queue).
  */
-router.post(
-  '/',
-  loadOwnedProject,
-  (req: Request, res: Response, next: NextFunction) => {
-    upload.single('file')(req, res, (err: unknown) => {
-      if (err) {
-        const message = err instanceof Error ? err.message : 'Upload failed';
-        res.status(400).json({ error: message });
-        return;
-      }
-      next();
-    });
-  },
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      if (!req.file?.buffer?.length) {
-        res.status(400).json({ error: 'IFC file is required (field name: file)' });
-        return;
-      }
-      const result = await parseIfc(req.file.buffer);
-      const mapped = mapIfcWallsToSuggestions(result.entities);
-      const suggestions = mapped.map(toJobWallSuggestion);
-
-      const job = await IfcImportJob.create({
-        projectId: req.project!._id,
-        userId: req.user!.userId,
-        fileName: req.file.originalname || 'model.ifc',
-        status: 'SUCCEEDED',
-        summary: result.summary,
-        suggestions,
-      });
-
-      res.status(201).json({
-        jobId: job._id.toString(),
-        job: publicJob(job),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'IFC parse failed';
-      res.status(422).json({ error: message });
+router.post('/', loadOwnedProject, uploadSingle, async (req: Request, res: Response) => {
+  const diskPath = req.file?.path;
+  try {
+    if (!diskPath || !req.file) {
+      res.status(400).json({ error: 'IFC file is required (field name: file)' });
+      return;
     }
-  },
-);
+    if (!fs.existsSync(diskPath) || req.file.size <= 0) {
+      await unlinkQuiet(diskPath);
+      res.status(400).json({ error: 'IFC file is required (field name: file)' });
+      return;
+    }
+
+    const job = await IfcImportJob.create({
+      projectId: req.project!._id,
+      userId: req.user!.userId,
+      fileName: req.file.originalname || 'model.ifc',
+      status: 'QUEUED',
+      tempFilePath: diskPath,
+      summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
+      suggestions: [],
+    });
+
+    enqueueIfcImport(job._id.toString());
+
+    res.status(201).json({
+      jobId: job._id.toString(),
+      job: publicJob(job),
+    });
+  } catch (err) {
+    await unlinkQuiet(diskPath);
+    const message = err instanceof Error ? err.message : 'IFC upload failed';
+    res.status(422).json({ error: message });
+  }
+});
 
 /**
  * POST /api/projects/:projectId/ifc-import/parse
@@ -182,23 +230,20 @@ router.post(
 router.post(
   '/parse',
   loadOwnedProject,
-  (req: Request, res: Response, next: NextFunction) => {
-    upload.single('file')(req, res, (err: unknown) => {
-      if (err) {
-        const message = err instanceof Error ? err.message : 'Upload failed';
-        res.status(400).json({ error: message });
-        return;
-      }
-      next();
-    });
-  },
+  uploadSingle,
   async (req: Request, res: Response) => {
+    const diskPath = req.file?.path;
     try {
-      if (!req.file?.buffer?.length) {
+      if (!diskPath || !req.file) {
         res.status(400).json({ error: 'IFC file is required (field name: file)' });
         return;
       }
-      const result = await parseIfc(req.file.buffer);
+      const buffer = await fsPromises.readFile(diskPath);
+      if (!buffer.length) {
+        res.status(400).json({ error: 'IFC file is required (field name: file)' });
+        return;
+      }
+      const result = await parseIfc(buffer);
       const wallSuggestions = mapIfcWallsToSuggestions(result.entities);
       res.json({
         projectId: req.project!._id.toString(),
@@ -209,6 +254,8 @@ router.post(
     } catch (err) {
       const message = err instanceof Error ? err.message : 'IFC parse failed';
       res.status(422).json({ error: message });
+    } finally {
+      await unlinkQuiet(diskPath);
     }
   },
 );
@@ -222,6 +269,182 @@ router.get(
       if (!job) return;
       res.json({ job: publicJob(job) });
     } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /:jobId/suggestions — first-class IfcSuggestion rows for review UI.
+ * Sorted: HIGH first, then MEDIUM, then LOW; manual-modeling flagged rows last within tier.
+ */
+router.get(
+  '/:jobId/suggestions',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const job = await loadOwnedJob(req, res);
+      if (!job) return;
+      const rows = await IfcSuggestion.find({
+        projectId: req.project!._id,
+        jobId: job._id,
+      });
+      const rank = (c: string) =>
+        c === 'HIGH' ? 0 : c === 'MEDIUM' ? 1 : 2;
+      rows.sort((a, b) => {
+        if (a.entityType !== b.entityType) {
+          return a.entityType.localeCompare(b.entityType);
+        }
+        const rd = rank(a.confidence) - rank(b.confidence);
+        if (rd !== 0) return rd;
+        if (a.needsManualModeling !== b.needsManualModeling) {
+          return a.needsManualModeling ? 1 : -1;
+        }
+        return a.expressId - b.expressId;
+      });
+      res.json({
+        suggestions: rows.map(publicIfcSuggestion),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.patch(
+  '/:jobId/suggestions/:suggestionId',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const job = await loadOwnedJob(req, res);
+      if (!job) return;
+      if (job.status !== 'SUCCEEDED') {
+        res.status(409).json({ error: 'Suggestions are only editable after parse succeeds' });
+        return;
+      }
+      const suggestion = await loadOwnedSuggestion(
+        req.project!._id,
+        String(req.params.suggestionId),
+      );
+      if (!suggestion || suggestion.jobId.toString() !== job._id.toString()) {
+        res.status(404).json({ error: 'Suggestion not found' });
+        return;
+      }
+      const updated = await patchIfcSuggestionMappedData(
+        suggestion,
+        req.body?.mappedInstanceData || req.body || {},
+      );
+      res.json({ suggestion: publicIfcSuggestion(updated) });
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === 'object' && 'status' in err
+          ? Number((err as { status?: number }).status)
+          : 0;
+      if (status) {
+        res.status(status).json({
+          error: err instanceof Error ? err.message : 'Update failed',
+        });
+        return;
+      }
+      next(err);
+    }
+  },
+);
+
+/**
+ * POST /:jobId/suggestions/:suggestionId/accept
+ * Body: { floorId, mappedInstanceData? }
+ * Creates WALLS instance tagged source=IFC_IMPORT; dedupes on sourceGlobalId.
+ */
+router.post(
+  '/:jobId/suggestions/:suggestionId/accept',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const job = await loadOwnedJob(req, res);
+      if (!job) return;
+      if (job.status !== 'SUCCEEDED' && job.status !== 'COMMITTED') {
+        res.status(409).json({ error: 'Cannot accept until parse succeeds' });
+        return;
+      }
+      const suggestion = await loadOwnedSuggestion(
+        req.project!._id,
+        String(req.params.suggestionId),
+      );
+      if (!suggestion || suggestion.jobId.toString() !== job._id.toString()) {
+        res.status(404).json({ error: 'Suggestion not found' });
+        return;
+      }
+      const floorId = String(req.body?.floorId ?? '').trim();
+      if (!floorId) {
+        res.status(400).json({ error: 'floorId is required' });
+        return;
+      }
+      const result = await acceptIfcSuggestion({
+        suggestion,
+        project: req.project!,
+        floorId,
+        mappedPatch: req.body?.mappedInstanceData,
+      });
+      res.json({
+        suggestion: publicIfcSuggestion(result.suggestion),
+        skippedDuplicate: result.skippedDuplicate,
+        instance: result.instance
+          ? {
+              id: result.instance._id.toString(),
+              mark: result.instance.mark,
+              shape: result.instance.shape,
+              floorId: result.instance.floorId,
+              elementKey: result.instance.elementKey,
+              source: result.instance.source,
+              sourceGlobalId: result.instance.sourceGlobalId,
+            }
+          : null,
+      });
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === 'object' && 'status' in err
+          ? Number((err as { status?: number }).status)
+          : 0;
+      if (status) {
+        res.status(status).json({
+          error: err instanceof Error ? err.message : 'Accept failed',
+        });
+        return;
+      }
+      next(err);
+    }
+  },
+);
+
+router.post(
+  '/:jobId/suggestions/:suggestionId/reject',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const job = await loadOwnedJob(req, res);
+      if (!job) return;
+      const suggestion = await loadOwnedSuggestion(
+        req.project!._id,
+        String(req.params.suggestionId),
+      );
+      if (!suggestion || suggestion.jobId.toString() !== job._id.toString()) {
+        res.status(404).json({ error: 'Suggestion not found' });
+        return;
+      }
+      const updated = await rejectIfcSuggestion(suggestion);
+      res.json({ suggestion: publicIfcSuggestion(updated) });
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === 'object' && 'status' in err
+          ? Number((err as { status?: number }).status)
+          : 0;
+      if (status) {
+        res.status(status).json({
+          error: err instanceof Error ? err.message : 'Reject failed',
+        });
+        return;
+      }
       next(err);
     }
   },
@@ -343,8 +566,29 @@ router.post(
           reinforcement: b.reinforcement,
           spec: b.spec,
           location: b.location,
+          source: 'IFC_IMPORT' as const,
+          sourceGlobalId: b.sourceGlobalId,
         })),
       );
+
+      // Mirror accept onto first-class IfcSuggestion rows when present.
+      for (const body of bodies) {
+        await IfcSuggestion.updateMany(
+          {
+            projectId: req.project!._id,
+            jobId: job._id,
+            sourceGlobalId: body.sourceGlobalId,
+            status: 'PENDING',
+          },
+          {
+            $set: {
+              status: 'ACCEPTED',
+              needsManualModeling: false,
+              skipReason: null,
+            },
+          },
+        );
+      }
 
       job.status = 'COMMITTED';
       job.committedAt = new Date();

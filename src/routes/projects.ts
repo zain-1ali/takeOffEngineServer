@@ -122,6 +122,8 @@ function publicInstance(inst: IInstance) {
     reinforcement: inst.reinforcement,
     spec: inst.spec,
     location: inst.location ?? null,
+    source: inst.source ?? null,
+    sourceGlobalId: inst.sourceGlobalId ?? null,
     createdAt: inst.createdAt,
     updatedAt: inst.updatedAt,
   };
