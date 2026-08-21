@@ -19,6 +19,8 @@ export type IfcRawProfile = {
   /** Rectangle profile dims when available (metres). */
   xDim?: number;
   yDim?: number;
+  /** Ordered IfcPolyline boundary vertices when available (metres). */
+  boundaryPoints?: Array<{ x: number; y: number }>;
   profileName?: string | null;
 };
 
@@ -264,6 +266,7 @@ function typeName(line: unknown): string {
   if (typeCode === WebIFC.IFCRECTANGLEPROFILEDEF) return 'IfcRectangleProfileDef';
   if (typeCode === WebIFC.IFCARBITRARYCLOSEDPROFILEDEF)
     return 'IfcArbitraryClosedProfileDef';
+  if (typeCode === WebIFC.IFCPOLYLINE) return 'IfcPolyline';
   if (typeCode === WebIFC.IFCWALL) return 'IfcWall';
   if (typeCode === WebIFC.IFCWALLSTANDARDCASE) return 'IfcWallStandardCase';
   if (typeCode === WebIFC.IFCSLAB) return 'IfcSlab';
@@ -323,6 +326,30 @@ function extractProfile(
     const y = asNum(o.YDim);
     base.xDim = x == null ? undefined : x * lengthScaleToM;
     base.yDim = y == null ? undefined : y * lengthScaleToM;
+  } else if (isType(profile, WebIFC.IFCARBITRARYCLOSEDPROFILEDEF)) {
+    const outerCurve = o.OuterCurve;
+    if (
+      outerCurve &&
+      typeof outerCurve === 'object' &&
+      typeName(outerCurve) === 'IfcPolyline'
+    ) {
+      const points = (outerCurve as Record<string, unknown>).Points;
+      if (Array.isArray(points)) {
+        const boundaryPoints = points
+          .map((point) => asVec3(point))
+          .filter(
+            (point): point is { x: number; y: number; z: number } =>
+              point != null,
+          )
+          .map((point) => ({
+            x: point.x * lengthScaleToM,
+            y: point.y * lengthScaleToM,
+          }));
+        if (boundaryPoints.length >= 4) {
+          base.boundaryPoints = boundaryPoints;
+        }
+      }
+    }
   }
   return base;
 }

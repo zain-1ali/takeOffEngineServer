@@ -27,6 +27,137 @@ export type WallIfcSuggestion = {
 const VERTICAL_DOT_MIN = 0.95;
 const LEN_THICK_NEAR = 0.05; // relative — square-ish profile
 const AXIS_DIM_TOLERANCE = 0.02;
+const RECTANGLE_TOLERANCE = LEN_THICK_NEAR;
+const COLLINEAR_EPSILON = 1e-7;
+
+type Point2 = { x: number; y: number };
+
+function relativeDifference(a: number, b: number): number {
+  return Math.abs(a - b) / Math.max(a, b);
+}
+
+function pointDistance(a: Point2, b: Point2): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+/**
+ * Derive the two side dimensions only when a polygon is rectangular.
+ * Rotation is allowed. Repeated closing points and exactly-collinear points
+ * along an edge are ignored; curved/tessellated and genuinely irregular
+ * boundaries do not collapse to four valid corners.
+ */
+function rectangularPolygonDimensions(
+  boundaryPoints: Point2[] | undefined,
+): { xDim: number; yDim: number } | null {
+  if (!boundaryPoints || boundaryPoints.length < 4) return null;
+  if (
+    boundaryPoints.some(
+      (point) => !Number.isFinite(point.x) || !Number.isFinite(point.y),
+    )
+  ) {
+    return null;
+  }
+
+  const span = Math.max(
+    1,
+    ...boundaryPoints.map((point) => Math.abs(point.x)),
+    ...boundaryPoints.map((point) => Math.abs(point.y)),
+  );
+  const duplicateEpsilon = span * Number.EPSILON * 100;
+  const points: Point2[] = [];
+  for (const point of boundaryPoints) {
+    if (
+      !points.length ||
+      pointDistance(points[points.length - 1], point) > duplicateEpsilon
+    ) {
+      points.push(point);
+    }
+  }
+  if (
+    points.length > 1 &&
+    pointDistance(points[0], points[points.length - 1]) <= duplicateEpsilon
+  ) {
+    points.pop();
+  }
+
+  // Some exporters add intermediate points on otherwise straight edges.
+  let changed = true;
+  while (changed && points.length > 4) {
+    changed = false;
+    for (let i = 0; i < points.length; i += 1) {
+      const prev = points[(i - 1 + points.length) % points.length];
+      const current = points[i];
+      const next = points[(i + 1) % points.length];
+      const ax = current.x - prev.x;
+      const ay = current.y - prev.y;
+      const bx = next.x - current.x;
+      const by = next.y - current.y;
+      const aLen = Math.hypot(ax, ay);
+      const bLen = Math.hypot(bx, by);
+      if (!(aLen > 0) || !(bLen > 0)) return null;
+      const normalizedCross = Math.abs(ax * by - ay * bx) / (aLen * bLen);
+      const normalizedDot = (ax * bx + ay * by) / (aLen * bLen);
+      if (
+        normalizedCross <= COLLINEAR_EPSILON &&
+        normalizedDot > 0
+      ) {
+        points.splice(i, 1);
+        changed = true;
+        break;
+      }
+    }
+  }
+
+  if (points.length !== 4) return null;
+
+  const edges = points.map((point, index) => {
+    const next = points[(index + 1) % points.length];
+    const x = next.x - point.x;
+    const y = next.y - point.y;
+    return { x, y, length: Math.hypot(x, y) };
+  });
+  if (edges.some((edge) => !(edge.length > 0))) return null;
+
+  if (
+    relativeDifference(edges[0].length, edges[2].length) >
+      RECTANGLE_TOLERANCE ||
+    relativeDifference(edges[1].length, edges[3].length) >
+      RECTANGLE_TOLERANCE
+  ) {
+    return null;
+  }
+
+  const normalizedDot = (
+    a: (typeof edges)[number],
+    b: (typeof edges)[number],
+  ) => (a.x * b.x + a.y * b.y) / (a.length * b.length);
+  const normalizedCross = (
+    a: (typeof edges)[number],
+    b: (typeof edges)[number],
+  ) => (a.x * b.y - a.y * b.x) / (a.length * b.length);
+
+  for (let i = 0; i < edges.length; i += 1) {
+    if (
+      Math.abs(normalizedDot(edges[i], edges[(i + 1) % edges.length])) >
+      RECTANGLE_TOLERANCE
+    ) {
+      return null;
+    }
+  }
+  if (
+    Math.abs(normalizedCross(edges[0], edges[2])) > RECTANGLE_TOLERANCE ||
+    Math.abs(normalizedCross(edges[1], edges[3])) > RECTANGLE_TOLERANCE ||
+    normalizedDot(edges[0], edges[2]) >= 0 ||
+    normalizedDot(edges[1], edges[3]) >= 0
+  ) {
+    return null;
+  }
+
+  return {
+    xDim: (edges[0].length + edges[2].length) / 2,
+    yDim: (edges[1].length + edges[3].length) / 2,
+  };
+}
 
 function isVerticalExtrusion(
   dir: { x: number; y: number; z: number } | null | undefined,
@@ -135,11 +266,25 @@ function mapExtrudedWall(
     };
   }
 
-  const isRect = profile.type === 'IfcRectangleProfileDef';
+  let isRect = profile.type === 'IfcRectangleProfileDef';
+  let xDim = profile.xDim;
+  let yDim = profile.yDim;
+  if (profile.type === 'IfcArbitraryClosedProfileDef') {
+    const derived = rectangularPolygonDimensions(profile.boundaryPoints);
+    if (derived) {
+      isRect = true;
+      xDim = derived.xDim;
+      yDim = derived.yDim;
+      notes.push(
+        `IfcArbitraryClosedProfileDef boundary is rectangular; derived XDim=${round3(xDim)}m and YDim=${round3(yDim)}m`,
+      );
+    }
+  }
   if (!isRect) {
-    // v1: no guessing at arbitrary profiles / arcs from profile alone
     notes.push(
-      `Profile type ${profile.type} is not IfcRectangleProfileDef — curved/axis mapping not auto-derived`,
+      profile.type === 'IfcArbitraryClosedProfileDef'
+        ? 'IfcArbitraryClosedProfileDef boundary is not rectangular within the 5% tolerance — curved/axis mapping not auto-derived'
+        : `Profile type ${profile.type} is not IfcRectangleProfileDef — curved/axis mapping not auto-derived`,
     );
     return {
       ...base,
@@ -157,8 +302,6 @@ function mapExtrudedWall(
     };
   }
 
-  const xDim = profile.xDim;
-  const yDim = profile.yDim;
   if (xDim == null || yDim == null || !(xDim > 0) || !(yDim > 0)) {
     return {
       ...base,

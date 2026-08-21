@@ -1,11 +1,42 @@
 import fs from 'fs';
 import path from 'path';
-import { parseIfc } from '../../services/ifcImport';
+import {
+  parseIfc,
+  type IfcParsedEntity,
+  type IfcRawProfile,
+} from '../../services/ifcImport';
 import {
   mapIfcWallToSuggestion,
   mapIfcWallsToSuggestions,
 } from '../../services/ifcWallMap';
 import { wallConcrete } from '../walls';
+
+function wallWithProfile(
+  profile: IfcRawProfile,
+  axisGeometry: IfcParsedEntity['axisGeometry'] = null,
+): IfcParsedEntity {
+  return {
+    expressId: 700,
+    globalId: 'profile-wall',
+    entityType: 'IfcWall',
+    schemaType: 'IfcWallStandardCase',
+    name: 'Profile wall',
+    geometryOk: true,
+    skipReason: null,
+    geometry: {
+      representationKind: 'IfcExtrudedAreaSolid',
+      depth: 3,
+      extrusionDirection: { x: 0, y: 0, z: 1 },
+      worldExtrusionDirection: { x: 0, y: 0, z: 1 },
+      profile,
+      solidPosition: null,
+      objectPlacement: null,
+      lengthUnitKnown: true,
+    },
+    axisGeometry,
+    axisSkipReason: axisGeometry ? null : 'No Axis representation',
+  };
+}
 
 describe('mapIfcWallToSuggestion', () => {
   it('maps body-only fixture wall with MEDIUM fallback confidence', async () => {
@@ -115,6 +146,115 @@ describe('mapIfcWallToSuggestion', () => {
     expect(suggestion.confidence).toBe('HIGH');
     expect(suggestion.needsManualReview).toBe(false);
   }, 60000);
+
+  it('extracts an arbitrary IfcPolyline rectangle and uses the rectangle mapping path', async () => {
+    const file = path.join(__dirname, 'fixtures', 'minimal-wall.ifc');
+    const source = fs
+      .readFileSync(file, 'utf8')
+      .replace(
+        "#104=IFCRECTANGLEPROFILEDEF(.AREA.,'WallProfile',$,0.25,5.);",
+        [
+          "#104=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,'WallProfile',#201);",
+          '#201=IFCPOLYLINE((#202,#203,#204,#205,#202));',
+          '#202=IFCCARTESIANPOINT((0.,0.));',
+          '#203=IFCCARTESIANPOINT((5.,0.));',
+          '#204=IFCCARTESIANPOINT((5.,0.25));',
+          '#205=IFCCARTESIANPOINT((0.,0.25));',
+        ].join('\n'),
+      );
+    const result = await parseIfc(Buffer.from(source));
+    const wall = result.entities.find((entity) => entity.entityType === 'IfcWall');
+    expect(wall?.geometry?.profile).toMatchObject({
+      type: 'IfcArbitraryClosedProfileDef',
+      boundaryPoints: [
+        { x: 0, y: 0 },
+        { x: 5, y: 0 },
+        { x: 5, y: 0.25 },
+        { x: 0, y: 0.25 },
+        { x: 0, y: 0 },
+      ],
+    });
+
+    const suggestion = mapIfcWallToSuggestion(wall!);
+    expect(suggestion?.geometry).toEqual({
+      length: 5,
+      thickness: 0.25,
+      height: 3,
+    });
+    expect(suggestion?.confidence).toBe('MEDIUM');
+    expect(suggestion?.needsManualReview).toBe(false);
+    expect(suggestion?.confidenceNotes).toContain(
+      'IfcArbitraryClosedProfileDef boundary is rectangular; derived XDim=5m and YDim=0.25m',
+    );
+  }, 60000);
+
+  it('accepts a near-rectangular arbitrary polygon within the 5% tolerance', () => {
+    const suggestion = mapIfcWallToSuggestion(
+      wallWithProfile({
+        type: 'IfcArbitraryClosedProfileDef',
+        boundaryPoints: [
+          { x: 0, y: 0 },
+          { x: 5, y: 0 },
+          { x: 5.005, y: 0.25 },
+          { x: 0, y: 0.25 },
+          { x: 0, y: 0 },
+        ],
+      }),
+    );
+    expect(suggestion?.shape).toBe('LINEAR');
+    expect(suggestion?.geometry?.length).toBe(5.002);
+    expect(suggestion?.geometry?.thickness).toBe(0.25);
+    expect(suggestion?.geometry?.height).toBe(3);
+    expect(suggestion?.confidence).toBe('MEDIUM');
+    expect(suggestion?.needsManualReview).toBe(false);
+  });
+
+  it.each([
+    [
+      'angled quadrilateral',
+      [
+        { x: 0, y: 0 },
+        { x: 5, y: 0 },
+        { x: 4.6, y: 0.25 },
+        { x: 0.4, y: 0.25 },
+        { x: 0, y: 0 },
+      ],
+    ],
+    [
+      'L-shaped polygon',
+      [
+        { x: 0, y: 0 },
+        { x: 5, y: 0 },
+        { x: 5, y: 0.25 },
+        { x: 2, y: 0.25 },
+        { x: 2, y: 0.5 },
+        { x: 0, y: 0.5 },
+        { x: 0, y: 0 },
+      ],
+    ],
+    [
+      'curved tessellated boundary',
+      [
+        { x: 0, y: 0 },
+        { x: 5, y: 0 },
+        { x: 5, y: 0.25 },
+        { x: 4.9, y: 0.4 },
+        { x: 0.1, y: 0.4 },
+        { x: 0, y: 0.25 },
+        { x: 0, y: 0 },
+      ],
+    ],
+  ])('keeps a genuinely irregular %s LOW for manual review', (_label, points) => {
+    const suggestion = mapIfcWallToSuggestion(
+      wallWithProfile({
+        type: 'IfcArbitraryClosedProfileDef',
+        boundaryPoints: points,
+      }),
+    );
+    expect(suggestion?.shape).toBeNull();
+    expect(suggestion?.confidence).toBe('LOW');
+    expect(suggestion?.needsManualReview).toBe(true);
+  });
 
   it('uses a straight Axis to identify length when X/Y are reversed', () => {
     const suggestion = mapIfcWallToSuggestion({
