@@ -2,7 +2,12 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export type IfcSuggestionConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 export type IfcSuggestionStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
-export type IfcSuggestionEntityType = 'IfcWall' | 'IfcSlab';
+export type IfcSuggestionEntityType =
+  | 'IfcWall'
+  | 'IfcSlab'
+  | 'IfcFooting'
+  | 'IfcColumn'
+  | 'IfcBeam';
 export type IfcFloorMatchStatus =
   | 'MATCHED_NAME'
   | 'MATCHED_ELEVATION'
@@ -20,7 +25,15 @@ export type IfcSuggestionStorey = {
 
 /** Editable payload used to create an Instance on Accept. */
 export type IfcMappedInstanceData = {
-  elementKey: 'WALLS' | 'SLABS' | null;
+  elementKey:
+    | 'WALLS'
+    | 'SLABS'
+    | 'PAD_FOOTING'
+    | 'STRIP_FOOTING'
+    | 'PILE_CAP'
+    | 'COLUMNS'
+    | 'BEAMS'
+    | null;
   shape: string | null;
   mark: string | null;
   geometry: Record<string, number> | null;
@@ -54,7 +67,16 @@ const mappedDataSchema = new Schema(
   {
     elementKey: {
       type: String,
-      enum: ['WALLS', 'SLABS', null],
+      enum: [
+        'WALLS',
+        'SLABS',
+        'PAD_FOOTING',
+        'STRIP_FOOTING',
+        'PILE_CAP',
+        'COLUMNS',
+        'BEAMS',
+        null,
+      ],
       default: null,
     },
     shape: { type: String, default: null },
@@ -92,7 +114,7 @@ const ifcSuggestionSchema = new Schema(
     expressId: { type: Number, required: true },
     entityType: {
       type: String,
-      enum: ['IfcWall', 'IfcSlab'],
+      enum: ['IfcWall', 'IfcSlab', 'IfcFooting', 'IfcColumn', 'IfcBeam'],
       required: true,
       index: true,
     },

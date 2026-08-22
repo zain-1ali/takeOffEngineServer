@@ -1,10 +1,27 @@
 /**
  * Step 2 — map raw IfcWall extruded geometry → WALLS suggestion shape.
  * Suggestions only; never creates Instances.
+ *
+ * Shared utilities:
+ * - rectangle / arbitrary-polygon profile → ifcRectangleProfile
+ * - HIGH/MEDIUM/LOW thresholds & helpers → ifcConfidence
+ * Floor/storey matching lives in ifcFloorMatch (used by ifcBuildSuggestions).
  */
 import type { IfcParsedEntity, IfcRawExtrusionGeometry } from './ifcImport';
+import {
+  addConfidenceNote,
+  applyExtrusionConfidenceBasics,
+  createConfidence,
+  dimensionsAgreeWithin,
+  isNearSquareProfile,
+  markConfidenceLow,
+  markConfidenceMediumIfHigh,
+  roundMetres3,
+  type IfcConfidenceTier,
+} from './ifcConfidence';
+import { resolveRectangleProfileDims } from './ifcRectangleProfile';
 
-export type WallIfcConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
+export type WallIfcConfidence = IfcConfidenceTier;
 
 export type WallIfcSuggestion = {
   sourceGlobalId: string;
@@ -23,154 +40,6 @@ export type WallIfcSuggestion = {
   confidenceNotes: string[];
   needsManualReview: boolean;
 };
-
-const VERTICAL_DOT_MIN = 0.95;
-const LEN_THICK_NEAR = 0.05; // relative — square-ish profile
-const AXIS_DIM_TOLERANCE = 0.02;
-const RECTANGLE_TOLERANCE = LEN_THICK_NEAR;
-const COLLINEAR_EPSILON = 1e-7;
-
-type Point2 = { x: number; y: number };
-
-function relativeDifference(a: number, b: number): number {
-  return Math.abs(a - b) / Math.max(a, b);
-}
-
-function pointDistance(a: Point2, b: Point2): number {
-  return Math.hypot(b.x - a.x, b.y - a.y);
-}
-
-/**
- * Derive the two side dimensions only when a polygon is rectangular.
- * Rotation is allowed. Repeated closing points and exactly-collinear points
- * along an edge are ignored; curved/tessellated and genuinely irregular
- * boundaries do not collapse to four valid corners.
- */
-function rectangularPolygonDimensions(
-  boundaryPoints: Point2[] | undefined,
-): { xDim: number; yDim: number } | null {
-  if (!boundaryPoints || boundaryPoints.length < 4) return null;
-  if (
-    boundaryPoints.some(
-      (point) => !Number.isFinite(point.x) || !Number.isFinite(point.y),
-    )
-  ) {
-    return null;
-  }
-
-  const span = Math.max(
-    1,
-    ...boundaryPoints.map((point) => Math.abs(point.x)),
-    ...boundaryPoints.map((point) => Math.abs(point.y)),
-  );
-  const duplicateEpsilon = span * Number.EPSILON * 100;
-  const points: Point2[] = [];
-  for (const point of boundaryPoints) {
-    if (
-      !points.length ||
-      pointDistance(points[points.length - 1], point) > duplicateEpsilon
-    ) {
-      points.push(point);
-    }
-  }
-  if (
-    points.length > 1 &&
-    pointDistance(points[0], points[points.length - 1]) <= duplicateEpsilon
-  ) {
-    points.pop();
-  }
-
-  // Some exporters add intermediate points on otherwise straight edges.
-  let changed = true;
-  while (changed && points.length > 4) {
-    changed = false;
-    for (let i = 0; i < points.length; i += 1) {
-      const prev = points[(i - 1 + points.length) % points.length];
-      const current = points[i];
-      const next = points[(i + 1) % points.length];
-      const ax = current.x - prev.x;
-      const ay = current.y - prev.y;
-      const bx = next.x - current.x;
-      const by = next.y - current.y;
-      const aLen = Math.hypot(ax, ay);
-      const bLen = Math.hypot(bx, by);
-      if (!(aLen > 0) || !(bLen > 0)) return null;
-      const normalizedCross = Math.abs(ax * by - ay * bx) / (aLen * bLen);
-      const normalizedDot = (ax * bx + ay * by) / (aLen * bLen);
-      if (
-        normalizedCross <= COLLINEAR_EPSILON &&
-        normalizedDot > 0
-      ) {
-        points.splice(i, 1);
-        changed = true;
-        break;
-      }
-    }
-  }
-
-  if (points.length !== 4) return null;
-
-  const edges = points.map((point, index) => {
-    const next = points[(index + 1) % points.length];
-    const x = next.x - point.x;
-    const y = next.y - point.y;
-    return { x, y, length: Math.hypot(x, y) };
-  });
-  if (edges.some((edge) => !(edge.length > 0))) return null;
-
-  if (
-    relativeDifference(edges[0].length, edges[2].length) >
-      RECTANGLE_TOLERANCE ||
-    relativeDifference(edges[1].length, edges[3].length) >
-      RECTANGLE_TOLERANCE
-  ) {
-    return null;
-  }
-
-  const normalizedDot = (
-    a: (typeof edges)[number],
-    b: (typeof edges)[number],
-  ) => (a.x * b.x + a.y * b.y) / (a.length * b.length);
-  const normalizedCross = (
-    a: (typeof edges)[number],
-    b: (typeof edges)[number],
-  ) => (a.x * b.y - a.y * b.x) / (a.length * b.length);
-
-  for (let i = 0; i < edges.length; i += 1) {
-    if (
-      Math.abs(normalizedDot(edges[i], edges[(i + 1) % edges.length])) >
-      RECTANGLE_TOLERANCE
-    ) {
-      return null;
-    }
-  }
-  if (
-    Math.abs(normalizedCross(edges[0], edges[2])) > RECTANGLE_TOLERANCE ||
-    Math.abs(normalizedCross(edges[1], edges[3])) > RECTANGLE_TOLERANCE ||
-    normalizedDot(edges[0], edges[2]) >= 0 ||
-    normalizedDot(edges[1], edges[3]) >= 0
-  ) {
-    return null;
-  }
-
-  return {
-    xDim: (edges[0].length + edges[2].length) / 2,
-    yDim: (edges[1].length + edges[3].length) / 2,
-  };
-}
-
-function isVerticalExtrusion(
-  dir: { x: number; y: number; z: number } | null | undefined,
-): boolean {
-  if (!dir) return false;
-  const mag = Math.hypot(dir.x, dir.y, dir.z);
-  if (!(mag > 0)) return false;
-  return Math.abs(dir.z) / mag >= VERTICAL_DOT_MIN;
-}
-
-function round3(n: number): number {
-  return Math.round(n * 1000) / 1000;
-}
 
 /**
  * Map one parsed IFC wall entity to a WALLS suggestion.
@@ -218,10 +87,7 @@ function mapExtrudedWall(
   axis: IfcParsedEntity['axisGeometry'],
   axisSkipReason: string | null,
 ): WallIfcSuggestion {
-  const notes: string[] = ['IfcExtrudedAreaSolid'];
-  let confidence: WallIfcConfidence = 'HIGH';
-  let needsManualReview = false;
-
+  // Match prior Walls behavior: missing depth is a lone note (no seed notes).
   const depth = geom.depth;
   if (depth == null || !(depth > 0)) {
     return {
@@ -234,127 +100,96 @@ function mapExtrudedWall(
     };
   }
 
-  if (!geom.lengthUnitKnown) {
-    notes.push('IFC length unit could not be resolved — values may not be metres');
-    confidence = 'LOW';
-    needsManualReview = true;
-  } else {
-    notes.push('Length values normalized to metres');
+  const conf = createConfidence(['IfcExtrudedAreaSolid']);
+  applyExtrusionConfidenceBasics(conf, {
+    depth,
+    lengthUnitKnown: geom.lengthUnitKnown,
+    worldExtrusionDirection: geom.worldExtrusionDirection,
+    positionAxis: geom.solidPosition?.axis ?? null,
+    requireVerticalExtrusion: true,
+    nonVerticalNote:
+      'World extrusion direction is not vertical — unusual for WALLS mapping',
+    tiltedPositionNote:
+      'Swept-solid Position.Axis is tilted despite a vertical world extrusion — possible tilted WALLS geometry, review manually',
+  });
+
+  const resolved = resolveRectangleProfileDims(geom.profile);
+  if (!resolved.ok) {
+    const profile = geom.profile;
+    const noPartialGeometry =
+      !profile ||
+      resolved.unsupportedNote === 'No swept profile on extrusion' ||
+      resolved.unsupportedNote === 'Rectangle profile missing XDim/YDim';
+    return {
+      ...base,
+      shape: null,
+      geometry: noPartialGeometry
+        ? null
+        : {
+            thickness:
+              profile.xDim && profile.xDim > 0
+                ? roundMetres3(profile.xDim)
+                : 0,
+            height: roundMetres3(depth),
+          },
+      confidence: 'LOW',
+      confidenceNotes: [
+        ...conf.notes,
+        resolved.unsupportedNote || 'Unsupported profile',
+      ],
+      needsManualReview: true,
+    };
   }
 
-  if (!isVerticalExtrusion(geom.worldExtrusionDirection)) {
-    notes.push(
-      geom.worldExtrusionDirection
-        ? 'World extrusion direction is not vertical — unusual for WALLS mapping'
-        : 'World extrusion direction could not be resolved through placements',
+  const xDim = resolved.xDim!;
+  const yDim = resolved.yDim!;
+  if (resolved.derivedFromArbitrary) {
+    addConfidenceNote(
+      conf,
+      `IfcArbitraryClosedProfileDef boundary is rectangular; derived XDim=${roundMetres3(xDim)}m and YDim=${roundMetres3(yDim)}m`,
     );
-    confidence = 'LOW';
-    needsManualReview = true;
-  } else {
-    notes.push('Vertical extrusion');
   }
 
-  const profile = geom.profile;
-  if (!profile) {
-    return {
-      ...base,
-      shape: null,
-      geometry: null,
-      confidence: 'LOW',
-      confidenceNotes: [...notes, 'No swept profile on extrusion'],
-      needsManualReview: true,
-    };
-  }
-
-  let isRect = profile.type === 'IfcRectangleProfileDef';
-  let xDim = profile.xDim;
-  let yDim = profile.yDim;
-  if (profile.type === 'IfcArbitraryClosedProfileDef') {
-    const derived = rectangularPolygonDimensions(profile.boundaryPoints);
-    if (derived) {
-      isRect = true;
-      xDim = derived.xDim;
-      yDim = derived.yDim;
-      notes.push(
-        `IfcArbitraryClosedProfileDef boundary is rectangular; derived XDim=${round3(xDim)}m and YDim=${round3(yDim)}m`,
-      );
-    }
-  }
-  if (!isRect) {
-    notes.push(
-      profile.type === 'IfcArbitraryClosedProfileDef'
-        ? 'IfcArbitraryClosedProfileDef boundary is not rectangular within the 5% tolerance — curved/axis mapping not auto-derived'
-        : `Profile type ${profile.type} is not IfcRectangleProfileDef — curved/axis mapping not auto-derived`,
-    );
-    return {
-      ...base,
-      shape: null,
-      geometry:
-        depth > 0
-          ? {
-              thickness: profile.xDim && profile.xDim > 0 ? round3(profile.xDim) : 0,
-              height: round3(depth),
-            }
-          : null,
-      confidence: 'LOW',
-      confidenceNotes: notes,
-      needsManualReview: true,
-    };
-  }
-
-  if (xDim == null || yDim == null || !(xDim > 0) || !(yDim > 0)) {
-    return {
-      ...base,
-      shape: null,
-      geometry: null,
-      confidence: 'LOW',
-      confidenceNotes: [...notes, 'Rectangle profile missing XDim/YDim'],
-      needsManualReview: true,
-    };
-  }
-
-  const relDiff = Math.abs(xDim - yDim) / Math.max(xDim, yDim);
-  if (relDiff < LEN_THICK_NEAR) {
-    notes.push(
+  if (isNearSquareProfile(xDim, yDim)) {
+    markConfidenceLow(
+      conf,
       'Profile is nearly square — thickness vs length ambiguous',
     );
-    confidence = 'LOW';
-    needsManualReview = true;
   }
 
   const smaller = Math.min(xDim, yDim);
   const larger = Math.max(xDim, yDim);
 
   if (axis?.kind === 'CURVED') {
-    const arcLength =
-      axis.radius * ((axis.angleDeg * Math.PI) / 180);
-    const bodyAgreement =
-      Math.abs(larger - arcLength) / Math.max(larger, arcLength) <=
-      AXIS_DIM_TOLERANCE;
-    notes.push(
-      `Curved Axis: radius=${round3(axis.radius)}m, angle=${round3(axis.angleDeg)}°`,
+    const arcLength = axis.radius * ((axis.angleDeg * Math.PI) / 180);
+    const bodyAgreement = dimensionsAgreeWithin(larger, arcLength);
+    addConfidenceNote(
+      conf,
+      `Curved Axis: radius=${roundMetres3(axis.radius)}m, angle=${roundMetres3(axis.angleDeg)}°`,
     );
     if (!bodyAgreement) {
-      notes.push(
-        `Axis arc length ${round3(arcLength)}m conflicts with rectangle long dimension ${round3(larger)}m`,
+      markConfidenceLow(
+        conf,
+        `Axis arc length ${roundMetres3(arcLength)}m conflicts with rectangle long dimension ${roundMetres3(larger)}m`,
       );
-      confidence = 'LOW';
-      needsManualReview = true;
     } else {
-      notes.push('Curved Axis arc length agrees with rectangle body');
+      addConfidenceNote(
+        conf,
+        'Curved Axis arc length agrees with rectangle body',
+      );
     }
     return {
       ...base,
       shape: 'CURVED',
       geometry: {
-        radius: round3(axis.radius),
-        arcAngleDeg: round3(axis.angleDeg),
-        thickness: round3(smaller),
-        height: round3(depth),
+        radius: roundMetres3(axis.radius),
+        arcAngleDeg: roundMetres3(axis.angleDeg),
+        thickness: roundMetres3(smaller),
+        height: roundMetres3(depth),
       },
-      confidence,
-      confidenceNotes: notes,
-      needsManualReview,
+      confidence: conf.confidence,
+      confidenceNotes: conf.notes,
+      needsManualReview: conf.needsManualReview,
     };
   }
 
@@ -362,47 +197,44 @@ function mapExtrudedWall(
   let thickness: number;
   if (axis?.kind === 'LINEAR') {
     length = axis.length;
-    const xMatches =
-      Math.abs(xDim - length) / Math.max(xDim, length) <=
-      AXIS_DIM_TOLERANCE;
-    const yMatches =
-      Math.abs(yDim - length) / Math.max(yDim, length) <=
-      AXIS_DIM_TOLERANCE;
+    const xMatches = dimensionsAgreeWithin(xDim, length);
+    const yMatches = dimensionsAgreeWithin(yDim, length);
     if (xMatches !== yMatches) {
       thickness = xMatches ? yDim : xDim;
-      notes.push(
-        `Straight Axis length ${round3(length)}m agrees with ${xMatches ? 'XDim' : 'YDim'}; thickness uses the orthogonal profile dimension`,
+      addConfidenceNote(
+        conf,
+        `Straight Axis length ${roundMetres3(length)}m agrees with ${xMatches ? 'XDim' : 'YDim'}; thickness uses the orthogonal profile dimension`,
       );
     } else {
       thickness = smaller;
-      notes.push(
+      markConfidenceLow(
+        conf,
         xMatches
           ? 'Both rectangle dimensions match Axis length — thickness is ambiguous'
-          : `Axis length ${round3(length)}m conflicts with XDim=${round3(xDim)}m and YDim=${round3(yDim)}m`,
+          : `Axis length ${roundMetres3(length)}m conflicts with XDim=${roundMetres3(xDim)}m and YDim=${roundMetres3(yDim)}m`,
       );
-      confidence = 'LOW';
-      needsManualReview = true;
     }
   } else {
     length = larger;
     thickness = smaller;
-    notes.push(
+    addConfidenceNote(
+      conf,
       `${axisSkipReason || 'No Axis representation'} — using larger rectangle dimension as length and smaller as thickness`,
     );
-    if (confidence === 'HIGH') confidence = 'MEDIUM';
+    markConfidenceMediumIfHigh(conf);
   }
 
   return {
     ...base,
     shape: 'LINEAR',
     geometry: {
-      length: round3(length),
-      thickness: round3(thickness),
-      height: round3(depth),
+      length: roundMetres3(length),
+      thickness: roundMetres3(thickness),
+      height: roundMetres3(depth),
     },
-    confidence,
-    confidenceNotes: notes,
-    needsManualReview,
+    confidence: conf.confidence,
+    confidenceNotes: conf.notes,
+    needsManualReview: conf.needsManualReview,
   };
 }
 

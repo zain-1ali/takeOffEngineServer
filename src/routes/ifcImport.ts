@@ -185,7 +185,7 @@ router.post('/', loadOwnedProject, uploadSingle, async (req: Request, res: Respo
       userId: req.user!.userId,
       fileName: req.file.originalname || 'model.ifc',
       status: 'QUEUED',
-      summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
+      summary: { walls: 0, slabs: 0, footings: 0, columns: 0, beams: 0, geometryOk: 0, skipped: 0 },
       suggestions: [],
     });
 
@@ -342,7 +342,7 @@ router.patch(
 /**
  * POST /:jobId/suggestions/:suggestionId/accept
  * Body: { mappedInstanceData? }. Uses the floor persisted on the suggestion.
- * Creates WALLS instance tagged source=IFC_IMPORT; dedupes on sourceGlobalId.
+ * Creates a WALLS or SLABS instance tagged source=IFC_IMPORT; dedupes on sourceGlobalId.
  */
 router.post(
   '/:jobId/suggestions/:suggestionId/accept',

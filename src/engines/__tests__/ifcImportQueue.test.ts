@@ -49,7 +49,7 @@ describe('runIfcImportJob', () => {
       userId: new Types.ObjectId(),
       fileName: 'minimal-wall.ifc',
       status: 'QUEUED',
-      summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
+      summary: { walls: 0, slabs: 0, footings: 0, geometryOk: 0, skipped: 0 },
       suggestions: [],
     });
 
@@ -72,7 +72,7 @@ describe('runIfcImportJob', () => {
       userId: new Types.ObjectId(),
       fileName: 'missing.ifc',
       status: 'QUEUED',
-      summary: { walls: 0, slabs: 0, geometryOk: 0, skipped: 0 },
+      summary: { walls: 0, slabs: 0, footings: 0, geometryOk: 0, skipped: 0 },
       suggestions: [],
     });
 

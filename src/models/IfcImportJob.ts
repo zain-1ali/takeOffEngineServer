@@ -51,6 +51,9 @@ export interface IIfcImportJob extends Document {
   summary: {
     walls: number;
     slabs: number;
+    footings: number;
+    columns?: number;
+    beams?: number;
     geometryOk: number;
     skipped: number;
   };
@@ -151,6 +154,9 @@ const ifcImportJobSchema = new Schema(
     summary: {
       walls: { type: Number, default: 0 },
       slabs: { type: Number, default: 0 },
+      footings: { type: Number, default: 0 },
+      columns: { type: Number, default: 0 },
+      beams: { type: Number, default: 0 },
       geometryOk: { type: Number, default: 0 },
       skipped: { type: Number, default: 0 },
     },

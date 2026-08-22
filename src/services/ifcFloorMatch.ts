@@ -1,3 +1,10 @@
+/**
+ * Shared IFC storey → project Floor matching.
+ * Every element import (Walls, Slabs, future types) should call
+ * `matchIfcEntityToFloor` after parse; do not reimplement per mapper.
+ * Storey attachment itself is built once in ifcImport via
+ * IfcRelContainedInSpatialStructure → IfcBuildingStorey.
+ */
 import type { IfcParsedEntity, IfcSourceStorey } from './ifcImport';
 import type { IfcFloorMatchStatus } from '../models/IfcSuggestion';
 

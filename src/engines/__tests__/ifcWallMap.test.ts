@@ -14,6 +14,9 @@ import { wallConcrete } from '../walls';
 function wallWithProfile(
   profile: IfcRawProfile,
   axisGeometry: IfcParsedEntity['axisGeometry'] = null,
+  geometryOverrides: Partial<
+    NonNullable<IfcParsedEntity['geometry']>
+  > = {},
 ): IfcParsedEntity {
   return {
     expressId: 700,
@@ -32,6 +35,7 @@ function wallWithProfile(
       solidPosition: null,
       objectPlacement: null,
       lengthUnitKnown: true,
+      ...geometryOverrides,
     },
     axisGeometry,
     axisSkipReason: axisGeometry ? null : 'No Axis representation',
@@ -397,5 +401,39 @@ describe('mapIfcWallToSuggestion', () => {
     });
     expect(suggestion!.confidence).toBe('LOW');
     expect(suggestion!.needsManualReview).toBe(true);
+  });
+
+  it('marks compensating tilted Position.Axis LOW despite vertical world extrusion', () => {
+    const suggestion = mapIfcWallToSuggestion(
+      wallWithProfile(
+        {
+          type: 'IfcRectangleProfileDef',
+          xDim: 0.25,
+          yDim: 5,
+        },
+        {
+          kind: 'LINEAR',
+          start: { x: 0, y: 0, z: 0 },
+          end: { x: 5, y: 0, z: 0 },
+          length: 5,
+        },
+        {
+          extrusionDirection: { x: 0, y: -0.5, z: 0.866025403784 },
+          worldExtrusionDirection: { x: 0, y: 0, z: 1 },
+          solidPosition: {
+            location: null,
+            axis: { x: 0, y: 0.5, z: 0.866025403784 },
+            refDirection: null,
+          },
+        },
+      ),
+    );
+    expect(suggestion?.confidence).toBe('LOW');
+    expect(suggestion?.needsManualReview).toBe(true);
+    expect(
+      suggestion?.confidenceNotes.some((note) =>
+        note.includes('Position.Axis is tilted'),
+      ),
+    ).toBe(true);
   });
 });

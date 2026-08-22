@@ -1,5 +1,6 @@
 /**
- * Accept / reject IfcSuggestion rows — creates WALLS Instances with IFC provenance.
+ * Accept / reject IfcSuggestion rows — creates WALLS / SLABS / foundation /
+ * COLUMNS / BEAMS Instances tagged source=IFC_IMPORT, deduped on sourceGlobalId.
  */
 import { Types } from 'mongoose';
 import { Floor } from '../models/Floor';
@@ -11,15 +12,21 @@ import {
 } from '../models/IfcSuggestion';
 import type { IProject } from '../models/Project';
 import {
-  nextWallMarkSeed,
+  nextPrefixedMarkSeed,
+  FOUNDATION_INSTANCE_DEFAULTS,
+  SLAB_INSTANCE_DEFAULTS,
   WALL_INSTANCE_DEFAULTS,
+  COLUMN_INSTANCE_DEFAULTS,
+  BEAM_INSTANCE_DEFAULTS,
 } from './ifcImportCommit';
 import {
   defaultLocationForElement,
   LOCATION_DEPENDENT_ELEMENTS,
 } from './costPlan/uniformat';
 
-function isWallCommitReady(data: IfcMappedInstanceData | null | undefined): boolean {
+function isWallCommitReady(
+  data: IfcMappedInstanceData | null | undefined,
+): boolean {
   if (!data || data.elementKey !== 'WALLS') return false;
   if (data.shape !== 'LINEAR' && data.shape !== 'CURVED') return false;
   const g = data.geometry;
@@ -27,6 +34,329 @@ function isWallCommitReady(data: IfcMappedInstanceData | null | undefined): bool
   if (!(Number(g.thickness) > 0) || !(Number(g.height) > 0)) return false;
   if (data.shape === 'LINEAR') return Number(g.length) > 0;
   return Number(g.radius) > 0 && Number(g.arcAngleDeg) > 0;
+}
+
+function isSlabCommitReady(
+  data: IfcMappedInstanceData | null | undefined,
+): boolean {
+  if (!data || data.elementKey !== 'SLABS') return false;
+  if (data.shape !== 'FLAT') return false;
+  const g = data.geometry;
+  if (!g) return false;
+  return (
+    Number(g.length) > 0 && Number(g.width) > 0 && Number(g.thickness) > 0
+  );
+}
+
+function isFoundationKey(
+  key: string | null | undefined,
+): key is 'PAD_FOOTING' | 'STRIP_FOOTING' | 'PILE_CAP' {
+  return (
+    key === 'PAD_FOOTING' || key === 'STRIP_FOOTING' || key === 'PILE_CAP'
+  );
+}
+
+function isFoundationCommitReady(
+  data: IfcMappedInstanceData | null | undefined,
+): boolean {
+  if (!data || !isFoundationKey(data.elementKey) || !data.geometry) {
+    return false;
+  }
+  const g = data.geometry;
+  if (data.elementKey === 'PAD_FOOTING') {
+    return (
+      data.shape === 'RECTANGULAR' &&
+      Number(g.length) > 0 &&
+      Number(g.width) > 0 &&
+      Number(g.baseThickness) > 0
+    );
+  }
+  if (data.elementKey === 'STRIP_FOOTING') {
+    return (
+      data.shape === 'FLAT' &&
+      Number(g.length) > 0 &&
+      Number(g.width) > 0 &&
+      Number(g.height) > 0
+    );
+  }
+  return (
+    data.shape === 'RECTANGULAR' &&
+    Number(g.length) > 0 &&
+    Number(g.width) > 0 &&
+    Number(g.thickness) > 0 &&
+    Number(g.pileCount) >= 1
+  );
+}
+
+function isColumnCommitReady(
+  data: IfcMappedInstanceData | null | undefined,
+): boolean {
+  if (!data || data.elementKey !== 'COLUMNS' || !data.geometry) return false;
+  const g = data.geometry;
+  if (!(Number(g.clearHeight) > 0)) return false;
+  if (data.shape === 'CIRCULAR') return Number(g.diameter) > 0;
+  if (data.shape === 'L_SHAPED') {
+    return (
+      Number(g.width) > 0 &&
+      Number(g.depth) > 0 &&
+      Number(g.legThickness) > 0
+    );
+  }
+  if (data.shape === 'T_SHAPED') {
+    return (
+      Number(g.flangeWidth) > 0 &&
+      Number(g.overallDepth) > 0 &&
+      Number(g.flangeThickness) > 0 &&
+      Number(g.webThickness) > 0
+    );
+  }
+  if (data.shape === 'CRUCIFORM') {
+    return (
+      Number(g.width) > 0 &&
+      Number(g.depth) > 0 &&
+      Number(g.armThickness) > 0
+    );
+  }
+  if (data.shape === 'RECTANGULAR') {
+    return Number(g.width) > 0 && Number(g.depth) > 0;
+  }
+  return false;
+}
+
+function isBeamCommitReady(
+  data: IfcMappedInstanceData | null | undefined,
+): boolean {
+  if (!data || data.elementKey !== 'BEAMS' || !data.geometry) return false;
+  const g = data.geometry;
+  if (!(Number(g.spanLength) > 0)) return false;
+  if (data.shape === 'T_SECTION' || data.shape === 'L_SECTION') {
+    return (
+      Number(g.flangeWidth) > 0 &&
+      Number(g.flangeThickness) > 0 &&
+      Number(g.webWidth) > 0 &&
+      Number(g.overallDepth) > 0
+    );
+  }
+  if (data.shape === 'CANTILEVER_TAPERED') {
+    return (
+      Number(g.width) > 0 &&
+      Number(g.supportDepth) > 0 &&
+      Number(g.tipDepth) > 0
+    );
+  }
+  if (data.shape === 'RECTANGULAR' || data.shape === 'GROUND_TIE') {
+    return Number(g.width) > 0 && Number(g.depth) > 0;
+  }
+  return false;
+}
+
+function isCommitReady(
+  suggestion: IIfcSuggestion,
+  data: IfcMappedInstanceData | null | undefined,
+): boolean {
+  if (
+    suggestion.entityType === 'IfcBeam' ||
+    data?.elementKey === 'BEAMS'
+  ) {
+    return isBeamCommitReady(data);
+  }
+  if (
+    suggestion.entityType === 'IfcColumn' ||
+    data?.elementKey === 'COLUMNS'
+  ) {
+    return isColumnCommitReady(data);
+  }
+  if (suggestion.entityType === 'IfcSlab' || data?.elementKey === 'SLABS') {
+    return isSlabCommitReady(data);
+  }
+  if (
+    suggestion.entityType === 'IfcFooting' ||
+    isFoundationKey(data?.elementKey)
+  ) {
+    return isFoundationCommitReady(data);
+  }
+  return isWallCommitReady(data);
+}
+
+function commitReadyError(suggestion: IIfcSuggestion): string {
+  if (
+    suggestion.entityType === 'IfcBeam' ||
+    suggestion.mappedInstanceData?.elementKey === 'BEAMS'
+  ) {
+    return 'Complete beam shape and dimensions before accepting';
+  }
+  if (
+    suggestion.entityType === 'IfcColumn' ||
+    suggestion.mappedInstanceData?.elementKey === 'COLUMNS'
+  ) {
+    return 'Complete column shape and dimensions before accepting';
+  }
+  if (suggestion.entityType === 'IfcSlab') {
+    return 'Complete Flat dimensions (L/W/T) before accepting';
+  }
+  if (
+    suggestion.entityType === 'IfcFooting' ||
+    isFoundationKey(suggestion.mappedInstanceData?.elementKey)
+  ) {
+    if (suggestion.mappedInstanceData?.elementKey === 'PILE_CAP') {
+      return 'Complete rectangular pile-cap dimensions (L/W/T) and pile count before accepting';
+    }
+    return 'Complete foundation dimensions before accepting';
+  }
+  return 'Complete shape and dimensions (L/T/H or radius/angle) before accepting';
+}
+
+function defaultElementKey(
+  suggestion: IIfcSuggestion,
+): IfcMappedInstanceData['elementKey'] {
+  if (suggestion.mappedInstanceData?.elementKey) {
+    return suggestion.mappedInstanceData.elementKey;
+  }
+  if (suggestion.entityType === 'IfcSlab') return 'SLABS';
+  if (suggestion.entityType === 'IfcWall') return 'WALLS';
+  if (suggestion.entityType === 'IfcColumn') return 'COLUMNS';
+  if (suggestion.entityType === 'IfcBeam') return 'BEAMS';
+  return null;
+}
+
+function wallGeometry(
+  data: IfcMappedInstanceData,
+): Record<string, number> {
+  const g = data.geometry!;
+  const geometry: Record<string, number> = {
+    thickness: Number(g.thickness),
+    height: Number(g.height),
+  };
+  if (data.shape === 'LINEAR') geometry.length = Number(g.length);
+  if (data.shape === 'CURVED') {
+    geometry.radius = Number(g.radius);
+    geometry.arcAngleDeg = Number(g.arcAngleDeg);
+  }
+  return geometry;
+}
+
+function foundationGeometry(
+  data: IfcMappedInstanceData,
+): Record<string, number> {
+  const g = data.geometry!;
+  if (data.elementKey === 'PAD_FOOTING') {
+    return {
+      length: Number(g.length),
+      width: Number(g.width),
+      baseThickness: Number(g.baseThickness),
+    };
+  }
+  if (data.elementKey === 'STRIP_FOOTING') {
+    return {
+      length: Number(g.length),
+      width: Number(g.width),
+      height: Number(g.height),
+    };
+  }
+  return {
+    length: Number(g.length),
+    width: Number(g.width),
+    thickness: Number(g.thickness),
+    pileCount: Number(g.pileCount),
+  };
+}
+
+function slabGeometry(
+  data: IfcMappedInstanceData,
+): Record<string, number> {
+  const g = data.geometry!;
+  return {
+    length: Number(g.length),
+    width: Number(g.width),
+    thickness: Number(g.thickness),
+  };
+}
+
+function columnGeometry(
+  data: IfcMappedInstanceData,
+): Record<string, number> {
+  const g = data.geometry!;
+  const clearHeight = Number(g.clearHeight);
+  if (data.shape === 'CIRCULAR') {
+    return { diameter: Number(g.diameter), clearHeight };
+  }
+  if (data.shape === 'L_SHAPED') {
+    return {
+      width: Number(g.width),
+      depth: Number(g.depth),
+      legThickness: Number(g.legThickness),
+      clearHeight,
+    };
+  }
+  if (data.shape === 'T_SHAPED') {
+    return {
+      flangeWidth: Number(g.flangeWidth),
+      overallDepth: Number(g.overallDepth),
+      flangeThickness: Number(g.flangeThickness),
+      webThickness: Number(g.webThickness),
+      clearHeight,
+    };
+  }
+  if (data.shape === 'CRUCIFORM') {
+    return {
+      width: Number(g.width),
+      depth: Number(g.depth),
+      armThickness: Number(g.armThickness),
+      clearHeight,
+    };
+  }
+  return {
+    width: Number(g.width),
+    depth: Number(g.depth),
+    clearHeight,
+  };
+}
+
+function beamGeometry(
+  data: IfcMappedInstanceData,
+): Record<string, number> {
+  const g = data.geometry!;
+  const spanLength = Number(g.spanLength);
+  if (data.shape === 'T_SECTION' || data.shape === 'L_SECTION') {
+    return {
+      spanLength,
+      flangeWidth: Number(g.flangeWidth),
+      flangeThickness: Number(g.flangeThickness),
+      webWidth: Number(g.webWidth),
+      overallDepth: Number(g.overallDepth),
+    };
+  }
+  if (data.shape === 'CANTILEVER_TAPERED') {
+    return {
+      spanLength,
+      width: Number(g.width),
+      supportDepth: Number(g.supportDepth),
+      tipDepth: Number(g.tipDepth),
+    };
+  }
+  return {
+    spanLength,
+    width: Number(g.width),
+    depth: Number(g.depth),
+  };
+}
+
+function instanceDefaults(elementKey: NonNullable<IfcMappedInstanceData['elementKey']>) {
+  if (elementKey === 'SLABS') return SLAB_INSTANCE_DEFAULTS;
+  if (elementKey === 'COLUMNS') return COLUMN_INSTANCE_DEFAULTS;
+  if (elementKey === 'BEAMS') return BEAM_INSTANCE_DEFAULTS;
+  if (isFoundationKey(elementKey)) return FOUNDATION_INSTANCE_DEFAULTS[elementKey];
+  return WALL_INSTANCE_DEFAULTS;
+}
+
+function instanceGeometry(
+  data: IfcMappedInstanceData,
+): Record<string, number> {
+  if (data.elementKey === 'SLABS') return slabGeometry(data);
+  if (data.elementKey === 'COLUMNS') return columnGeometry(data);
+  if (data.elementKey === 'BEAMS') return beamGeometry(data);
+  if (isFoundationKey(data.elementKey)) return foundationGeometry(data);
+  return wallGeometry(data);
 }
 
 export function publicIfcSuggestion(s: IIfcSuggestion) {
@@ -93,7 +423,7 @@ export async function acceptIfcSuggestion(opts: {
 
   if (opts.mappedPatch) {
     const prev = suggestion.mappedInstanceData || {
-      elementKey: suggestion.entityType === 'IfcWall' ? 'WALLS' : 'SLABS',
+      elementKey: defaultElementKey(suggestion),
       shape: null,
       mark: null,
       geometry: null,
@@ -120,22 +450,10 @@ export async function acceptIfcSuggestion(opts: {
   }
 
   const data = suggestion.mappedInstanceData;
-  if (suggestion.entityType === 'IfcSlab' || data?.elementKey === 'SLABS') {
-    throw Object.assign(
-      new Error(
-        'Slab auto-import is not available — model this entity manually in the Slabs schedule',
-      ),
-      { status: 400 },
-    );
-  }
-
-  if (!isWallCommitReady(data)) {
-    throw Object.assign(
-      new Error(
-        'Complete shape and dimensions (L/T/H or radius/angle) before accepting',
-      ),
-      { status: 400 },
-    );
+  if (!isCommitReady(suggestion, data)) {
+    throw Object.assign(new Error(commitReadyError(suggestion)), {
+      status: 400,
+    });
   }
 
   const floorId = String(suggestion.floorId || '').trim();
@@ -171,41 +489,38 @@ export async function acceptIfcSuggestion(opts: {
     };
   }
 
+  const elementKey = data!.elementKey;
+  if (!elementKey) {
+    throw Object.assign(new Error(commitReadyError(suggestion)), {
+      status: 400,
+    });
+  }
+  const defaults = instanceDefaults(elementKey);
   const existingMarks = (
     await Instance.find({
       projectId: project._id,
       floorId,
-      elementKey: 'WALLS',
+      elementKey,
     }).select('mark')
   ).map((i) => i.mark);
 
-  let seed = nextWallMarkSeed(existingMarks);
+  let seed = nextPrefixedMarkSeed(defaults.markPrefix, existingMarks);
   const used = new Set(existingMarks.map((m) => m.trim().toUpperCase()));
   let mark = (data!.mark || '').trim();
   if (!mark) {
-    mark = `${WALL_INSTANCE_DEFAULTS.markPrefix}${seed}`;
+    mark = `${defaults.markPrefix}${seed}`;
     seed += 1;
   }
   if (used.has(mark.toUpperCase())) {
-    while (used.has(`W${seed}`)) seed += 1;
-    mark = `${WALL_INSTANCE_DEFAULTS.markPrefix}${seed}`;
+    while (used.has(`${defaults.markPrefix}${seed}`.toUpperCase())) seed += 1;
+    mark = `${defaults.markPrefix}${seed}`;
   }
 
-  const g = data!.geometry!;
-  const geometry: Record<string, number> = {
-    thickness: Number(g.thickness),
-    height: Number(g.height),
-  };
-  if (data!.shape === 'LINEAR') geometry.length = Number(g.length);
-  if (data!.shape === 'CURVED') {
-    geometry.radius = Number(g.radius);
-    geometry.arcAngleDeg = Number(g.arcAngleDeg);
-  }
-
-  const location = LOCATION_DEPENDENT_ELEMENTS.has('WALLS')
-    ? defaultLocationForElement('WALLS', floorId) || 'Interior'
+  const geometry = instanceGeometry(data!);
+  const location = LOCATION_DEPENDENT_ELEMENTS.has(elementKey)
+    ? defaultLocationForElement(elementKey, floorId) ||
+      (elementKey === 'WALLS' ? 'Interior' : null)
     : null;
-
   const grade = project.materials?.defaultConcreteGrade || 'C25/30';
 
   let inst: IInstance;
@@ -213,20 +528,19 @@ export async function acceptIfcSuggestion(opts: {
     inst = await Instance.create({
       projectId: project._id,
       floorId,
-      elementKey: 'WALLS',
+      elementKey,
       shape: data!.shape!,
       mark,
       count: 1,
       geometry,
       concreteGrade: grade,
-      reinforcement: { ...WALL_INSTANCE_DEFAULTS.rebar },
+      reinforcement: { ...defaults.rebar },
       spec: null,
       location,
       source: 'IFC_IMPORT',
       sourceGlobalId: suggestion.sourceGlobalId,
     });
   } catch (err: unknown) {
-    // Race on unique sourceGlobalId
     if (
       err &&
       typeof err === 'object' &&
@@ -299,7 +613,7 @@ export async function patchIfcSuggestionMappedData(
     });
   }
   const prev = suggestion.mappedInstanceData || {
-    elementKey: suggestion.entityType === 'IfcWall' ? 'WALLS' : 'SLABS',
+    elementKey: defaultElementKey(suggestion),
     shape: null,
     mark: null,
     geometry: null,
@@ -311,10 +625,7 @@ export async function patchIfcSuggestionMappedData(
     geometry: patch.geometry !== undefined ? patch.geometry : prev.geometry,
   };
   suggestion.markModified('mappedInstanceData');
-  if (
-    suggestion.entityType === 'IfcWall' &&
-    isWallCommitReady(suggestion.mappedInstanceData)
-  ) {
+  if (isCommitReady(suggestion, suggestion.mappedInstanceData)) {
     suggestion.needsManualModeling = false;
     suggestion.skipReason = null;
   }
