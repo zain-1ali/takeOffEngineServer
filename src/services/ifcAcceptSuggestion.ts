@@ -38,6 +38,15 @@ export function publicIfcSuggestion(s: IIfcSuggestion) {
     expressId: s.expressId,
     entityType: s.entityType,
     name: s.name,
+    floorId: s.floorId || null,
+    sourceStorey: s.sourceStorey || null,
+    floorMatchStatus:
+      s.floorMatchStatus || (s.floorId ? 'MANUAL' : 'NO_STOREY'),
+    floorMatchNote:
+      s.floorMatchNote ||
+      (s.floorId
+        ? 'Floor assigned on an earlier import'
+        : 'No floor assignment is available'),
     mappedInstanceData: s.mappedInstanceData,
     confidence: s.confidence,
     confidenceNotes: s.confidenceNotes,
@@ -68,14 +77,13 @@ export async function rejectIfcSuggestion(
 export async function acceptIfcSuggestion(opts: {
   suggestion: IIfcSuggestion;
   project: IProject;
-  floorId: string;
   mappedPatch?: Partial<IfcMappedInstanceData> | null;
 }): Promise<{
   suggestion: IIfcSuggestion;
   instance: IInstance | null;
   skippedDuplicate: boolean;
 }> {
-  const { suggestion, project, floorId } = opts;
+  const { suggestion, project } = opts;
   if (suggestion.status === 'ACCEPTED') {
     throw Object.assign(new Error('Suggestion already accepted'), { status: 409 });
   }
@@ -130,6 +138,15 @@ export async function acceptIfcSuggestion(opts: {
     );
   }
 
+  const floorId = String(suggestion.floorId || '').trim();
+  if (!floorId) {
+    throw Object.assign(
+      new Error(
+        'Assign this IFC suggestion to a project floor before accepting it',
+      ),
+      { status: 400 },
+    );
+  }
   const floor = await Floor.findOne({ projectId: project._id, floorId });
   if (!floor) {
     throw Object.assign(new Error('floorId does not exist on this project'), {
@@ -242,6 +259,34 @@ export async function acceptIfcSuggestion(opts: {
   await suggestion.save();
 
   return { suggestion, instance: inst, skippedDuplicate: false };
+}
+
+export async function assignIfcSuggestionFloor(opts: {
+  suggestion: IIfcSuggestion;
+  projectId: Types.ObjectId;
+  floorId: string;
+}): Promise<IIfcSuggestion> {
+  const { suggestion, projectId } = opts;
+  if (suggestion.status !== 'PENDING') {
+    throw Object.assign(new Error('Only PENDING suggestions can be edited'), {
+      status: 409,
+    });
+  }
+  const floorId = String(opts.floorId || '').trim();
+  if (!floorId) {
+    throw Object.assign(new Error('floorId is required'), { status: 400 });
+  }
+  const floor = await Floor.findOne({ projectId, floorId });
+  if (!floor) {
+    throw Object.assign(new Error('floorId does not exist on this project'), {
+      status: 400,
+    });
+  }
+  suggestion.floorId = floor.floorId;
+  suggestion.floorMatchStatus = 'MANUAL';
+  suggestion.floorMatchNote = `Manually assigned to project floor “${floor.label}”`;
+  await suggestion.save();
+  return suggestion;
 }
 
 export async function patchIfcSuggestionMappedData(

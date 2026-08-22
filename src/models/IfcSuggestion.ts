@@ -3,6 +3,20 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 export type IfcSuggestionConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 export type IfcSuggestionStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 export type IfcSuggestionEntityType = 'IfcWall' | 'IfcSlab';
+export type IfcFloorMatchStatus =
+  | 'MATCHED_NAME'
+  | 'MATCHED_ELEVATION'
+  | 'AMBIGUOUS'
+  | 'UNMATCHED'
+  | 'NO_STOREY'
+  | 'MANUAL';
+
+export type IfcSuggestionStorey = {
+  expressId: number;
+  globalId: string | null;
+  name: string | null;
+  elevationM: number | null;
+};
 
 /** Editable payload used to create an Instance on Accept. */
 export type IfcMappedInstanceData = {
@@ -20,6 +34,10 @@ export interface IIfcSuggestion extends Document {
   expressId: number;
   entityType: IfcSuggestionEntityType;
   name: string | null;
+  floorId: string | null;
+  sourceStorey: IfcSuggestionStorey | null;
+  floorMatchStatus: IfcFloorMatchStatus;
+  floorMatchNote: string;
   mappedInstanceData: IfcMappedInstanceData | null;
   confidence: IfcSuggestionConfidence;
   confidenceNotes: string[];
@@ -42,6 +60,16 @@ const mappedDataSchema = new Schema(
     shape: { type: String, default: null },
     mark: { type: String, default: null },
     geometry: { type: Schema.Types.Mixed, default: null },
+  },
+  { _id: false },
+);
+
+const sourceStoreySchema = new Schema(
+  {
+    expressId: { type: Number, required: true },
+    globalId: { type: String, default: null },
+    name: { type: String, default: null },
+    elevationM: { type: Number, default: null },
   },
   { _id: false },
 );
@@ -69,6 +97,22 @@ const ifcSuggestionSchema = new Schema(
       index: true,
     },
     name: { type: String, default: null },
+    floorId: { type: String, default: null, trim: true, index: true },
+    sourceStorey: { type: sourceStoreySchema, default: null },
+    floorMatchStatus: {
+      type: String,
+      enum: [
+        'MATCHED_NAME',
+        'MATCHED_ELEVATION',
+        'AMBIGUOUS',
+        'UNMATCHED',
+        'NO_STOREY',
+        'MANUAL',
+      ],
+      default: 'NO_STOREY',
+      index: true,
+    },
+    floorMatchNote: { type: String, default: '' },
     mappedInstanceData: { type: mappedDataSchema, default: null },
     confidence: {
       type: String,
@@ -96,6 +140,7 @@ const ifcSuggestionSchema = new Schema(
 
 ifcSuggestionSchema.index({ projectId: 1, jobId: 1, status: 1 });
 ifcSuggestionSchema.index({ jobId: 1, entityType: 1, confidence: 1 });
+ifcSuggestionSchema.index({ jobId: 1, floorId: 1, entityType: 1 });
 
 export const IfcSuggestion = mongoose.model(
   'IfcSuggestion',

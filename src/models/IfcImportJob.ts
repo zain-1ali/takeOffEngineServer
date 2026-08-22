@@ -1,4 +1,8 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
+import type {
+  IfcFloorMatchStatus,
+  IfcSuggestionStorey,
+} from './IfcSuggestion';
 
 export type IfcSuggestionStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 export type IfcImportJobStatus =
@@ -23,6 +27,10 @@ export type IfcWallSuggestionRow = {
   expressId: number;
   elementKey: 'WALLS';
   name: string | null;
+  floorId: string | null;
+  sourceStorey: IfcSuggestionStorey | null;
+  floorMatchStatus: IfcFloorMatchStatus;
+  floorMatchNote: string;
   /** Optional user mark override; auto-assigned on commit if empty. */
   mark: string | null;
   shape: 'LINEAR' | 'CURVED' | null;
@@ -63,6 +71,16 @@ const geometrySchema = new Schema(
   { _id: false },
 );
 
+const sourceStoreySchema = new Schema(
+  {
+    expressId: { type: Number, required: true },
+    globalId: { type: String, default: null },
+    name: { type: String, default: null },
+    elevationM: { type: Number, default: null },
+  },
+  { _id: false },
+);
+
 const suggestionSchema = new Schema(
   {
     id: { type: String, required: true },
@@ -70,6 +88,21 @@ const suggestionSchema = new Schema(
     expressId: { type: Number, required: true },
     elementKey: { type: String, enum: ['WALLS'], required: true },
     name: { type: String, default: null },
+    floorId: { type: String, default: null },
+    sourceStorey: { type: sourceStoreySchema, default: null },
+    floorMatchStatus: {
+      type: String,
+      enum: [
+        'MATCHED_NAME',
+        'MATCHED_ELEVATION',
+        'AMBIGUOUS',
+        'UNMATCHED',
+        'NO_STOREY',
+        'MANUAL',
+      ],
+      default: 'NO_STOREY',
+    },
+    floorMatchNote: { type: String, default: '' },
     mark: { type: String, default: null },
     shape: {
       type: String,

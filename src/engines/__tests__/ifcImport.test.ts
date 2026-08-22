@@ -25,6 +25,31 @@ describe('parseIfc', () => {
       z: 1,
     });
     expect(wall!.axisGeometry).toBeNull();
+    expect(wall!.sourceStorey).toEqual({
+      expressId: 40,
+      globalId: '0StoreyGuid00000000001',
+      name: 'Level 1',
+      elevationM: 0,
+    });
+    expect(wall!.storeyIssue).toBeNull();
+  }, 60000);
+
+  it('flags multiple spatial containment relationships as ambiguous', async () => {
+    const file = path.join(__dirname, 'fixtures', 'minimal-wall.ifc');
+    const containment =
+      "#120=IFCRELCONTAINEDINSPATIALSTRUCTURE('0ContainGuid00000000001',#2,$,$,(#110),#40);";
+    const source = fs.readFileSync(file, 'utf8').replace(
+      containment,
+      [
+        containment,
+        "#121=IFCBUILDINGSTOREY('0StoreyGuid00000000002',#2,'Level 2',$,$,#41,$,$,.ELEMENT.,3.);",
+        "#122=IFCRELCONTAINEDINSPATIALSTRUCTURE('0ContainGuid00000000002',#2,$,$,(#110),#121);",
+      ].join('\n'),
+    );
+    const result = await parseIfc(Buffer.from(source));
+    const wall = result.entities.find((e) => e.entityType === 'IfcWall');
+    expect(wall?.sourceStorey).toBeNull();
+    expect(wall?.storeyIssue).toBe('AMBIGUOUS');
   }, 60000);
 
   it('normalizes millimetres and extracts a straight Axis', async () => {

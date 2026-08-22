@@ -19,6 +19,7 @@ import {
 } from '../services/ifcImportQueue';
 import {
   acceptIfcSuggestion,
+  assignIfcSuggestionFloor,
   loadOwnedSuggestion,
   patchIfcSuggestionMappedData,
   publicIfcSuggestion,
@@ -126,6 +127,14 @@ function applySuggestionPatches(
     if (p.mark != null) {
       const mark = String(p.mark).trim();
       row.mark = mark || null;
+    }
+    if (p.floorId != null) {
+      const floorId = String(p.floorId).trim();
+      row.floorId = floorId || null;
+      if (floorId) {
+        row.floorMatchStatus = 'MANUAL';
+        row.floorMatchNote = `Manually assigned to project floor “${floorId}”`;
+      }
     }
     if (p.shape === 'LINEAR' || p.shape === 'CURVED' || p.shape === null) {
       row.shape = p.shape;
@@ -255,6 +264,9 @@ router.get(
       const rank = (c: string) =>
         c === 'HIGH' ? 0 : c === 'MEDIUM' ? 1 : 2;
       rows.sort((a, b) => {
+        const floorA = a.floorId || '\uffff';
+        const floorB = b.floorId || '\uffff';
+        if (floorA !== floorB) return floorA.localeCompare(floorB);
         if (a.entityType !== b.entityType) {
           return a.entityType.localeCompare(b.entityType);
         }
@@ -293,10 +305,23 @@ router.patch(
         res.status(404).json({ error: 'Suggestion not found' });
         return;
       }
-      const updated = await patchIfcSuggestionMappedData(
-        suggestion,
-        req.body?.mappedInstanceData || req.body || {},
-      );
+      let updated = suggestion;
+      if (req.body?.floorId !== undefined) {
+        updated = await assignIfcSuggestionFloor({
+          suggestion: updated,
+          projectId: req.project!._id,
+          floorId: String(req.body.floorId),
+        });
+      }
+      const mappedPatch =
+        req.body?.mappedInstanceData ??
+        (req.body?.floorId === undefined ? req.body || {} : null);
+      if (mappedPatch) {
+        updated = await patchIfcSuggestionMappedData(
+          updated,
+          mappedPatch,
+        );
+      }
       res.json({ suggestion: publicIfcSuggestion(updated) });
     } catch (err: unknown) {
       const status =
@@ -316,7 +341,7 @@ router.patch(
 
 /**
  * POST /:jobId/suggestions/:suggestionId/accept
- * Body: { floorId, mappedInstanceData? }
+ * Body: { mappedInstanceData? }. Uses the floor persisted on the suggestion.
  * Creates WALLS instance tagged source=IFC_IMPORT; dedupes on sourceGlobalId.
  */
 router.post(
@@ -338,15 +363,9 @@ router.post(
         res.status(404).json({ error: 'Suggestion not found' });
         return;
       }
-      const floorId = String(req.body?.floorId ?? '').trim();
-      if (!floorId) {
-        res.status(400).json({ error: 'floorId is required' });
-        return;
-      }
       const result = await acceptIfcSuggestion({
         suggestion,
         project: req.project!,
-        floorId,
         mappedPatch: req.body?.mappedInstanceData,
       });
       res.json({
@@ -447,7 +466,7 @@ router.patch(
 
 /**
  * POST /api/projects/:projectId/ifc-import/:jobId/commit
- * Body: { floorId, suggestions?: patch[] }
+ * Body: { suggestions?: patch[] }. Uses each row's persisted floorId.
  * Creates WALLS Instances for ACCEPTED suggestions only.
  */
 router.post(
@@ -466,20 +485,6 @@ router.post(
         return;
       }
 
-      const floorId = String(req.body?.floorId ?? '').trim();
-      if (!floorId) {
-        res.status(400).json({ error: 'floorId is required' });
-        return;
-      }
-      const floor = await Floor.findOne({
-        projectId: req.project!._id,
-        floorId,
-      });
-      if (!floor) {
-        res.status(400).json({ error: 'floorId does not exist on this project' });
-        return;
-      }
-
       const updates = req.body?.suggestions;
       if (Array.isArray(updates)) {
         applySuggestionPatches(job.suggestions, updates);
@@ -494,18 +499,51 @@ router.post(
         return;
       }
 
-      const existing = await Instance.find({
-        projectId: req.project!._id,
-        floorId,
-        elementKey: 'WALLS',
-      }).select('mark');
-      const existingMarks = existing.map((i) => i.mark);
+      const unassigned = accepted.filter((s) => !String(s.floorId || '').trim());
+      if (unassigned.length) {
+        res.status(400).json({
+          error:
+            'Assign every accepted IFC suggestion to a project floor before committing',
+          suggestionIds: unassigned.map((s) => s.id),
+        });
+        return;
+      }
 
-      const { bodies, skipped } = buildWallInstanceBodies(accepted, {
-        floorId,
-        project: req.project!,
-        existingMarks,
-      });
+      const floorIds = [
+        ...new Set(accepted.map((s) => String(s.floorId).trim())),
+      ];
+      const validFloors = await Floor.find({
+        projectId: req.project!._id,
+        floorId: { $in: floorIds },
+      }).select('floorId');
+      const validFloorIds = new Set(validFloors.map((floor) => floor.floorId));
+      const invalidFloorIds = floorIds.filter(
+        (floorId) => !validFloorIds.has(floorId),
+      );
+      if (invalidFloorIds.length) {
+        res.status(400).json({
+          error: `Unknown project floorId: ${invalidFloorIds.join(', ')}`,
+        });
+        return;
+      }
+
+      const bodies: ReturnType<typeof buildWallInstanceBodies>['bodies'] = [];
+      const skipped: string[] = [];
+      for (const floorId of floorIds) {
+        const rows = accepted.filter((s) => s.floorId === floorId);
+        const existing = await Instance.find({
+          projectId: req.project!._id,
+          floorId,
+          elementKey: 'WALLS',
+        }).select('mark');
+        const built = buildWallInstanceBodies(rows, {
+          floorId,
+          project: req.project!,
+          existingMarks: existing.map((i) => i.mark),
+        });
+        bodies.push(...built.bodies);
+        skipped.push(...built.skipped);
+      }
 
       if (!bodies.length) {
         res.status(400).json({
@@ -546,6 +584,7 @@ router.post(
           {
             $set: {
               status: 'ACCEPTED',
+              floorId: body.floorId,
               needsManualModeling: false,
               skipReason: null,
             },

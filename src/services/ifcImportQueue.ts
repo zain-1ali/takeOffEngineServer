@@ -6,6 +6,7 @@
  * Results land as PENDING IfcSuggestion documents (not only embedded on the job).
  */
 import { randomUUID } from 'crypto';
+import { Floor } from '../models/Floor';
 import { IfcImportJob } from '../models/IfcImportJob';
 import { IfcSuggestion } from '../models/IfcSuggestion';
 import { buildIfcSuggestionsFromParse } from './ifcBuildSuggestions';
@@ -59,7 +60,17 @@ export async function runIfcImportJob(jobId: string): Promise<void> {
 
   try {
     const result = await parseIfc(buffer);
-    const built = buildIfcSuggestionsFromParse(result);
+    const floors = await Floor.find({ projectId: job.projectId })
+      .select('floorId label elevation')
+      .lean();
+    const built = buildIfcSuggestionsFromParse(
+      result,
+      floors.map((floor) => ({
+        floorId: floor.floorId,
+        label: floor.label,
+        elevation: floor.elevation,
+      })),
+    );
 
     await IfcSuggestion.deleteMany({ jobId: job._id });
     if (built.length) {
@@ -81,6 +92,10 @@ export async function runIfcImportJob(jobId: string): Promise<void> {
         expressId: s.expressId,
         elementKey: 'WALLS' as const,
         name: s.name,
+        floorId: s.floorId,
+        sourceStorey: s.sourceStorey,
+        floorMatchStatus: s.floorMatchStatus,
+        floorMatchNote: s.floorMatchNote,
         mark: s.mappedInstanceData?.mark ?? null,
         shape:
           s.mappedInstanceData?.shape === 'LINEAR' ||

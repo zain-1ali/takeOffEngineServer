@@ -50,6 +50,13 @@ export type IfcRawAxisGeometry =
       angleDeg: number;
     };
 
+export type IfcSourceStorey = {
+  expressId: number;
+  globalId: string | null;
+  name: string | null;
+  elevationM: number | null;
+};
+
 export type IfcParsedEntity = {
   globalId: string;
   expressId: number;
@@ -63,6 +70,9 @@ export type IfcParsedEntity = {
   geometry: IfcRawExtrusionGeometry | null;
   axisGeometry: IfcRawAxisGeometry | null;
   axisSkipReason: string | null;
+  /** Spatial container read from IfcRelContainedInSpatialStructure. */
+  sourceStorey?: IfcSourceStorey | null;
+  storeyIssue?: 'NO_STOREY' | 'AMBIGUOUS' | null;
 };
 
 export type IfcParseResult = {
@@ -107,6 +117,20 @@ function isIfcHandle(v: unknown): v is { value: number } {
     typeof (v as { value?: unknown }).value === 'number' &&
     (v as { value: number }).value > 0
   );
+}
+
+function handleExpressId(v: unknown): number | null {
+  if (isIfcHandle(v)) return v.value;
+  if (
+    v &&
+    typeof v === 'object' &&
+    (v as { type?: unknown }).type === 5 &&
+    typeof (v as { value?: unknown }).value === 'number'
+  ) {
+    const id = (v as { value: number }).value;
+    return id > 0 ? id : null;
+  }
+  return null;
 }
 
 /**
@@ -643,12 +667,85 @@ function collectIds(
   api: WebIFC.IfcAPI,
   modelID: number,
   typeCode: number,
+  includeInherited = true,
 ): number[] {
-  const vec = api.GetLineIDsWithType(modelID, typeCode, true);
+  const vec = api.GetLineIDsWithType(
+    modelID,
+    typeCode,
+    includeInherited,
+  );
   const ids: number[] = [];
   const n = vec.size();
   for (let i = 0; i < n; i++) ids.push(vec.get(i));
   return ids;
+}
+
+type EntityStoreyLookup = Map<
+  number,
+  { sourceStorey: IfcSourceStorey | null; storeyIssue: 'NO_STOREY' | 'AMBIGUOUS' | null }
+>;
+
+/**
+ * Read only the targeted spatial relation/storey lines. Avoid flatten/inverse
+ * traversal: valid IFC project graphs are cyclic and can recurse indefinitely.
+ */
+function buildEntityStoreyLookup(
+  api: WebIFC.IfcAPI,
+  modelID: number,
+  lengthScaleToM: number,
+): EntityStoreyLookup {
+  const storeys: Map<number, IfcSourceStorey> = new Map();
+  for (const id of collectIds(api, modelID, WebIFC.IFCBUILDINGSTOREY)) {
+    const line = api.GetLine(modelID, id, false);
+    if (!line || !isType(line, WebIFC.IFCBUILDINGSTOREY)) continue;
+    const elevation = asNum(line.Elevation);
+    storeys.set(id, {
+      expressId: id,
+      globalId: asStr(line.GlobalId),
+      name: asStr(line.Name),
+      elevationM:
+        elevation == null ? null : elevation * lengthScaleToM,
+    });
+  }
+
+  const relatedStoreys: Map<number, Set<number>> = new Map();
+  for (const relId of collectIds(
+    api,
+    modelID,
+    WebIFC.IFCRELCONTAINEDINSPATIALSTRUCTURE,
+    false,
+  )) {
+    const rel = api.GetLine(modelID, relId, false);
+    if (!rel) continue;
+    const storeyId = handleExpressId(rel.RelatingStructure);
+    if (storeyId == null || !storeys.has(storeyId)) continue;
+    const related = rel.RelatedElements;
+    if (!Array.isArray(related)) continue;
+    for (const handle of related) {
+      const entityId = handleExpressId(handle);
+      if (entityId == null) continue;
+      const ids: Set<number> = relatedStoreys.get(entityId) || new Set();
+      ids.add(storeyId);
+      relatedStoreys.set(entityId, ids);
+    }
+  }
+
+  const lookup: EntityStoreyLookup = new Map();
+  for (const [entityId, ids] of relatedStoreys) {
+    if (ids.size !== 1) {
+      lookup.set(entityId, {
+        sourceStorey: null,
+        storeyIssue: 'AMBIGUOUS',
+      });
+      continue;
+    }
+    const storey = storeys.get([...ids][0]) || null;
+    lookup.set(entityId, {
+      sourceStorey: storey,
+      storeyIssue: storey ? null : 'NO_STOREY',
+    });
+  }
+  return lookup;
 }
 
 function parseOneEntity(
@@ -658,6 +755,7 @@ function parseOneEntity(
   entityType: IfcParsedEntityType,
   lengthScaleToM: number,
   lengthUnitKnown: boolean,
+  storeyLookup: EntityStoreyLookup,
 ): IfcParsedEntity {
   const rawLine = api.GetLine(modelID, expressId, false);
   const representation = expandIfcValue(
@@ -678,6 +776,10 @@ function parseOneEntity(
   const schemaType = typeName(line);
   const globalId = asStr(line?.GlobalId) || `express:${expressId}`;
   const name = asStr(line?.Name);
+  const storey = storeyLookup.get(expressId) || {
+    sourceStorey: null,
+    storeyIssue: 'NO_STOREY' as const,
+  };
   const { axis, reason: axisSkipReason } = extractAxisGeometry(
     representation,
     lengthScaleToM,
@@ -695,6 +797,7 @@ function parseOneEntity(
       geometry: null,
       axisGeometry: axis,
       axisSkipReason,
+      ...storey,
     };
   }
   const geometry = extractExtrudedSolid(
@@ -715,6 +818,7 @@ function parseOneEntity(
       geometry: null,
       axisGeometry: axis,
       axisSkipReason,
+      ...storey,
     };
   }
   return {
@@ -728,6 +832,7 @@ function parseOneEntity(
     geometry,
     axisGeometry: axis,
     axisSkipReason,
+    ...storey,
   };
 }
 
@@ -748,6 +853,11 @@ export async function parseIfc(fileBuffer: Buffer): Promise<IfcParseResult> {
       throw new Error('web-ifc failed to open the IFC model');
     }
     const lengthUnit = modelLengthScale(api, modelID);
+    const storeyLookup = buildEntityStoreyLookup(
+      api,
+      modelID,
+      lengthUnit.scale,
+    );
 
     const wallIds = [
       ...collectIds(api, modelID, WebIFC.IFCWALL),
@@ -772,6 +882,7 @@ export async function parseIfc(fileBuffer: Buffer): Promise<IfcParseResult> {
           'IfcWall',
           lengthUnit.scale,
           lengthUnit.known,
+          storeyLookup,
         ),
       );
     }
@@ -784,6 +895,7 @@ export async function parseIfc(fileBuffer: Buffer): Promise<IfcParseResult> {
           'IfcSlab',
           lengthUnit.scale,
           lengthUnit.known,
+          storeyLookup,
         ),
       );
     }

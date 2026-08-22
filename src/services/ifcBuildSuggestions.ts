@@ -4,10 +4,16 @@
  */
 import type { IfcParsedEntity, IfcParseResult } from './ifcImport';
 import type {
+  IfcFloorMatchStatus,
   IfcMappedInstanceData,
   IfcSuggestionConfidence,
   IfcSuggestionEntityType,
+  IfcSuggestionStorey,
 } from '../models/IfcSuggestion';
+import {
+  matchIfcEntityToFloor,
+  type MatchableFloor,
+} from './ifcFloorMatch';
 import {
   mapIfcWallToSuggestion,
   type WallIfcSuggestion,
@@ -18,6 +24,10 @@ export type BuiltIfcSuggestion = {
   expressId: number;
   entityType: IfcSuggestionEntityType;
   name: string | null;
+  floorId: string | null;
+  sourceStorey: IfcSuggestionStorey | null;
+  floorMatchStatus: IfcFloorMatchStatus;
+  floorMatchNote: string;
   mappedInstanceData: IfcMappedInstanceData | null;
   confidence: IfcSuggestionConfidence;
   confidenceNotes: string[];
@@ -25,6 +35,16 @@ export type BuiltIfcSuggestion = {
   skipReason: string | null;
   status: 'PENDING';
 };
+
+function floorFields(entity: IfcParsedEntity, floors: MatchableFloor[]) {
+  const match = matchIfcEntityToFloor(entity, floors);
+  return {
+    floorId: match.floorId,
+    sourceStorey: match.sourceStorey,
+    floorMatchStatus: match.floorMatchStatus,
+    floorMatchNote: match.floorMatchNote,
+  };
+}
 
 function wallMappedData(mapped: WallIfcSuggestion): IfcMappedInstanceData {
   return {
@@ -64,13 +84,17 @@ function wallIsCommitReady(mapped: WallIfcSuggestion): boolean {
   );
 }
 
-function fromWallEntity(entity: IfcParsedEntity): BuiltIfcSuggestion {
+function fromWallEntity(
+  entity: IfcParsedEntity,
+  floors: MatchableFloor[],
+): BuiltIfcSuggestion {
   if (!entity.geometryOk) {
     return {
       sourceGlobalId: entity.globalId,
       expressId: entity.expressId,
       entityType: 'IfcWall',
       name: entity.name,
+      ...floorFields(entity, floors),
       mappedInstanceData: {
         elementKey: 'WALLS',
         shape: null,
@@ -95,6 +119,7 @@ function fromWallEntity(entity: IfcParsedEntity): BuiltIfcSuggestion {
       expressId: entity.expressId,
       entityType: 'IfcWall',
       name: entity.name,
+      ...floorFields(entity, floors),
       mappedInstanceData: null,
       confidence: 'LOW',
       confidenceNotes: ['Wall entity could not be mapped'],
@@ -110,6 +135,7 @@ function fromWallEntity(entity: IfcParsedEntity): BuiltIfcSuggestion {
     expressId: mapped.expressId,
     entityType: 'IfcWall',
     name: mapped.name,
+    ...floorFields(entity, floors),
     mappedInstanceData: wallMappedData(mapped),
     confidence: mapped.confidence,
     confidenceNotes: [...mapped.confidenceNotes],
@@ -121,7 +147,10 @@ function fromWallEntity(entity: IfcParsedEntity): BuiltIfcSuggestion {
   };
 }
 
-function fromSlabEntity(entity: IfcParsedEntity): BuiltIfcSuggestion {
+function fromSlabEntity(
+  entity: IfcParsedEntity,
+  floors: MatchableFloor[],
+): BuiltIfcSuggestion {
   // No Step 5 slab mapper yet — always list for manual modeling.
   const notes = [
     entity.geometryOk
@@ -133,6 +162,7 @@ function fromSlabEntity(entity: IfcParsedEntity): BuiltIfcSuggestion {
     expressId: entity.expressId,
     entityType: 'IfcSlab',
     name: entity.name,
+    ...floorFields(entity, floors),
     mappedInstanceData: {
       elementKey: 'SLABS',
       shape: null,
@@ -149,11 +179,12 @@ function fromSlabEntity(entity: IfcParsedEntity): BuiltIfcSuggestion {
 
 export function buildIfcSuggestionsFromParse(
   result: IfcParseResult,
+  floors: MatchableFloor[] = [],
 ): BuiltIfcSuggestion[] {
   const out: BuiltIfcSuggestion[] = [];
   for (const e of result.entities) {
-    if (e.entityType === 'IfcWall') out.push(fromWallEntity(e));
-    else if (e.entityType === 'IfcSlab') out.push(fromSlabEntity(e));
+    if (e.entityType === 'IfcWall') out.push(fromWallEntity(e, floors));
+    else if (e.entityType === 'IfcSlab') out.push(fromSlabEntity(e, floors));
   }
   return out;
 }

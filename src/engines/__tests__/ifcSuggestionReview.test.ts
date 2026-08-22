@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import mongoose, { Types } from 'mongoose';
+import { Floor } from '../../models/Floor';
 import { Instance } from '../../models/Instance';
 import { IfcSuggestion } from '../../models/IfcSuggestion';
-import { acceptIfcSuggestion } from '../../services/ifcAcceptSuggestion';
+import {
+  acceptIfcSuggestion,
+  assignIfcSuggestionFloor,
+} from '../../services/ifcAcceptSuggestion';
 import { buildIfcSuggestionsFromParse } from '../../services/ifcBuildSuggestions';
 import { parseIfc } from '../../services/ifcImport';
 import { runIfcImportJob, stashIfcUploadBuffer } from '../../services/ifcImportQueue';
@@ -95,7 +99,6 @@ describe('acceptIfcSuggestion dedupe', () => {
     const gid = `test-gid-${Date.now()}`;
 
     // Floor required by accept
-    const { Floor } = await import('../../models/Floor');
     await Floor.create({
       projectId,
       floorId: 'FDN',
@@ -112,6 +115,9 @@ describe('acceptIfcSuggestion dedupe', () => {
       expressId: 1,
       entityType: 'IfcWall',
       name: 'W',
+      floorId: 'FDN',
+      floorMatchStatus: 'MATCHED_ELEVATION',
+      floorMatchNote: 'Matched elevation',
       mappedInstanceData: {
         elementKey: 'WALLS',
         shape: 'LINEAR',
@@ -130,10 +136,34 @@ describe('acceptIfcSuggestion dedupe', () => {
       materials: { defaultConcreteGrade: 'C25/30' },
     } as unknown as IProject;
 
+    const unassigned = await IfcSuggestion.create({
+      projectId,
+      jobId,
+      sourceGlobalId: `${gid}-unassigned`,
+      expressId: 0,
+      entityType: 'IfcWall',
+      name: 'Unassigned',
+      floorId: null,
+      mappedInstanceData: suggestion.mappedInstanceData,
+      confidence: 'HIGH',
+      confidenceNotes: [],
+      needsManualModeling: false,
+      status: 'PENDING',
+    });
+    await expect(
+      acceptIfcSuggestion({ suggestion: unassigned, project }),
+    ).rejects.toThrow(/assign.*project floor/i);
+    const manuallyAssigned = await assignIfcSuggestionFloor({
+      suggestion: unassigned,
+      projectId,
+      floorId: 'FDN',
+    });
+    expect(manuallyAssigned.floorId).toBe('FDN');
+    expect(manuallyAssigned.floorMatchStatus).toBe('MANUAL');
+
     const first = await acceptIfcSuggestion({
       suggestion,
       project,
-      floorId: 'FDN',
     });
     expect(first.skippedDuplicate).toBe(false);
     expect(first.instance?.source).toBe('IFC_IMPORT');
@@ -147,6 +177,9 @@ describe('acceptIfcSuggestion dedupe', () => {
       expressId: 2,
       entityType: 'IfcWall',
       name: 'W2',
+      floorId: 'FDN',
+      floorMatchStatus: 'MANUAL',
+      floorMatchNote: 'Manually assigned',
       mappedInstanceData: {
         elementKey: 'WALLS',
         shape: 'LINEAR',
@@ -163,7 +196,6 @@ describe('acceptIfcSuggestion dedupe', () => {
     const second = await acceptIfcSuggestion({
       suggestion: againDoc,
       project,
-      floorId: 'FDN',
     });
     expect(second.skippedDuplicate).toBe(true);
     expect(second.instance?._id.toString()).toBe(
@@ -191,9 +223,18 @@ describe('runIfcImportJob persists IfcSuggestion docs', () => {
 
   it('writes PENDING suggestions from an in-memory buffer', async () => {
     const fixture = path.join(__dirname, 'fixtures', 'minimal-wall.ifc');
+    const projectId = new Types.ObjectId();
+    await Floor.create({
+      projectId,
+      floorId: 'L01',
+      label: 'Level 1',
+      elevation: 0,
+      height: 3,
+      sortOrder: 0,
+    });
 
     const job = await IfcImportJob.create({
-      projectId: new Types.ObjectId(),
+      projectId,
       userId: new Types.ObjectId(),
       fileName: 'minimal-wall.ifc',
       status: 'QUEUED',
@@ -210,8 +251,12 @@ describe('runIfcImportJob persists IfcSuggestion docs', () => {
     const docs = await IfcSuggestion.find({ jobId: job._id });
     expect(docs.length).toBeGreaterThanOrEqual(1);
     expect(docs.every((d) => d.status === 'PENDING')).toBe(true);
+    expect(docs.every((d) => d.floorId === 'L01')).toBe(true);
+    expect(docs.every((d) => d.floorMatchStatus === 'MATCHED_NAME')).toBe(true);
+    expect(updated!.suggestions.every((s) => s.floorId === 'L01')).toBe(true);
 
     await IfcSuggestion.deleteMany({ jobId: job._id });
+    await Floor.deleteMany({ projectId });
     await IfcImportJob.deleteOne({ _id: job._id });
   }, 120000);
 });
