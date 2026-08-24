@@ -9,6 +9,9 @@ import type {
   IfcWallSuggestionRow,
 } from '../models/IfcImportJob';
 import type { WallIfcSuggestion } from './ifcWallMap';
+import { nextPrefixedMarkSeed } from '../utils/instanceMarks';
+
+export { nextPrefixedMarkSeed } from '../utils/instanceMarks';
 
 /** Matches frontend ELEMENT_SCHEMAS.WALLS defaults. */
 export const WALL_INSTANCE_DEFAULTS = {
@@ -67,7 +70,7 @@ export const FOUNDATION_INSTANCE_DEFAULTS = {
       topMainSpacing: 150,
       topDistDia: 16,
       topDistSpacing: 150,
-      startersEnabled: true,
+      startersEnabled: false,
       starterDia: 20,
       starterCount: 4,
       starterProjection: 0.75,
@@ -203,19 +206,6 @@ export function isCommitableWallSuggestion(
     typeof g.arcAngleDeg === 'number' &&
     g.arcAngleDeg > 0
   );
-}
-
-export function nextPrefixedMarkSeed(
-  prefix: string,
-  existingMarks: string[],
-): number {
-  const re = new RegExp(`^${prefix}(\\d+)$`, 'i');
-  let max = 0;
-  for (const m of existingMarks) {
-    const match = re.exec(String(m).trim());
-    if (match) max = Math.max(max, parseInt(match[1], 10));
-  }
-  return max + 1;
 }
 
 export function nextWallMarkSeed(existingMarks: string[]): number {

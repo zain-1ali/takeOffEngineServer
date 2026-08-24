@@ -11,6 +11,15 @@ import { REPORTABLE_KEYS } from '../services/reports/elementMeta';
 import ratePdfImportRouter from './ratePdfImport';
 import manualBoqItemsRouter from './manualBoqItems';
 import ifcImportRouter from './ifcImport';
+import sheetsRouter from './sheets';
+import layersRouter from './layers';
+import blueprintPromotionsRouter from './blueprintPromotions';
+import projectBlueprintExportRouter from './projectBlueprintExport';
+import {
+  DEFAULT_GENERAL_LAYER_COLOR,
+  DEFAULT_GENERAL_LAYER_NAME,
+} from '../utils/defaultProjectLayer';
+import { LayerModel } from '../models/Layer';
 import { buildCostPlan } from '../services/costPlan/buildCostPlan';
 import {
   DEFAULT_CASCADE_PERCENTS,
@@ -45,6 +54,18 @@ const router = Router();
 router.use('/:projectId/rate-lib/import-pdf', ratePdfImportRouter);
 router.use('/:projectId/manual-boq', manualBoqItemsRouter);
 router.use('/:projectId/ifc-import', ifcImportRouter);
+router.use('/:projectId/sheets', loadOwnedProject, sheetsRouter);
+router.use('/:projectId/layers', loadOwnedProject, layersRouter);
+router.use(
+  '/:projectId/blueprint-promotions',
+  loadOwnedProject,
+  blueprintPromotionsRouter,
+);
+router.use(
+  '/:projectId/export',
+  loadOwnedProject,
+  projectBlueprintExportRouter,
+);
 
 function publicProject(p: IProject) {
   return {
@@ -124,6 +145,8 @@ function publicInstance(inst: IInstance) {
     location: inst.location ?? null,
     source: inst.source ?? null,
     sourceGlobalId: inst.sourceGlobalId ?? null,
+    sourceTakeoffItemId: inst.sourceTakeoffItemId?.toString() ?? null,
+    sourceAiSuggestionId: inst.sourceAiSuggestionId?.toString() ?? null,
     createdAt: inst.createdAt,
     updatedAt: inst.updatedAt,
   };
@@ -276,6 +299,14 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     await Floor.insertMany(
       DEFAULT_FLOORS.map((f) => ({ ...f, projectId: project._id })),
     );
+
+    await LayerModel.create({
+      projectId: project._id,
+      name: DEFAULT_GENERAL_LAYER_NAME,
+      color: DEFAULT_GENERAL_LAYER_COLOR,
+      visible: true,
+      sortOrder: 0,
+    });
 
     const floors = await Floor.find({ projectId: project._id }).sort({ sortOrder: 1 });
     res.status(201).json({
@@ -495,7 +526,8 @@ router.post('/:projectId/floors', loadOwnedProject, async (req: Request, res: Re
 });
 
 /**
- * Duplicate instances onto a new or existing floor.
+ * Duplicate instances onto a new or existing floor (or the same floor
+ * for selected copies — new marks, grid refs cleared).
  * Body (full floor): { sourceFloorId, newFloor? | targetFloorId }
  * Body (selected):   { instanceIds, newFloor? | targetFloorId }
  * Quantities are not copied — recalculated via /calculate on the target.

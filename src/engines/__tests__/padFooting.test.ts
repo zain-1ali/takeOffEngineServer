@@ -1,5 +1,6 @@
 import { calcFooting } from '../padFooting';
 import { unitWeightKgPerM, barCountForSpan, round } from '../math';
+import { FOUNDATION_INSTANCE_DEFAULTS } from '../../services/ifcImportCommit';
 
 describe('padFooting', () => {
   /** Verified rectangular pad: 2 × 2 × 0.6 m, H16@150, cover 50 mm */
@@ -78,12 +79,36 @@ describe('padFooting', () => {
       starterEmbedment: 0.4,
     });
     expect(r.totalRebarKg).toBe(89.91);
+    expect(r.perUnit.rebar.starterBars).toEqual(
+      expect.objectContaining({ diameterMm: 20, barCount: 4 }),
+    );
   });
 
   it('scales by count', () => {
     const r = calcFooting({ ...basePad, count: 6 });
     expect(r.totalVolumeM3).toBe(14.4);
     expect(r.totalRebarKg).toBe(round(78.06 * 6));
+  });
+});
+
+describe('new pad instance defaults (no silent T20 starters)', () => {
+  it('FOUNDATION_INSTANCE_DEFAULTS produce mesh only — no Ø20 starter group', () => {
+    const r = calcFooting({
+      shape: 'RECTANGULAR',
+      length: 2,
+      width: 2,
+      baseThickness: 0.6,
+      count: 1,
+      ...FOUNDATION_INSTANCE_DEFAULTS.PAD_FOOTING.rebar,
+    });
+    expect(FOUNDATION_INSTANCE_DEFAULTS.PAD_FOOTING.rebar.startersEnabled).toBe(
+      false,
+    );
+    expect(r.perUnit.rebar.starterBars).toBeNull();
+    const groups = r.perUnit.rebar.groups as { diameterMm: number; role: string }[];
+    expect(groups.some((g) => g.role === 'Starter bars')).toBe(false);
+    expect(groups.some((g) => g.diameterMm === 20)).toBe(false);
+    expect(r.totalRebarKg).toBe(78.06);
   });
 });
 

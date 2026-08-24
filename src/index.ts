@@ -7,6 +7,13 @@ import { requireAuth } from './middleware/requireAuth';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth';
 import projectsRouter from './routes/projects';
+import sheetMutationsRouter from './routes/sheetMutations';
+import takeoffItemsRouter from './routes/takeoffItems';
+import markupObjectsRouter from './routes/markupObjects';
+import sheetExportRouter from './routes/sheetExport';
+import aiSuggestionsRouter from './routes/aiSuggestions';
+import aiSuggestionActionsRouter from './routes/aiSuggestionActions';
+import { UPLOADS_ROOT } from './services/pdfConversion';
 
 dotenv.config();
 
@@ -58,12 +65,36 @@ async function start() {
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
 
+  app.use('/uploads', express.static(UPLOADS_ROOT));
+
   // Public routes
   app.use('/api', healthRouter);
   app.use('/api/auth', authRouter);
 
   // Authenticated API
   app.use('/api/projects', requireAuth, projectsRouter);
+  app.use(
+    '/api/sheets/:sheetId/takeoff-items',
+    requireAuth,
+    takeoffItemsRouter,
+  );
+  app.use(
+    '/api/sheets/:sheetId/markups',
+    requireAuth,
+    markupObjectsRouter,
+  );
+  app.use(
+    '/api/sheets/:sheetId/export',
+    requireAuth,
+    sheetExportRouter,
+  );
+  app.use(
+    '/api/sheets/:sheetId/ai-suggestions',
+    requireAuth,
+    aiSuggestionsRouter,
+  );
+  app.use('/api/ai-suggestions', requireAuth, aiSuggestionActionsRouter);
+  app.use('/api/sheets', requireAuth, sheetMutationsRouter);
 
   // Catch-all auth for any future /api routes not listed above
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
@@ -71,7 +102,9 @@ async function start() {
     if (
       path === '/health' ||
       path.startsWith('/auth/') ||
-      path.startsWith('/projects')
+      path.startsWith('/projects') ||
+      path.startsWith('/sheets') ||
+      path.startsWith('/ai-suggestions')
     ) {
       next();
       return;

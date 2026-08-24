@@ -17,10 +17,19 @@ export interface IInstance extends Document {
    * Null for elements with a fixed UniFormat mapping.
    */
   location: string | null;
-  /** Provenance: manual schedule add vs IFC import. */
-  source: 'MANUAL' | 'IFC_IMPORT' | null;
+  /** Provenance: manual schedule add, IFC import, or blueprint promotion. */
+  source:
+    | 'MANUAL'
+    | 'IFC_IMPORT'
+    | 'BLUEPRINT_TRACE'
+    | 'BLUEPRINT_AI_SUGGESTION'
+    | null;
   /** IFC GlobalId when source is IFC_IMPORT — used to prevent duplicate imports. */
   sourceGlobalId: string | null;
+  /** Source measurement for blueprint promotion (also set for accepted AI rooms). */
+  sourceTakeoffItemId: Types.ObjectId | null;
+  /** Accepted AI room suggestion that produced this instance. */
+  sourceAiSuggestionId: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,10 +49,26 @@ const instanceSchema = new Schema(
     location: { type: String, default: null, trim: true },
     source: {
       type: String,
-      enum: ['MANUAL', 'IFC_IMPORT', null],
+      enum: [
+        'MANUAL',
+        'IFC_IMPORT',
+        'BLUEPRINT_TRACE',
+        'BLUEPRINT_AI_SUGGESTION',
+        null,
+      ],
       default: null,
     },
     sourceGlobalId: { type: String, default: null, trim: true },
+    sourceTakeoffItemId: {
+      type: Schema.Types.ObjectId,
+      ref: 'TakeoffItem',
+      default: null,
+    },
+    sourceAiSuggestionId: {
+      type: Schema.Types.ObjectId,
+      ref: 'AiSuggestion',
+      default: null,
+    },
   },
   { timestamps: true },
 );
@@ -56,6 +81,26 @@ instanceSchema.index(
     unique: true,
     partialFilterExpression: {
       sourceGlobalId: { $type: 'string', $gt: '' },
+    },
+  },
+);
+/** A blueprint measurement can create at most one element instance. */
+instanceSchema.index(
+  { projectId: 1, sourceTakeoffItemId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sourceTakeoffItemId: { $type: 'objectId' },
+    },
+  },
+);
+/** An accepted AI room can create at most one element instance. */
+instanceSchema.index(
+  { projectId: 1, sourceAiSuggestionId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sourceAiSuggestionId: { $type: 'objectId' },
     },
   },
 );

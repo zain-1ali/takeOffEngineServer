@@ -2,12 +2,21 @@
  * Duplicate element instances onto a target floor (new or existing empty for
  * full-floor copy; any floor for selected-instance copy).
  *
- * Copies geometry/shape/grade/spec/reinforcement/grid refs as-is.
+ * Cross-floor: copies geometry/shape/grade/spec/reinforcement/grid refs as-is.
+ * Same-floor (selected copy onto the source floor): new non-colliding mark
+ * using `{prefix}{n}` auto-numbering, and grid refs cleared so the copy is
+ * unplaced. Full-floor copy onto the same floor is still rejected.
+ *
  * Does NOT copy calculated quantities — callers re-run calc() via /calculate.
  */
 import { Types } from 'mongoose';
 import { Floor, type IFloor } from '../models/Floor';
 import { Instance, type IInstance } from '../models/Instance';
+import {
+  clearGridPlacement,
+  markPrefixForElement,
+  nextUniqueMark,
+} from '../utils/instanceMarks';
 import {
   defaultLocationForElement,
   LOCATION_DEPENDENT_ELEMENTS,
@@ -163,8 +172,11 @@ export async function duplicateToFloor(
 
   const targetFloor = await resolveTargetFloor(projectId, input);
   const targetFloorId = targetFloor.floorId;
+  const sourceFloorId = hasSourceFloor
+    ? String(input.sourceFloorId).trim()
+    : '';
 
-  if (hasSourceFloor && targetFloorId === String(input.sourceFloorId).trim()) {
+  if (hasSourceFloor && targetFloorId === sourceFloorId) {
     throw Object.assign(new Error('Target floor must differ from source floor'), {
       status: 400,
     });
@@ -190,19 +202,50 @@ export async function duplicateToFloor(
     };
   }
 
-  const docs = sources.map((src) => ({
+  const existingOnTarget = await Instance.find({
     projectId,
     floorId: targetFloorId,
-    elementKey: src.elementKey,
-    shape: src.shape,
-    mark: src.mark,
-    count: src.count,
-    geometry: cloneJson(src.geometry || {}),
-    concreteGrade: src.concreteGrade,
-    reinforcement: cloneJson(src.reinforcement),
-    spec: src.spec,
-    location: resolveLocation(src.elementKey, targetFloorId, src.location),
-  }));
+  })
+    .select('elementKey mark')
+    .exec();
+  const usedMarksByElement = new Map<string, string[]>();
+  for (const inst of existingOnTarget) {
+    const list = usedMarksByElement.get(inst.elementKey) || [];
+    list.push(inst.mark);
+    usedMarksByElement.set(inst.elementKey, list);
+  }
+
+  const docs = sources.map((src) => {
+    const sameFloor = src.floorId === targetFloorId;
+    let mark = src.mark;
+    let geometry = cloneJson(src.geometry || {});
+    if (sameFloor) {
+      const used = usedMarksByElement.get(src.elementKey) || [];
+      mark = nextUniqueMark(
+        src.mark,
+        used,
+        markPrefixForElement(src.elementKey),
+      );
+      used.push(mark);
+      usedMarksByElement.set(src.elementKey, used);
+      geometry = clearGridPlacement(
+        geometry && typeof geometry === 'object' ? geometry : {},
+      );
+    }
+    return {
+      projectId,
+      floorId: targetFloorId,
+      elementKey: src.elementKey,
+      shape: src.shape,
+      mark,
+      count: src.count,
+      geometry,
+      concreteGrade: src.concreteGrade,
+      reinforcement: cloneJson(src.reinforcement),
+      spec: src.spec,
+      location: resolveLocation(src.elementKey, targetFloorId, src.location),
+    };
+  });
 
   const created = await Instance.insertMany(docs);
   return {

@@ -451,7 +451,7 @@ function mapTaperedRectangular(
   if (!start.ok || !end.ok) {
     markConfidenceLow(
       conf,
-      !start.ok ? start.reason : end.reason,
+      'reason' in start ? start.reason : ('reason' in end ? end.reason : 'Unsupported beam profile'),
     );
     addConfidenceNote(
       conf,
@@ -713,7 +713,10 @@ function mapExtrudedBeam(
   }
 
   const tapered = mapTaperedRectangular(conf, geom, span);
-  if (tapered === 'failed' || conf.confidence === 'LOW') {
+  if (
+    tapered === 'failed' ||
+    (conf.confidence as 'HIGH' | 'MEDIUM' | 'LOW') === 'LOW'
+  ) {
     addConfidenceNote(conf, UNSUPPORTED_BEAM_NOTE);
     return {
       ...base,

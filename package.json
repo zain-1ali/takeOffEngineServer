@@ -26,8 +26,12 @@
     "multer": "^1.4.5-lts.2",
     "nodemailer": "^9.0.5",
     "p-queue": "^6.6.2",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
-    "web-ifc": "^0.0.77"
+    "pdf-to-img": "^6.2.0",
+    "sharp": "^0.35.3",
+    "web-ifc": "^0.0.77",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
