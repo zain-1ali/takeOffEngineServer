@@ -37,6 +37,7 @@ import {
   markConfidenceLow,
   markConfidenceMediumIfHigh,
   roundMetres3,
+  type ConfidenceAccumulator,
   type IfcConfidenceTier,
 } from './ifcConfidence';
 import {
@@ -449,10 +450,12 @@ function mapTaperedRectangular(
   const start = classifyBeamSectionProfile(geom.profile);
   const end = classifyBeamSectionProfile(geom.endProfile);
   if (!start.ok || !end.ok) {
-    markConfidenceLow(
-      conf,
-      'reason' in start ? start.reason : ('reason' in end ? end.reason : 'Unsupported beam profile'),
-    );
+    const reason = !start.ok
+      ? start.reason
+      : !end.ok
+        ? end.reason
+        : 'Unsupported beam profile';
+    markConfidenceLow(conf, reason);
     addConfidenceNote(
       conf,
       'Tapered extrusion end profile could not be classified as a constant Beams section',
@@ -601,6 +604,11 @@ export function mapIfcBeamToSuggestion(
   );
 }
 
+/** Re-read after helpers that may mutate `conf.confidence` (TS does not track that). */
+function currentConfidence(c: ConfidenceAccumulator): IfcConfidenceTier {
+  return c.confidence;
+}
+
 function mapExtrudedBeam(
   base: Pick<
     BeamIfcSuggestion,
@@ -713,10 +721,7 @@ function mapExtrudedBeam(
   }
 
   const tapered = mapTaperedRectangular(conf, geom, span);
-  if (
-    tapered === 'failed' ||
-    (conf.confidence as 'HIGH' | 'MEDIUM' | 'LOW') === 'LOW'
-  ) {
+  if (tapered === 'failed' || currentConfidence(conf) === 'LOW') {
     addConfidenceNote(conf, UNSUPPORTED_BEAM_NOTE);
     return {
       ...base,
