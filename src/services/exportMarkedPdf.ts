@@ -1,5 +1,3 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import sharp from 'sharp';
 import { PDFDocument } from 'pdf-lib';
 import { Types } from 'mongoose';
@@ -10,7 +8,7 @@ import {
 } from '../models/BlueprintSheet';
 import { TakeoffItemModel } from '../models/TakeoffItem';
 import { MarkupObjectModel } from '../models/MarkupObject';
-import { UPLOADS_ROOT } from './pdfConversion';
+import { readUpload } from './objectStorage';
 import {
   buildExportOverlaySvg,
   type ExportMarkup,
@@ -29,13 +27,6 @@ const MAX_EXPORT_EDGE = 4500;
 export interface ExportVisibilityQuery {
   visibleLayerIds?: string[] | null;
   uncategorizedVisible?: boolean;
-}
-
-function resolveImageAbsolutePath(sheet: BlueprintSheetDocument): string {
-  const url = sheet.originalFileUrl || '';
-  // Expected: /uploads/{projectId}/{sheetId}.png
-  const relative = url.replace(/^\/uploads\//, '');
-  return path.join(UPLOADS_ROOT, relative);
 }
 
 function toFilter(query: ExportVisibilityQuery): LayerVisibilityFilter {
@@ -101,10 +92,9 @@ export async function renderSheetMarkedPng(
   sheet: BlueprintSheetDocument,
   visibility: ExportVisibilityQuery,
 ): Promise<{ png: Buffer; width: number; height: number }> {
-  const absolutePath = resolveImageAbsolutePath(sheet);
-  await fs.access(absolutePath);
+  const imageBuffer = await readUpload(sheet.originalFileUrl);
 
-  const base = sharp(absolutePath);
+  const base = sharp(imageBuffer);
   const meta = await base.metadata();
   if (!meta.width || !meta.height) {
     throw new Error('Could not read sheet image dimensions');
@@ -119,7 +109,7 @@ export async function renderSheetMarkedPng(
     const scale = MAX_EXPORT_EDGE / longEdge;
     width = Math.max(1, Math.round(width * scale));
     height = Math.max(1, Math.round(height * scale));
-    pipeline = sharp(absolutePath).resize(width, height, { fit: 'fill' });
+    pipeline = sharp(imageBuffer).resize(width, height, { fit: 'fill' });
   }
 
   const layerDocs = await LayerModel.find({ projectId: sheet.projectId })

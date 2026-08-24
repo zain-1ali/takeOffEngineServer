@@ -5,11 +5,12 @@ import { PDFDocument } from 'pdf-lib';
 import { Types } from 'mongoose';
 import { BlueprintSheet, type Sheet } from '../models/BlueprintSheet';
 import { mapSheet } from '../utils/mapSheet';
-import { writeSheetThumbnail } from './thumbnails';
+import { persistUpload } from './objectStorage';
+import { renderSheetThumbnailJpeg } from './thumbnails';
 import { enqueueAiExtraction } from '../jobs/processAiExtraction';
 
-/** Directory for persisted page PNGs: backend/uploads */
-export const UPLOADS_ROOT = path.resolve(__dirname, '../../uploads');
+/** @deprecated Use objectStorage.UPLOADS_ROOT — re-exported for existing imports. */
+export { UPLOADS_ROOT } from './objectStorage';
 
 const PDF_RENDER_SCALE = 3;
 
@@ -26,9 +27,14 @@ async function nextSortOrder(projectId: string): Promise<number> {
   return (highest?.sortOrder ?? -1) + 1;
 }
 
+function toBuffer(data: Buffer | Uint8Array): Buffer {
+  return Buffer.isBuffer(data) ? data : Buffer.from(data);
+}
+
 /**
- * Convert each PDF page to a PNG + thumbnail, persist under
- * uploads/{projectId}/{sheetId}.png, and create one BlueprintSheet per page.
+ * Convert each PDF page to a PNG + thumbnail, persist the original PDF and
+ * page assets (Railway bucket when configured, otherwise local uploads/),
+ * and create one BlueprintSheet per page.
  */
 export async function convertPdfToSheets(
   projectId: string,
@@ -44,11 +50,15 @@ export async function convertPdfToSheets(
     throw new Error('PDF has no pages');
   }
 
+  const sourceId = new Types.ObjectId().toString();
+  const sourcePdfUrl = await persistUpload(
+    `${projectId}/source/${sourceId}.pdf`,
+    pdfBytes,
+    'application/pdf',
+  );
+
   const { pdf } = await import('pdf-to-img');
   const document = await pdf(pdfFilePath, { scale: PDF_RENDER_SCALE });
-
-  const projectUploadsDir = path.join(UPLOADS_ROOT, projectId);
-  await fs.mkdir(projectUploadsDir, { recursive: true });
 
   const baseName = path.parse(originalFileName).name || 'Sheet';
   const projectObjectId = new Types.ObjectId(projectId);
@@ -61,20 +71,20 @@ export async function convertPdfToSheets(
   let sortOrder = await nextSortOrder(projectId);
   let pageNumber = 0;
 
-  for await (const imageBuffer of document) {
+  for await (const imageData of document) {
     pageNumber += 1;
     if (pageNumber > pageCount) break;
 
+    const imageBuffer = toBuffer(imageData);
     const sheetId = new Types.ObjectId();
     const sheetIdStr = sheetId.toString();
-    const fileName = `${sheetIdStr}.png`;
-    const absolutePath = path.join(projectUploadsDir, fileName);
-    const originalFileUrl = `/uploads/${projectId}/${fileName}`;
-    const pagePdfPath = path.join(projectUploadsDir, `${sheetIdStr}.page.pdf`);
+    const originalFileUrl = await persistUpload(
+      `${projectId}/${sheetIdStr}.png`,
+      imageBuffer,
+      'image/png',
+    );
 
-    await fs.writeFile(absolutePath, imageBuffer);
-
-    // Single-page PDF for OpenRouter file analysis (data-only extraction).
+    let pagePdfUrl: string | null = null;
     try {
       const singlePagePdf = await PDFDocument.create();
       const [copiedPage] = await singlePagePdf.copyPages(pdfDoc, [
@@ -82,7 +92,11 @@ export async function convertPdfToSheets(
       ]);
       singlePagePdf.addPage(copiedPage);
       const pageBytes = await singlePagePdf.save();
-      await fs.writeFile(pagePdfPath, pageBytes);
+      pagePdfUrl = await persistUpload(
+        `${projectId}/${sheetIdStr}.page.pdf`,
+        toBuffer(pageBytes),
+        'application/pdf',
+      );
     } catch (error: unknown) {
       console.error(
         `Failed to write single-page PDF for sheet ${sheetIdStr}:`,
@@ -93,7 +107,7 @@ export async function convertPdfToSheets(
     let imageWidth: number | null = null;
     let imageHeight: number | null = null;
     try {
-      const meta = await sharp(absolutePath).metadata();
+      const meta = await sharp(imageBuffer).metadata();
       imageWidth = meta.width ?? null;
       imageHeight = meta.height ?? null;
     } catch (error: unknown) {
@@ -102,10 +116,11 @@ export async function convertPdfToSheets(
 
     let thumbnailFileUrl: string | null = null;
     try {
-      thumbnailFileUrl = await writeSheetThumbnail(
-        absolutePath,
-        projectId,
-        sheetIdStr,
+      const thumb = await renderSheetThumbnailJpeg(imageBuffer);
+      thumbnailFileUrl = await persistUpload(
+        `${projectId}/${sheetIdStr}.thumb.jpg`,
+        thumb,
+        'image/jpeg',
       );
     } catch (error: unknown) {
       console.error('Thumbnail generation failed:', error);
@@ -117,6 +132,7 @@ export async function convertPdfToSheets(
       name: `${baseName} - Page ${pageNumber}`,
       originalFileUrl,
       thumbnailFileUrl,
+      sourcePdfUrl,
       pageNumber,
       discipline,
       sortOrder,
@@ -130,12 +146,14 @@ export async function convertPdfToSheets(
       aiExtractionError: null,
     });
 
-    enqueueAiExtraction({
-      sheetId: sheetIdStr,
-      projectId,
-      pagePdfPath,
-      pageNumber,
-    });
+    if (pagePdfUrl) {
+      enqueueAiExtraction({
+        sheetId: sheetIdStr,
+        projectId,
+        pagePdfUrl,
+        pageNumber,
+      });
+    }
 
     createdSheets.push(mapSheet(sheetDoc));
     sortOrder += 1;

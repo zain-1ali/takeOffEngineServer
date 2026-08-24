@@ -39,6 +39,11 @@ const blueprintSheetSchema = new Schema(
       type: String,
       default: null,
     },
+    /** Original multi-page PDF (`/uploads/{projectId}/source/{id}.pdf`). */
+    sourcePdfUrl: {
+      type: String,
+      default: null,
+    },
     pageNumber: {
       type: Number,
       required: true,
@@ -115,6 +120,7 @@ export interface Sheet {
   name: string;
   originalFileUrl: string;
   thumbnailFileUrl: string | null;
+  sourcePdfUrl: string | null;
   pageNumber: number;
   discipline: string;
   sortOrder: number;

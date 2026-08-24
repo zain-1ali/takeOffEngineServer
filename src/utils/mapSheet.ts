@@ -8,6 +8,7 @@ export function mapSheet(doc: BlueprintSheetDocument): Sheet {
     name: doc.name,
     originalFileUrl: doc.originalFileUrl,
     thumbnailFileUrl: doc.thumbnailFileUrl ?? null,
+    sourcePdfUrl: doc.sourcePdfUrl ?? null,
     pageNumber: doc.pageNumber,
     discipline: doc.discipline || 'Other',
     sortOrder: doc.sortOrder ?? 0,

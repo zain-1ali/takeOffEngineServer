@@ -1,6 +1,6 @@
-import { promises as fs } from "node:fs";
 import { z } from "zod";
 import { parseDimensionPair } from "../utils/parseDimension";
+import { readUpload } from "./objectStorage";
 
 export {
   parseDimensionPair,
@@ -290,12 +290,12 @@ export async function analyzeSinglePage(
   );
 }
 
-/** Read a single-page PDF from disk and run analysis. */
+/** Read a single-page PDF from object storage (or local uploads) and run analysis. */
 export async function extractRoomsFromPage(
-  pagePdfPath: string,
+  pagePdfUrl: string,
   pageNumber: number
 ): Promise<AiPageExtractionResult> {
-  const bytes = await fs.readFile(pagePdfPath);
+  const bytes = await readUpload(pagePdfUrl);
   const base64Pdf = bytes.toString("base64");
   return analyzeSinglePage(base64Pdf, pageNumber);
 }

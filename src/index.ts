@@ -13,7 +13,10 @@ import markupObjectsRouter from './routes/markupObjects';
 import sheetExportRouter from './routes/sheetExport';
 import aiSuggestionsRouter from './routes/aiSuggestions';
 import aiSuggestionActionsRouter from './routes/aiSuggestionActions';
-import { UPLOADS_ROOT } from './services/pdfConversion';
+import {
+  objectStorageSummary,
+  serveUpload,
+} from './services/objectStorage';
 
 dotenv.config();
 
@@ -65,7 +68,13 @@ async function start() {
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
 
-  app.use('/uploads', express.static(UPLOADS_ROOT));
+  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      next();
+      return;
+    }
+    void serveUpload(req, res);
+  });
 
   // Public routes
   app.use('/api', healthRouter);
@@ -119,6 +128,7 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
+    console.log(`Uploads storage: ${objectStorageSummary()}`);
     console.log(
       `CORS origins: ${CORS_ORIGINS.join(', ') || '(none)'} (credentials: true)`,
     );

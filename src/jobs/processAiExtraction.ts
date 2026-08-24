@@ -17,8 +17,8 @@ import {
 export interface AiExtractionJobData {
   sheetId: string;
   projectId: string;
-  /** Absolute path to a single-page PDF for this sheet. */
-  pagePdfPath: string;
+  /** Public upload URL of the single-page PDF (`/uploads/{projectId}/{sheetId}.page.pdf`). */
+  pagePdfUrl: string;
   pageNumber: number;
 }
 
@@ -28,7 +28,7 @@ export interface AiExtractionJobData {
 export async function processAiExtraction(
   data: AiExtractionJobData,
 ): Promise<void> {
-  const { sheetId, pagePdfPath, pageNumber } = data;
+  const { sheetId, pagePdfUrl, pageNumber } = data;
 
   if (!Types.ObjectId.isValid(sheetId)) {
     throw new Error(`Invalid sheetId: ${sheetId}`);
@@ -50,7 +50,7 @@ export async function processAiExtraction(
   ).exec();
 
   try {
-    const result = await extractRoomsFromPage(pagePdfPath, pageNumber);
+    const result = await extractRoomsFromPage(pagePdfUrl, pageNumber);
 
     await BlueprintSheet.updateOne(
       { _id: sheetId },
