@@ -68,7 +68,7 @@ function safeFileStem(name: string): string {
   );
 }
 
-/** GET /api/projects/:projectId/sheets */
+/** GET /api/projects/:projectId/sheets?floorId= */
 sheetsRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.params as unknown as ProjectParams;
   if (!Types.ObjectId.isValid(projectId)) {
@@ -81,7 +81,13 @@ sheetsRouter.get('/', async (req: Request, res: Response): Promise<void> => {
       res.status(404).json({ error: 'Project not found' });
       return;
     }
-    const docs = await BlueprintSheet.find({ projectId })
+    const floorId =
+      typeof req.query.floorId === 'string' && req.query.floorId.trim()
+        ? req.query.floorId.trim()
+        : null;
+    const filter: Record<string, unknown> = { projectId };
+    if (floorId) filter.floorId = floorId;
+    const docs = await BlueprintSheet.find(filter)
       .sort({ sortOrder: 1, pageNumber: 1, createdAt: 1 })
       .exec();
     res.status(200).json({ sheets: docs.map(mapSheet) });
@@ -151,6 +157,20 @@ sheetsRouter.post(
         typeof req.body?.discipline === 'string' && req.body.discipline.trim()
           ? req.body.discipline.trim()
           : 'Other';
+      const floorId =
+        typeof req.body?.floorId === 'string' && req.body.floorId.trim()
+          ? req.body.floorId.trim()
+          : null;
+
+      if (!floorId) {
+        await Promise.all(
+          uploaded.map((file) => fs.unlink(file.path).catch(() => undefined)),
+        );
+        res.status(400).json({
+          error: 'floorId is required — upload one drawing PDF per floor',
+        });
+        return;
+      }
 
       const workItems: Array<{ path: string; originalName: string }> = [];
       for (const file of uploaded) {
@@ -164,10 +184,13 @@ sheetsRouter.post(
       }
 
       enqueueBackgroundJob(async () => {
+        // One PDF per floor: replace prior pages for this floor.
+        await BlueprintSheet.deleteMany({ projectId, floorId }).exec();
         for (const item of workItems) {
           try {
             await convertPdfToSheets(projectId, item.path, item.originalName, {
               discipline,
+              floorId,
             });
           } catch (error: unknown) {
             console.error(
@@ -178,10 +201,11 @@ sheetsRouter.post(
             await fs.unlink(item.path).catch(() => undefined);
           }
         }
-      }, `pdf-upload project=${projectId} files=${workItems.length}`);
+      }, `pdf-upload project=${projectId} floor=${floorId} files=${workItems.length}`);
 
       res.status(202).json({
         projectId,
+        floorId,
         status: 'processing',
         message: 'PDF processing started',
         fileCount: workItems.length,

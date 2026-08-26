@@ -5,6 +5,7 @@ export function mapSheet(doc: BlueprintSheetDocument): Sheet {
   return {
     id: doc._id.toString(),
     projectId: doc.projectId.toString(),
+    floorId: doc.floorId ?? null,
     name: doc.name,
     originalFileUrl: doc.originalFileUrl,
     thumbnailFileUrl: doc.thumbnailFileUrl ?? null,

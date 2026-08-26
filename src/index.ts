@@ -11,8 +11,6 @@ import sheetMutationsRouter from './routes/sheetMutations';
 import takeoffItemsRouter from './routes/takeoffItems';
 import markupObjectsRouter from './routes/markupObjects';
 import sheetExportRouter from './routes/sheetExport';
-import aiSuggestionsRouter from './routes/aiSuggestions';
-import aiSuggestionActionsRouter from './routes/aiSuggestionActions';
 import {
   objectStorageSummary,
   serveUpload,
@@ -97,12 +95,6 @@ async function start() {
     requireAuth,
     sheetExportRouter,
   );
-  app.use(
-    '/api/sheets/:sheetId/ai-suggestions',
-    requireAuth,
-    aiSuggestionsRouter,
-  );
-  app.use('/api/ai-suggestions', requireAuth, aiSuggestionActionsRouter);
   app.use('/api/sheets', requireAuth, sheetMutationsRouter);
 
   // Catch-all auth for any future /api routes not listed above
@@ -112,8 +104,7 @@ async function start() {
       path === '/health' ||
       path.startsWith('/auth/') ||
       path.startsWith('/projects') ||
-      path.startsWith('/sheets') ||
-      path.startsWith('/ai-suggestions')
+      path.startsWith('/sheets')
     ) {
       next();
       return;

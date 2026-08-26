@@ -7,7 +7,6 @@ import { BlueprintSheet, type Sheet } from '../models/BlueprintSheet';
 import { mapSheet } from '../utils/mapSheet';
 import { persistUpload } from './objectStorage';
 import { renderSheetThumbnailJpeg } from './thumbnails';
-import { enqueueAiExtraction } from '../jobs/processAiExtraction';
 
 /** @deprecated Use objectStorage.UPLOADS_ROOT — re-exported for existing imports. */
 export { UPLOADS_ROOT } from './objectStorage';
@@ -40,7 +39,7 @@ export async function convertPdfToSheets(
   projectId: string,
   pdfFilePath: string,
   originalFileName: string,
-  options?: { discipline?: string },
+  options?: { discipline?: string; floorId?: string | null },
 ): Promise<ConvertPdfResult> {
   const pdfBytes = await fs.readFile(pdfFilePath);
   const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
@@ -67,6 +66,10 @@ export async function convertPdfToSheets(
     typeof options?.discipline === 'string' && options.discipline.trim()
       ? options.discipline.trim()
       : 'Other';
+  const floorId =
+    typeof options?.floorId === 'string' && options.floorId.trim()
+      ? options.floorId.trim()
+      : null;
 
   let sortOrder = await nextSortOrder(projectId);
   let pageNumber = 0;
@@ -84,7 +87,6 @@ export async function convertPdfToSheets(
       'image/png',
     );
 
-    let pagePdfUrl: string | null = null;
     try {
       const singlePagePdf = await PDFDocument.create();
       const [copiedPage] = await singlePagePdf.copyPages(pdfDoc, [
@@ -92,7 +94,7 @@ export async function convertPdfToSheets(
       ]);
       singlePagePdf.addPage(copiedPage);
       const pageBytes = await singlePagePdf.save();
-      pagePdfUrl = await persistUpload(
+      await persistUpload(
         `${projectId}/${sheetIdStr}.page.pdf`,
         toBuffer(pageBytes),
         'application/pdf',
@@ -129,6 +131,7 @@ export async function convertPdfToSheets(
     const sheetDoc = await BlueprintSheet.create({
       _id: sheetId,
       projectId: projectObjectId,
+      floorId,
       name: `${baseName} - Page ${pageNumber}`,
       originalFileUrl,
       thumbnailFileUrl,
@@ -138,22 +141,13 @@ export async function convertPdfToSheets(
       sortOrder,
       calibrationScale: null,
       calibrationUnit: null,
-      isFloorPlan: null,
+      isFloorPlan: true,
       pageTitle: null,
       imageWidth,
       imageHeight,
-      aiExtractionStatus: 'pending',
+      aiExtractionStatus: 'idle',
       aiExtractionError: null,
     });
-
-    if (pagePdfUrl) {
-      enqueueAiExtraction({
-        sheetId: sheetIdStr,
-        projectId,
-        pagePdfUrl,
-        pageNumber,
-      });
-    }
 
     createdSheets.push(mapSheet(sheetDoc));
     sortOrder += 1;

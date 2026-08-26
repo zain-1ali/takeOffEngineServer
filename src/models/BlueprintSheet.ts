@@ -25,6 +25,13 @@ const blueprintSheetSchema = new Schema(
       required: true,
       index: true,
     },
+    /** Project floor id (e.g. FDN, L01) — one drawing PDF per floor. */
+    floorId: {
+      type: String,
+      default: null,
+      trim: true,
+      index: true,
+    },
     name: {
       type: String,
       required: true,
@@ -106,6 +113,7 @@ const blueprintSheetSchema = new Schema(
 );
 
 blueprintSheetSchema.index({ projectId: 1, sortOrder: 1 });
+blueprintSheetSchema.index({ projectId: 1, floorId: 1, sortOrder: 1 });
 
 export type BlueprintSheetDocument = InferSchemaType<
   typeof blueprintSheetSchema
@@ -117,6 +125,7 @@ export type BlueprintSheetDocument = InferSchemaType<
 export interface Sheet {
   id: string;
   projectId: string;
+  floorId: string | null;
   name: string;
   originalFileUrl: string;
   thumbnailFileUrl: string | null;
