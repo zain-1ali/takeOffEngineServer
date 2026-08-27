@@ -8,8 +8,10 @@ export interface IInstance extends Document {
   shape: string;
   mark: string;
   count: number;
+  /** Mixed; may include formulas?: Record<fieldKey, string> (UI provenance). */
   geometry: Record<string, unknown>;
   concreteGrade: string | null;
+  /** Mixed; may include formulas?: Record<fieldKey, string> (UI provenance). */
   reinforcement: Record<string, unknown> | null;
   spec: string | null;
   /**
