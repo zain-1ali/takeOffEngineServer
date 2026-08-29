@@ -184,6 +184,26 @@ sheetMutationsRouter.patch(
         sheet.name = req.body.name.trim();
       }
 
+      if (req.body?.title !== undefined) {
+        if (typeof req.body.title !== 'string' || !req.body.title.trim()) {
+          res.status(400).json({ error: 'title must be a non-empty string' });
+          return;
+        }
+        const title = req.body.title.trim();
+        sheet.title = title;
+        // Keep a single drawing title across all pages of this floor PDF.
+        if (sheet.floorId) {
+          await BlueprintSheet.updateMany(
+            {
+              projectId: sheet.projectId,
+              floorId: sheet.floorId,
+              _id: { $ne: sheet._id },
+            },
+            { $set: { title } },
+          ).exec();
+        }
+      }
+
       if (req.body?.discipline !== undefined) {
         if (
           typeof req.body.discipline !== 'string' ||

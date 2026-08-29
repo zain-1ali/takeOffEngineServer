@@ -133,6 +133,7 @@ export async function convertPdfToSheets(
       projectId: projectObjectId,
       floorId,
       name: `${baseName} - Page ${pageNumber}`,
+      title: baseName,
       originalFileUrl,
       thumbnailFileUrl,
       sourcePdfUrl,

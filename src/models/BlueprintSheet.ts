@@ -37,6 +37,15 @@ const blueprintSheetSchema = new Schema(
       required: true,
       trim: true,
     },
+    /**
+     * User-facing drawing title (defaults to uploaded PDF filename stem).
+     * Shared across pages of the same floor PDF.
+     */
+    title: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     /** Public URL of the page PNG (`/uploads/{projectId}/{id}.png`). */
     originalFileUrl: {
       type: String,
@@ -127,6 +136,8 @@ export interface Sheet {
   projectId: string;
   floorId: string | null;
   name: string;
+  /** Drawing title; null on legacy rows until set. */
+  title: string | null;
   originalFileUrl: string;
   thumbnailFileUrl: string | null;
   sourcePdfUrl: string | null;
