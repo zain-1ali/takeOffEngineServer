@@ -1,0 +1,5015 @@
+{
+  "source": "info.xlsx",
+  "importedAt": "2026-09-03T08:10:36.169Z",
+  "itemCount": 313,
+  "items": [
+    {
+      "ref": "1.01",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate foundation pits to the required dimensions and depth, including levelling, trimming and preparation of formation",
+      "unit": "m³",
+      "formulaText": "Number × excavation L × W × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, foundation excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 0
+    },
+    {
+      "ref": "1.02",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Cart away and dispose of surplus excavated material off site, classified where required",
+      "unit": "m³",
+      "formulaText": "Excavation volume − retained or reused material",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, disposal",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 1
+    },
+    {
+      "ref": "1.03",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Return, place and compact suitable excavated material around completed pad foundations",
+      "unit": "m³",
+      "formulaText": "Excavation volume − permanent works − imported backfill",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 2
+    },
+    {
+      "ref": "1.04",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place and compact imported selected backfill around pad foundations",
+      "unit": "m³",
+      "formulaText": "Actual imported backfill volume",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 3
+    },
+    {
+      "ref": "1.05",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and place lean concrete blinding beneath pad foundations to specified thickness",
+      "unit": "m³",
+      "formulaText": "Number × blinding L × W × T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Blinding",
+      "sheet": "Module 1",
+      "sortOrder": 4
+    },
+    {
+      "ref": "1.06",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, cut, bend and fix reinforcement bars, links, chairs, spacers and tying wire",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 5
+    },
+    {
+      "ref": "1.07",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete pad foundations of specified concrete grade",
+      "unit": "m³",
+      "formulaText": "Number × foundation L × W × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 6
+    },
+    {
+      "ref": "1.08",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide formwork to exposed vertical sides of pad foundations",
+      "unit": "m²",
+      "formulaText": "Number × foundation perimeter × formed D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 7
+    },
+    {
+      "ref": "1.09",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide waterproofing membrane to horizontal and vertical foundation surfaces, including laps and turn-ups",
+      "unit": "m²",
+      "formulaText": "Actual horizontal area + actual vertical area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 waterproofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 8
+    },
+    {
+      "ref": "1.1",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide protection board or protection fleece over the complete waterproofed foundation surface",
+      "unit": "m²",
+      "formulaText": "Same as 01.09, only where the complete waterproofed area is protected",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to waterproofing protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 9
+    },
+    {
+      "ref": "1.11",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and install holding-down bolts or anchor assemblies, classified by type and size",
+      "unit": "nr",
+      "formulaText": "Count from anchor-bolt schedule",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 10
+    },
+    {
+      "ref": "1.12",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and install embedded plates, earthing lugs, sockets or other cast-in components",
+      "unit": "nr",
+      "formulaText": "Count by cast-in item type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 11
+    },
+    {
+      "ref": "1.13",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Form and seal construction joints, including waterstop where specified",
+      "unit": "m",
+      "formulaText": "Measured joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 12
+    },
+    {
+      "ref": "1.14",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Apply fair-faced or other specified finish to exposed concrete surfaces",
+      "unit": "m²",
+      "formulaText": "Actual exposed concrete surface area receiving finish",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 13
+    },
+    {
+      "ref": "1.15",
+      "elementKey": "PAD_FOOTING",
+      "elementLabel": "Pad Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Apply concrete sealer to the complete measured finished concrete surface",
+      "unit": "m²",
+      "formulaText": "Same as 01.14, only where the entire finished surface receives sealer",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete surface treatment",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 14
+    },
+    {
+      "ref": "2.01",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate trenches for strip foundations to required width and depth, including trimming formation",
+      "unit": "m³",
+      "formulaText": "Trench L × excavation W × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, foundation excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 15
+    },
+    {
+      "ref": "2.02",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Cart away and dispose of surplus excavated material off site",
+      "unit": "m³",
+      "formulaText": "Excavation volume − retained or reused material",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, disposal",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 16
+    },
+    {
+      "ref": "2.03",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Return, place and compact suitable excavated material to sides of strip foundations",
+      "unit": "m³",
+      "formulaText": "Trench volume − permanent works − imported backfill",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 17
+    },
+    {
+      "ref": "2.04",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place and compact imported selected backfill to sides of strip foundations",
+      "unit": "m³",
+      "formulaText": "Actual imported backfill volume",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 18
+    },
+    {
+      "ref": "2.05",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and place lean concrete blinding beneath strip foundations",
+      "unit": "m³",
+      "formulaText": "Blinding L × W × T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Blinding",
+      "sheet": "Module 1",
+      "sortOrder": 19
+    },
+    {
+      "ref": "2.06",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, cut, bend and fix reinforcement bars, links and associated accessories",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 20
+    },
+    {
+      "ref": "2.07",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete strip foundations",
+      "unit": "m³",
+      "formulaText": "Foundation L × W × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 21
+    },
+    {
+      "ref": "2.08",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide formwork to exposed vertical sides of strip foundations",
+      "unit": "m²",
+      "formulaText": "Foundation L × formed D × number of formed sides",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 22
+    },
+    {
+      "ref": "2.09",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide waterproofing membrane or DPM associated with strip foundation construction",
+      "unit": "m²",
+      "formulaText": "Membrane L × developed W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 waterproofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 23
+    },
+    {
+      "ref": "2.1",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide protection fleece over the complete measured waterproofing membrane",
+      "unit": "m²",
+      "formulaText": "Same as 02.09, only where waterproofing receives full protection",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to waterproofing protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 24
+    },
+    {
+      "ref": "2.11",
+      "elementKey": "STRIP_FOOTING",
+      "elementLabel": "Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Form and seal construction joints within strip foundations",
+      "unit": "m",
+      "formulaText": "Measured joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 25
+    },
+    {
+      "ref": "3.01",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate trenches for stone strip foundations, including trimming and preparation of formation",
+      "unit": "m³",
+      "formulaText": "Trench L × W × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, foundation excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 26
+    },
+    {
+      "ref": "3.02",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Remove and dispose of surplus excavated material off site",
+      "unit": "m³",
+      "formulaText": "Excavation volume − retained or reused material",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, disposal",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 27
+    },
+    {
+      "ref": "3.03",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place and compact granular base beneath stone foundation",
+      "unit": "m³",
+      "formulaText": "Foundation L × base W × compacted T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 28
+    },
+    {
+      "ref": "3.04",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and place lean concrete blinding beneath stone foundation where specified",
+      "unit": "m³",
+      "formulaText": "Foundation L × blinding W × T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Blinding",
+      "sheet": "Module 1",
+      "sortOrder": 29
+    },
+    {
+      "ref": "3.05",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Construct stone masonry strip foundation of specified stone type and dimensions, including cutting, bedding and jointing",
+      "unit": "m³",
+      "formulaText": "Stonework L × W × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, masonry",
+      "workCategory": "Masonry",
+      "sheet": "Module 1",
+      "sortOrder": 30
+    },
+    {
+      "ref": "3.06",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Apply pointing or special mortar finish to exposed stonework surfaces",
+      "unit": "m²",
+      "formulaText": "Actual exposed stonework face area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, masonry finishes",
+      "workCategory": "Masonry",
+      "sheet": "Module 1",
+      "sortOrder": 31
+    },
+    {
+      "ref": "3.07",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Return, place and compact suitable backfill around stone foundations",
+      "unit": "m³",
+      "formulaText": "Excavation volume − stonework − base − blinding",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 32
+    },
+    {
+      "ref": "3.08",
+      "elementKey": "STONE_STRIP",
+      "elementLabel": "Stone Strip Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide horizontal or vertical damp-proof course or membrane",
+      "unit": "m²",
+      "formulaText": "Membrane L × developed W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 damp-proofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 33
+    },
+    {
+      "ref": "4.01",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate to reduced level for raft construction, including trimming and preparation of formation",
+      "unit": "m³",
+      "formulaText": "Excavated plan area × average excavation D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, bulk excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 34
+    },
+    {
+      "ref": "4.02",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Cart away and dispose of surplus excavated material off site",
+      "unit": "m³",
+      "formulaText": "Excavation volume − retained or reused material",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, disposal",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 35
+    },
+    {
+      "ref": "4.03",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide ground improvement or stabilisation beneath raft foundation",
+      "unit": "m² or m³",
+      "formulaText": "Treated plan area, or area × treatment D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 6, ground stabilisation",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 36
+    },
+    {
+      "ref": "4.04",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place and compact imported engineered fill beneath raft foundation",
+      "unit": "m³",
+      "formulaText": "Filled plan area × compacted average T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 37
+    },
+    {
+      "ref": "4.05",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and place lean concrete blinding beneath raft foundation",
+      "unit": "m³",
+      "formulaText": "Blinding plan area × T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Blinding",
+      "sheet": "Module 1",
+      "sortOrder": 38
+    },
+    {
+      "ref": "4.06",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide waterproofing or tanking membrane beneath and around raft, including laps, joints and turn-ups",
+      "unit": "m²",
+      "formulaText": "Horizontal membrane area + vertical turn-up area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 waterproofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 39
+    },
+    {
+      "ref": "4.07",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide protection fleece over the complete horizontal and vertical waterproofed area",
+      "unit": "m²",
+      "formulaText": "Same as 04.06, only where all waterproofing receives protection fleece",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to waterproofing protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 40
+    },
+    {
+      "ref": "4.08",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide protection board over the complete vertical waterproofed area",
+      "unit": "m²",
+      "formulaText": "Actual vertical waterproofed area receiving protection board",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to waterproofing protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 41
+    },
+    {
+      "ref": "4.09",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide rigid insulation over the complete horizontal waterproofed raft area",
+      "unit": "m²",
+      "formulaText": "Same as horizontal component of 04.06, only where insulation provides full horizontal coverage",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 insulation work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 42
+    },
+    {
+      "ref": "4.1",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, cut, bend and fix top, bottom and local reinforcement, including starters, chairs and couplers",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 43
+    },
+    {
+      "ref": "4.11",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete raft, including thickened zones",
+      "unit": "m³",
+      "formulaText": "Main raft area × T + thickening volumes",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 44
+    },
+    {
+      "ref": "4.12",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide formwork to raft edges, thickenings, rebates, recesses and upstands",
+      "unit": "m²",
+      "formulaText": "Σ(formed face L × H)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 45
+    },
+    {
+      "ref": "4.13",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide PVC or hydrophilic waterbars to construction and movement joints",
+      "unit": "m",
+      "formulaText": "Measured waterbar L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 46
+    },
+    {
+      "ref": "4.14",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Form and seal construction joints between separate raft pours",
+      "unit": "m",
+      "formulaText": "Measured construction-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 47
+    },
+    {
+      "ref": "4.15",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Form and seal movement or isolation joints",
+      "unit": "m",
+      "formulaText": "Measured movement-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 48
+    },
+    {
+      "ref": "4.16",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Apply power-float, trowelled or other specified finish to the raft upper surface",
+      "unit": "m²",
+      "formulaText": "Actual finished raft surface area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 49
+    },
+    {
+      "ref": "4.17",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Apply surface hardener over the complete power-floated raft surface",
+      "unit": "m²",
+      "formulaText": "Same as 04.16, only where the hardener covers the entire finished area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete surface treatment",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 50
+    },
+    {
+      "ref": "4.18",
+      "elementKey": "RAFT",
+      "elementLabel": "Raft Foundations",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and install cast-in sleeves, sockets, anchors, plates and embedded items",
+      "unit": "nr",
+      "formulaText": "Count by item type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 51
+    },
+    {
+      "ref": "5.01",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate around completed pile groups to pile-cap formation level",
+      "unit": "m³",
+      "formulaText": "Number × excavation L × W × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, foundation excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 52
+    },
+    {
+      "ref": "5.02",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Cart away and dispose of surplus excavated material",
+      "unit": "m³",
+      "formulaText": "Excavation volume − retained or reused material",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, disposal",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 53
+    },
+    {
+      "ref": "5.03",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Crop, break down and prepare pile heads to specified cut-off level",
+      "unit": "nr",
+      "formulaText": "Count of pile heads",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, cutting off pile tops",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 54
+    },
+    {
+      "ref": "5.04",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and place lean concrete blinding beneath pile caps",
+      "unit": "m³",
+      "formulaText": "Number × blinding L × W × T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Blinding",
+      "sheet": "Module 1",
+      "sortOrder": 55
+    },
+    {
+      "ref": "5.05",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, cut, bend and fix pile-cap reinforcement, links, starters and accessories",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 56
+    },
+    {
+      "ref": "5.06",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete pile caps",
+      "unit": "m³",
+      "formulaText": "Number × pile-cap L × W × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 57
+    },
+    {
+      "ref": "5.07",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide formwork to exposed vertical sides of pile caps",
+      "unit": "m²",
+      "formulaText": "Number × pile-cap perimeter × formed D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 58
+    },
+    {
+      "ref": "5.08",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and install holding-down bolts or anchor assemblies",
+      "unit": "nr",
+      "formulaText": "Count from anchor schedule",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 59
+    },
+    {
+      "ref": "5.09",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and install one earthing lug to each pile cap",
+      "unit": "nr",
+      "formulaText": "Same as pile-cap count, only where exactly one lug is required per pile cap",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to accessories cast in",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 60
+    },
+    {
+      "ref": "5.1",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and install embedded plates, sleeves and other cast-in components",
+      "unit": "nr",
+      "formulaText": "Count by type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 61
+    },
+    {
+      "ref": "5.11",
+      "elementKey": "PILE_CAP",
+      "elementLabel": "Pile Caps",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Return, place and compact selected backfill around completed pile caps",
+      "unit": "m³",
+      "formulaText": "Excavation volume − pile cap − blinding − other permanent works",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 62
+    },
+    {
+      "ref": "6.01",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Construct rotary bored piles of stated type and diameter from commencing level to design toe level",
+      "unit": "m",
+      "formulaText": "Σ completed bored-pile lengths",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, piling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 63
+    },
+    {
+      "ref": "6.02",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Construct CFA piles of stated diameter and completed length",
+      "unit": "m",
+      "formulaText": "Σ completed CFA-pile lengths",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to NRM2 bored piles",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 64
+    },
+    {
+      "ref": "6.03",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Construct driven precast-concrete piles of stated size and completed length",
+      "unit": "m",
+      "formulaText": "Σ completed driven-pile lengths",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, piling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 65
+    },
+    {
+      "ref": "6.04",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Construct driven steel piles of stated section, size and completed length",
+      "unit": "m",
+      "formulaText": "Σ completed driven-pile lengths",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, piling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 66
+    },
+    {
+      "ref": "6.05",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide contiguous or secant piling of stated pile diameter and spacing",
+      "unit": "m",
+      "formulaText": "Σ completed pile lengths",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, piling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 67
+    },
+    {
+      "ref": "6.06",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and install fabricated reinforcement cages to in-situ concrete piles",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, reinforcement to piles",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 68
+    },
+    {
+      "ref": "6.07",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply and place concrete or grout to pile shafts",
+      "unit": "m³",
+      "formulaText": "π × diameter² ÷ 4 × concreted L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, piling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 69
+    },
+    {
+      "ref": "6.08",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide permanent pile casing of specified diameter and thickness",
+      "unit": "m",
+      "formulaText": "Σ permanent casing lengths",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, piling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 70
+    },
+    {
+      "ref": "6.09",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide temporary pile casing where separately measurable",
+      "unit": "m",
+      "formulaText": "Σ temporary casing lengths",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to pile casing measurement",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 71
+    },
+    {
+      "ref": "6.1",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide enlarged pile bases or heads",
+      "unit": "nr",
+      "formulaText": "Count by enlargement type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, extra over piling",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 72
+    },
+    {
+      "ref": "6.11",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide pile extensions above original cut-off or commencing level",
+      "unit": "m³",
+      "formulaText": "Extension cross-sectional area × extension L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, pile extensions",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 73
+    },
+    {
+      "ref": "6.12",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Break through obstructions encountered above the pile founding stratum",
+      "unit": "hr",
+      "formulaText": "Authorised piling-rig standing hours",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, breaking through obstructions",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 74
+    },
+    {
+      "ref": "6.13",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Remove and dispose of spoil generated by bored or CFA piling",
+      "unit": "m³",
+      "formulaText": "Nominal pile-bore area × bored L, adjusted where required",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, disposal",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 75
+    },
+    {
+      "ref": "6.14",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Carry out pile integrity testing by the specified method",
+      "unit": "nr",
+      "formulaText": "Count of piles tested",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, tests",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 76
+    },
+    {
+      "ref": "6.15",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Carry out static pile-load testing",
+      "unit": "nr",
+      "formulaText": "Count of static tests",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, tests",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 77
+    },
+    {
+      "ref": "6.16",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Carry out dynamic pile-load testing",
+      "unit": "nr",
+      "formulaText": "Count of dynamic tests",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, tests",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 78
+    },
+    {
+      "ref": "6.17",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide preliminary or sacrificial test pile complete with testing",
+      "unit": "nr",
+      "formulaText": "Count of preliminary test piles",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 7, tests",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 79
+    },
+    {
+      "ref": "6.18",
+      "elementKey": "PILES",
+      "elementLabel": "Piles",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Trim and prepare completed pile heads to cut-off level",
+      "unit": "nr",
+      "formulaText": "Count of pile heads",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, cutting off pile tops",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 80
+    },
+    {
+      "ref": "7.01",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Clear site of vegetation, scrub and other growth within the defined work area",
+      "unit": "m²",
+      "formulaText": "Measured site-clearance plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, site clearance",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 81
+    },
+    {
+      "ref": "7.02",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Strip topsoil to stated average depth and stockpile or dispose as specified",
+      "unit": "m³",
+      "formulaText": "Topsoil plan area × average D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, site preparation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 82
+    },
+    {
+      "ref": "7.03",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate to reduce existing ground to proposed formation level",
+      "unit": "m³",
+      "formulaText": "Existing-surface volume − proposed-surface volume",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, bulk excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 83
+    },
+    {
+      "ref": "7.04",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate for strip footings, pad foundations, pile caps and other foundations",
+      "unit": "m³",
+      "formulaText": "Σ individual foundation-excavation volumes",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, foundation excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 84
+    },
+    {
+      "ref": "7.05",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Excavate trenches or pits for services and associated structures where included in structural scope",
+      "unit": "m³",
+      "formulaText": "Trench or pit L × W × average D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 85
+    },
+    {
+      "ref": "7.06",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Extra over excavation for rock requiring breakers, specialist plant or explosives",
+      "unit": "m³",
+      "formulaText": "Actual measured rock volume",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, extra over excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 86
+    },
+    {
+      "ref": "7.07",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Extra over excavation in hazardous or contaminated material",
+      "unit": "m³",
+      "formulaText": "Actual affected excavation volume",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, extra over excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 87
+    },
+    {
+      "ref": "7.08",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Extra over excavation below established groundwater level",
+      "unit": "m³",
+      "formulaText": "Actual excavation volume below groundwater level",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, extra over excavation",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 88
+    },
+    {
+      "ref": "7.09",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide support to faces of excavation where specifically required",
+      "unit": "m²",
+      "formulaText": "Supported excavation-face L × D",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, earthwork support",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 89
+    },
+    {
+      "ref": "7.1",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Cart away and dispose of excavated material off site",
+      "unit": "m³",
+      "formulaText": "Total excavation − material retained on site",
+      "quantityBasis": "derived",
+      "nrm2Ref": "NRM2 Work Section 5, disposal",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 90
+    },
+    {
+      "ref": "7.11",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Retain excavated material in temporary spoil heaps on site",
+      "unit": "m³",
+      "formulaText": "Actual volume retained on site",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, retaining excavated material",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 91
+    },
+    {
+      "ref": "7.12",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Return, place and compact suitable excavated material",
+      "unit": "m³",
+      "formulaText": "Actual compacted filling from excavated material",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 92
+    },
+    {
+      "ref": "7.13",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place and compact imported engineered fill",
+      "unit": "m³",
+      "formulaText": "Filled plan area × compacted average T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 93
+    },
+    {
+      "ref": "7.14",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Supply, place and compact granular fill, capping or sub-base",
+      "unit": "m³",
+      "formulaText": "Plan area × compacted T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 94
+    },
+    {
+      "ref": "7.15",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide blinding bed not exceeding the stated thickness",
+      "unit": "m³",
+      "formulaText": "Blinded plan area × T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Blinding",
+      "sheet": "Module 1",
+      "sortOrder": 95
+    },
+    {
+      "ref": "7.16",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide geotextile separation or filtration membrane, including required laps",
+      "unit": "m²",
+      "formulaText": "Actual covered area + measured lap allowance",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, geotextile fabric",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 96
+    },
+    {
+      "ref": "7.17",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide geogrid or ground-stabilisation mesh",
+      "unit": "m²",
+      "formulaText": "Actual stabilised plan area + specified laps",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, stabilisation meshes",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 97
+    },
+    {
+      "ref": "7.18",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Stabilise soil in situ by specified mechanical or chemical treatment",
+      "unit": "m²",
+      "formulaText": "Actual treated plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 6, soil stabilisation",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 98
+    },
+    {
+      "ref": "7.19",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Provide site or excavation dewatering by specified system",
+      "unit": "item",
+      "formulaText": "One complete dewatering system, scope and duration stated",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 6, site dewatering",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 99
+    },
+    {
+      "ref": "7.2",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Carry out compaction-density tests",
+      "unit": "nr",
+      "formulaText": "Count of test locations or tests",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to earthworks testing",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 100
+    },
+    {
+      "ref": "7.21",
+      "elementKey": "EARTHWORKS",
+      "elementLabel": "Earthworks",
+      "applicableLevels": [
+        "Foundation"
+      ],
+      "description": "Carry out plate-bearing or proof-rolling tests",
+      "unit": "nr",
+      "formulaText": "Count of tests",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to earthworks testing",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 101
+    },
+    {
+      "ref": "8.01",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, cut, bend and fix column reinforcement bars, links, starters, chairs and spacers",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 102
+    },
+    {
+      "ref": "8.02",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete columns of stated size and concrete grade",
+      "unit": "m³",
+      "formulaText": "Number × column cross-sectional area × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 103
+    },
+    {
+      "ref": "8.03",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to column faces, corners, returns and enlargements",
+      "unit": "m²",
+      "formulaText": "Number × column perimeter × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 104
+    },
+    {
+      "ref": "8.04",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to column capitals, heads or corbels",
+      "unit": "m²",
+      "formulaText": "Actual formed surface area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 105
+    },
+    {
+      "ref": "8.05",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide reinforcement mechanical couplers where measured separately",
+      "unit": "nr",
+      "formulaText": "Count from reinforcement schedule",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to reinforcement accessories",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 106
+    },
+    {
+      "ref": "8.06",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install embedded plates, sockets or connection components",
+      "unit": "nr",
+      "formulaText": "Count by type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 107
+    },
+    {
+      "ref": "8.07",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form openings, sleeves or recesses in columns",
+      "unit": "nr",
+      "formulaText": "Count by opening type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to formed openings",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 108
+    },
+    {
+      "ref": "8.08",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply fair-faced finish to the complete exposed formed column surface",
+      "unit": "m²",
+      "formulaText": "Same as relevant exposed component of 08.03, only where all exposed formed faces require the finish",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 109
+    },
+    {
+      "ref": "8.09",
+      "elementKey": "COLUMNS",
+      "elementLabel": "Columns",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply clear sealer to the complete fair-faced column surface",
+      "unit": "m²",
+      "formulaText": "Same as 08.08, only where all fair-faced surfaces receive sealer",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete surface treatment",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 110
+    },
+    {
+      "ref": "9.01",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, cut, bend and fix wall reinforcement bars, mesh, starters, chairs and couplers",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 111
+    },
+    {
+      "ref": "9.02",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete structural, shear or retaining walls",
+      "unit": "m³",
+      "formulaText": "Wall L × H × T − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 112
+    },
+    {
+      "ref": "9.03",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to first wall face, including ends and returns",
+      "unit": "m²",
+      "formulaText": "First formed-face area − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 113
+    },
+    {
+      "ref": "9.04",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to second wall face, including ends and returns",
+      "unit": "m²",
+      "formulaText": "Second formed-face area − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 114
+    },
+    {
+      "ref": "9.05",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to wall ends, edges, kickers, upstands and attached features",
+      "unit": "m²",
+      "formulaText": "Σ(formed feature L × H or W)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 115
+    },
+    {
+      "ref": "9.06",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide waterproofing membrane to buried or retaining-wall faces",
+      "unit": "m²",
+      "formulaText": "Actual waterproofed wall-face area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 waterproofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 116
+    },
+    {
+      "ref": "9.07",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide protection board over the complete waterproofed wall face",
+      "unit": "m²",
+      "formulaText": "Same as 09.06, only where the full waterproofed area receives protection board",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to waterproofing protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 117
+    },
+    {
+      "ref": "9.08",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide drainage membrane over the complete waterproofed retaining-wall face",
+      "unit": "m²",
+      "formulaText": "Same as 09.06, only where drainage membrane covers the full waterproofed area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to retaining-wall drainage",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 118
+    },
+    {
+      "ref": "9.09",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide PVC or hydrophilic waterbars at wall construction joints and kickers",
+      "unit": "m",
+      "formulaText": "Measured waterbar L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 119
+    },
+    {
+      "ref": "9.1",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form and seal horizontal and vertical construction joints",
+      "unit": "m",
+      "formulaText": "Measured construction-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 120
+    },
+    {
+      "ref": "9.11",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form and seal movement or isolation joints",
+      "unit": "m",
+      "formulaText": "Measured movement-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 121
+    },
+    {
+      "ref": "9.12",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form service openings, box-outs, sleeves and recesses in concrete walls",
+      "unit": "nr",
+      "formulaText": "Count by opening type, dimensions and wall thickness",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to formed openings",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 122
+    },
+    {
+      "ref": "9.13",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install proprietary cast-in channels",
+      "unit": "m",
+      "formulaText": "Measured installed channel L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 123
+    },
+    {
+      "ref": "9.14",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install individual embedded plates, anchors and sockets",
+      "unit": "nr",
+      "formulaText": "Count by type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 124
+    },
+    {
+      "ref": "9.15",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply fair-faced finish to the complete exposed formed wall face",
+      "unit": "m²",
+      "formulaText": "Same as relevant exposed wall-formwork face, only where the entire face requires the finish",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 125
+    },
+    {
+      "ref": "9.16",
+      "elementKey": "WALLS",
+      "elementLabel": "RC Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply clear sealer to the complete fair-faced wall surface",
+      "unit": "m²",
+      "formulaText": "Same as 09.15, only where all fair-faced surfaces receive sealer",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete surface treatment",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 126
+    },
+    {
+      "ref": "10.01",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, cut, bend and fix beam reinforcement, including main bars, links, hangers and accessories",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 127
+    },
+    {
+      "ref": "10.02",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete beams",
+      "unit": "m³",
+      "formulaText": "Σ(beam L × W × D)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 128
+    },
+    {
+      "ref": "10.03",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete ground beams",
+      "unit": "m³",
+      "formulaText": "Σ(ground-beam L × W × D)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 129
+    },
+    {
+      "ref": "10.04",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to vertical sides of beams",
+      "unit": "m²",
+      "formulaText": "Σ(beam L × formed D × number of formed sides)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 130
+    },
+    {
+      "ref": "10.05",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to beam soffits, including required support",
+      "unit": "m²",
+      "formulaText": "Σ(beam L × W)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 131
+    },
+    {
+      "ref": "10.06",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to beam ends, steps, changes in section and attached features",
+      "unit": "m²",
+      "formulaText": "Actual formed feature area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 132
+    },
+    {
+      "ref": "10.07",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install embedded plates, anchors, sockets and cast-in components",
+      "unit": "nr",
+      "formulaText": "Count by type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 133
+    },
+    {
+      "ref": "10.08",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install elastomeric bearings, bearing pads or proprietary supports",
+      "unit": "nr",
+      "formulaText": "Count by bearing type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to structural bearings",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 134
+    },
+    {
+      "ref": "10.09",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form and finish construction joints between separate beam pours",
+      "unit": "m",
+      "formulaText": "Measured joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 135
+    },
+    {
+      "ref": "10.1",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply fair-faced finish to the complete exposed beam soffit",
+      "unit": "m²",
+      "formulaText": "Same as 10.05, only where the entire soffit area requires fair-faced finish",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 136
+    },
+    {
+      "ref": "10.11",
+      "elementKey": "BEAMS",
+      "elementLabel": "Beams",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply clear sealer to the complete fair-faced beam soffit",
+      "unit": "m²",
+      "formulaText": "Same as 10.10, only where all fair-faced soffits receive sealer",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete surface treatment",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 137
+    },
+    {
+      "ref": "11.01",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place and compact hardcore or structural fill beneath ground-bearing slabs",
+      "unit": "m³",
+      "formulaText": "Actual filled plan area × compacted T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 5, imported filling",
+      "workCategory": "Earthworks",
+      "sheet": "Module 1",
+      "sortOrder": 138
+    },
+    {
+      "ref": "11.02",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and place lean concrete blinding below slab construction",
+      "unit": "m³",
+      "formulaText": "Actual blinded plan area × T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Blinding",
+      "sheet": "Module 1",
+      "sortOrder": 139
+    },
+    {
+      "ref": "11.03",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide damp-proof membrane beneath ground-bearing slab, including laps and turn-ups",
+      "unit": "m²",
+      "formulaText": "Actual horizontal membrane area + turn-up area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 membrane work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 140
+    },
+    {
+      "ref": "11.04",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide gas-resistant membrane beneath slab, including sealed laps and penetrations",
+      "unit": "m²",
+      "formulaText": "Actual gas-membrane area including turn-ups",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 membrane work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 141
+    },
+    {
+      "ref": "11.05",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide protection fleece over the complete DPM or gas-membrane area",
+      "unit": "m²",
+      "formulaText": "Same as relevant membrane quantity, only where fleece covers the full measured membrane area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to membrane protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 142
+    },
+    {
+      "ref": "11.06",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide rigid insulation boards beneath or above slab",
+      "unit": "m²",
+      "formulaText": "Actual insulated slab area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 insulation work section",
+      "workCategory": "Insulation",
+      "sheet": "Module 1",
+      "sortOrder": 143
+    },
+    {
+      "ref": "11.07",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and fix fabric reinforcement mesh, including laps and supports",
+      "unit": "t",
+      "formulaText": "Mesh area × scheduled mesh mass kg/m² ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 144
+    },
+    {
+      "ref": "11.08",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, cut, bend and fix loose reinforcement bars and local strengthening",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 145
+    },
+    {
+      "ref": "11.09",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete ground-bearing slab",
+      "unit": "m³",
+      "formulaText": "Ground-slab area × T + thickenings and upstands",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 146
+    },
+    {
+      "ref": "11.1",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete suspended slab",
+      "unit": "m³",
+      "formulaText": "Suspended-slab area × T + drops and thickenings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 147
+    },
+    {
+      "ref": "11.11",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide soffit formwork to suspended slabs",
+      "unit": "m²",
+      "formulaText": "Actual formed slab-soffit area − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 148
+    },
+    {
+      "ref": "11.12",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to slab edges, drops, rebates, upstands and perimeter faces",
+      "unit": "m²",
+      "formulaText": "Σ(edge or feature L × formed D or H)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 149
+    },
+    {
+      "ref": "11.13",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide permanent metal decking or permanent slab formwork",
+      "unit": "m²",
+      "formulaText": "Actual decked plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to permanent formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 150
+    },
+    {
+      "ref": "11.14",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide void formers beneath or within slab construction",
+      "unit": "m² or nr",
+      "formulaText": "Actual void-former area, or count by type",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to void-former work",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 151
+    },
+    {
+      "ref": "11.15",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form and finish construction joints between separate slab pours",
+      "unit": "m",
+      "formulaText": "Measured construction-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 152
+    },
+    {
+      "ref": "11.16",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form and seal movement, isolation or expansion joints",
+      "unit": "m",
+      "formulaText": "Measured movement-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 153
+    },
+    {
+      "ref": "11.17",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide waterbars to slab construction or movement joints",
+      "unit": "m",
+      "formulaText": "Measured waterbar L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 154
+    },
+    {
+      "ref": "11.18",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply power-float, trowelled or brushed finish to concrete slab surface",
+      "unit": "m²",
+      "formulaText": "Actual finished slab-top area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 155
+    },
+    {
+      "ref": "11.19",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply dry-shake surface hardener over the complete finished slab-top area",
+      "unit": "m²",
+      "formulaText": "Same as 11.18, only where hardener covers the entire finished surface",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete surface treatment",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 156
+    },
+    {
+      "ref": "11.2",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply curing compound over the complete finished slab surface",
+      "unit": "m²",
+      "formulaText": "Same as 11.18, only where curing compound covers the entire finished surface",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete curing treatment",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 157
+    },
+    {
+      "ref": "11.21",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install cast-in sleeves, openings, box-outs and service penetrations",
+      "unit": "nr",
+      "formulaText": "Count by type, dimensions and slab thickness",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 158
+    },
+    {
+      "ref": "11.22",
+      "elementKey": "SLABS",
+      "elementLabel": "Slabs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install embedded plates, anchors, channels and cast-in components",
+      "unit": "nr or m",
+      "formulaText": "Count by item type, or measured channel L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 159
+    },
+    {
+      "ref": "12.01",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, cut, bend and fix reinforcement to flights, waist slabs and landings",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 160
+    },
+    {
+      "ref": "12.02",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete stair flights and landings",
+      "unit": "m³",
+      "formulaText": "Waist-slab volume + step volume + landing volume",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 161
+    },
+    {
+      "ref": "12.03",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to sloping soffits of stair flights",
+      "unit": "m²",
+      "formulaText": "Sloping flight L × flight W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 162
+    },
+    {
+      "ref": "12.04",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to horizontal soffits of stair landings",
+      "unit": "m²",
+      "formulaText": "Landing L × W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 163
+    },
+    {
+      "ref": "12.05",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to stair risers",
+      "unit": "m²",
+      "formulaText": "Number of risers × riser H × stair W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 164
+    },
+    {
+      "ref": "12.06",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to stair edges, strings and exposed sides",
+      "unit": "m²",
+      "formulaText": "Actual formed side and edge area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 165
+    },
+    {
+      "ref": "12.07",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form stair nosings and continuous edge profiles",
+      "unit": "m",
+      "formulaText": "Number of nosings × stair W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to linear concrete profiles",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 166
+    },
+    {
+      "ref": "12.08",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install cast-in inserts and fixings for handrails or balustrades",
+      "unit": "nr",
+      "formulaText": "Count from balustrade fixing layout",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 167
+    },
+    {
+      "ref": "12.09",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply specified finish to exposed stair treads and landings",
+      "unit": "m²",
+      "formulaText": "Actual tread and landing area receiving finish",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 168
+    },
+    {
+      "ref": "12.1",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply anti-slip treatment over the complete finished tread and landing area",
+      "unit": "m²",
+      "formulaText": "Same as 12.09, only where anti-slip treatment covers the entire finished area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to specialist surface treatment",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 169
+    },
+    {
+      "ref": "12.11",
+      "elementKey": "STAIRS",
+      "elementLabel": "Stairs",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply fair-faced finish to exposed stair soffits",
+      "unit": "m²",
+      "formulaText": "Same as 12.03 and 12.04, only where all measured soffits require fair-faced finish",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 170
+    },
+    {
+      "ref": "13.01",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, cut, bend and fix reinforcement to ramp slabs, edges and upstands",
+      "unit": "t",
+      "formulaText": "Σ(bar L × bar mass kg/m) ÷ 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 171
+    },
+    {
+      "ref": "13.02",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete ramp slab",
+      "unit": "m³",
+      "formulaText": "Sloping ramp area × structural T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 172
+    },
+    {
+      "ref": "13.03",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to suspended ramp soffit",
+      "unit": "m²",
+      "formulaText": "Sloping ramp soffit L × W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 173
+    },
+    {
+      "ref": "13.04",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide formwork to ramp edges and upstand faces",
+      "unit": "m²",
+      "formulaText": "Σ(edge or upstand L × formed H)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 174
+    },
+    {
+      "ref": "13.05",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and construct reinforced-concrete upstands to ramp edges",
+      "unit": "m³",
+      "formulaText": "Upstand L × W × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 175
+    },
+    {
+      "ref": "13.06",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and construct concrete kerbs or edge restraints",
+      "unit": "m",
+      "formulaText": "Measured centre-line L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to NRM2 siteworks kerbs",
+      "workCategory": "Concrete",
+      "sheet": "Module 1",
+      "sortOrder": 176
+    },
+    {
+      "ref": "13.07",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install drainage channels incorporated into ramp construction",
+      "unit": "m",
+      "formulaText": "Measured channel centre-line L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to linear drainage channels",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 177
+    },
+    {
+      "ref": "13.08",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form and seal ramp construction joints",
+      "unit": "m",
+      "formulaText": "Measured construction-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 178
+    },
+    {
+      "ref": "13.09",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form and seal movement or expansion joints",
+      "unit": "m",
+      "formulaText": "Measured movement-joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 179
+    },
+    {
+      "ref": "13.1",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply brushed, grooved or specialist anti-slip finish to ramp surface",
+      "unit": "m²",
+      "formulaText": "Actual sloping ramp surface area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 180
+    },
+    {
+      "ref": "13.11",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply clear or resin sealer over the complete anti-slip ramp surface",
+      "unit": "m²",
+      "formulaText": "Same as 13.10, only where sealer covers the entire treated ramp area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete surface treatment",
+      "workCategory": "Floor Finishes",
+      "sheet": "Module 1",
+      "sortOrder": 181
+    },
+    {
+      "ref": "13.12",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide waterproofing membrane to external or exposed ramp surface",
+      "unit": "m²",
+      "formulaText": "Actual waterproofed ramp area including turn-ups",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 waterproofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 182
+    },
+    {
+      "ref": "13.13",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide protection layer over the complete waterproofed ramp surface",
+      "unit": "m²",
+      "formulaText": "Same as 13.12, only where the protection layer covers the entire waterproofed area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to waterproofing protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 183
+    },
+    {
+      "ref": "13.14",
+      "elementKey": "RAMPS",
+      "elementLabel": "Ramps",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install cast-in sleeves, plates, anchors or embedded items",
+      "unit": "nr",
+      "formulaText": "Count by item type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 184
+    },
+    {
+      "ref": "14.01",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Supply, cut, bend and fix reinforcement mesh and loose bars to roof slab",
+      "unit": "t",
+      "formulaText": "Mesh weight + Σ(bar L × bar mass kg/m), divided by 1,000",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 185
+    },
+    {
+      "ref": "14.02",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Supply, place, compact and cure reinforced concrete roof slab, including local thickenings",
+      "unit": "m³",
+      "formulaText": "Roof slab area × T + thickening and upstand volumes",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, in-situ concrete",
+      "workCategory": "Reinforcement",
+      "sheet": "Module 1",
+      "sortOrder": 186
+    },
+    {
+      "ref": "14.03",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide soffit formwork to reinforced-concrete roof slab",
+      "unit": "m²",
+      "formulaText": "Actual formed roof-soffit area − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 187
+    },
+    {
+      "ref": "14.04",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide formwork to roof slab edges, upstands, kerbs, drops and penetrations",
+      "unit": "m²",
+      "formulaText": "Σ(formed face L × H or D)",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, formwork",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 188
+    },
+    {
+      "ref": "14.05",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide screed or concrete layer to form roof falls",
+      "unit": "m³",
+      "formulaText": "Roof area × average T",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to screed or concrete volume",
+      "workCategory": "Floor Finishes",
+      "sheet": "Module 1",
+      "sortOrder": 189
+    },
+    {
+      "ref": "14.06",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide roof waterproofing membrane, including laps, upstands and penetration detailing",
+      "unit": "m²",
+      "formulaText": "Horizontal roof area + upstand and kerb areas",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 waterproofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 190
+    },
+    {
+      "ref": "14.07",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide protection fleece over the complete roof waterproofing membrane",
+      "unit": "m²",
+      "formulaText": "Same as 14.06, only where fleece covers all horizontal and vertical waterproofing",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to waterproofing protection",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 191
+    },
+    {
+      "ref": "14.08",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide roof insulation over the complete horizontal waterproofed area",
+      "unit": "m²",
+      "formulaText": "Same as horizontal component of 14.06, only where insulation provides complete horizontal coverage",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 insulation work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 192
+    },
+    {
+      "ref": "14.09",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide roof protection board or cover board",
+      "unit": "m²",
+      "formulaText": "Actual roof area receiving protection board",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to roof protection layer",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 193
+    },
+    {
+      "ref": "14.1",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide vapour-control layer beneath roof insulation",
+      "unit": "m²",
+      "formulaText": "Actual vapour-control-layer area including laps and turn-ups",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 membrane work section",
+      "workCategory": "Waterproofing",
+      "sheet": "Module 1",
+      "sortOrder": 194
+    },
+    {
+      "ref": "14.11",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Provide roof finishes comprising ballast, paving slabs or protective surfacing",
+      "unit": "m²",
+      "formulaText": "Actual finished roof plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 roof finish or paving work",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 195
+    },
+    {
+      "ref": "14.12",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Form and seal construction or movement joints in roof slab",
+      "unit": "m",
+      "formulaText": "Measured joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, joints",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 196
+    },
+    {
+      "ref": "14.13",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Form roof openings, sleeves and penetrations through the structural slab",
+      "unit": "nr",
+      "formulaText": "Count by type, size and slab thickness",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to formed openings",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 197
+    },
+    {
+      "ref": "14.14",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Supply and install cast-in anchors, equipment fixings, channels and sockets",
+      "unit": "nr or m",
+      "formulaText": "Count by item type, or measured channel L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 11, accessories cast in",
+      "workCategory": "Other",
+      "sheet": "Module 1",
+      "sortOrder": 198
+    },
+    {
+      "ref": "14.15",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Apply fair-faced finish to the complete exposed roof-slab soffit",
+      "unit": "m²",
+      "formulaText": "Same as 14.03, only where the entire formed roof soffit requires fair-faced finish",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 Work Section 11, worked finishes",
+      "workCategory": "Formwork",
+      "sheet": "Module 1",
+      "sortOrder": 199
+    },
+    {
+      "ref": "14.16",
+      "elementKey": "SLABS",
+      "elementLabel": "Roof Slab",
+      "applicableLevels": [
+        "Roof"
+      ],
+      "description": "Apply paint or sealer over the complete fair-faced roof-slab soffit",
+      "unit": "m²",
+      "formulaText": "Same as 14.15, only where the entire fair-faced soffit receives treatment",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to concrete coating",
+      "workCategory": "Wall Finishes",
+      "sheet": "Module 1",
+      "sortOrder": 200
+    },
+    {
+      "ref": "13.01",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct internal blockwork walls of specified type, strength and thickness, including mortar, bonding, cutting and building around obstructions",
+      "unit": "m²",
+      "formulaText": "Internal wall L × H − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, masonry walls",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 201
+    },
+    {
+      "ref": "13.02",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct external blockwork walls of specified type, strength and thickness, including mortar, bonding and cutting",
+      "unit": "m²",
+      "formulaText": "External wall L × H − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, masonry walls",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 202
+    },
+    {
+      "ref": "13.03",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct facing brickwork of specified brick type, bond, mortar and joint finish",
+      "unit": "m²",
+      "formulaText": "Facing brickwork L × H − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, brickwork",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 203
+    },
+    {
+      "ref": "13.04",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct inner leaf of cavity wall in blockwork, including mortar, bonding and cutting",
+      "unit": "m²",
+      "formulaText": "Inner-leaf L × H − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, skins of hollow walls",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 204
+    },
+    {
+      "ref": "13.05",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct outer leaf of cavity wall in brickwork or blockwork, including specified joint finish",
+      "unit": "m²",
+      "formulaText": "Outer-leaf L × H − applicable openings",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, skins of hollow walls",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 205
+    },
+    {
+      "ref": "13.06",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide fair-faced finish to nominated blockwork wall face, including selected blocks and specified joint finish",
+      "unit": "m²",
+      "formulaText": "Same as relevant masonry wall face quantity, only where the entire measured face is fair-faced",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 Work Section 14, masonry finish stated",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 206
+    },
+    {
+      "ref": "13.07",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide full-fill or partial-fill insulation within cavity wall construction",
+      "unit": "m²",
+      "formulaText": "Insulated cavity L × H − excluded openings and uninsulated areas",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 insulation work section",
+      "workCategory": "Earthworks",
+      "sheet": "MODULE 2",
+      "sortOrder": 207
+    },
+    {
+      "ref": "13.08",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide proprietary wall ties connecting cavity-wall leaves",
+      "unit": "nr",
+      "formulaText": "Net tied wall area ÷ designed area served by one tie, plus additional ties",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to masonry accessories",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 208
+    },
+    {
+      "ref": "13.09",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide masonry restraints tying walls to columns, slabs or structural framing",
+      "unit": "nr",
+      "formulaText": "Count from restraint layout or specified centres",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to masonry accessories",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 209
+    },
+    {
+      "ref": "13.1",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide bed-joint reinforcement at specified vertical spacing",
+      "unit": "m",
+      "formulaText": "Wall L × number of reinforced courses",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to masonry reinforcement",
+      "workCategory": "Reinforcement",
+      "sheet": "MODULE 2",
+      "sortOrder": 210
+    },
+    {
+      "ref": "13.11",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide masonry movement joints, including filler, backing rod and sealant",
+      "unit": "m",
+      "formulaText": "Measured joint H or L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 masonry joint work",
+      "workCategory": "Earthworks",
+      "sheet": "MODULE 2",
+      "sortOrder": 211
+    },
+    {
+      "ref": "13.12",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide horizontal damp-proof course within masonry construction",
+      "unit": "m²",
+      "formulaText": "DPC L × developed W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 damp-proofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "MODULE 2",
+      "sortOrder": 212
+    },
+    {
+      "ref": "13.13",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide vertical damp-proof course at jambs, interfaces or abutments",
+      "unit": "m²",
+      "formulaText": "Vertical DPC L × developed W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 damp-proofing work section",
+      "workCategory": "Waterproofing",
+      "sheet": "MODULE 2",
+      "sortOrder": 213
+    },
+    {
+      "ref": "13.14",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide cavity trays over openings and at structural interfaces, including stop ends",
+      "unit": "m",
+      "formulaText": "Measured tray L, including specified end extensions",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to masonry damp-proofing",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 214
+    },
+    {
+      "ref": "13.15",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form door, window, service or equipment openings through masonry walls",
+      "unit": "nr",
+      "formulaText": "Count by opening type, size and wall thickness",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, masonry openings",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 215
+    },
+    {
+      "ref": "13.16",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form jambs, head and sill around masonry openings",
+      "unit": "m",
+      "formulaText": "2 × opening H + opening W, plus sill where applicable",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 Work Section 14, opening perimeters",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 216
+    },
+    {
+      "ref": "13.17",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide cavity closers around complete opening perimeter",
+      "unit": "m",
+      "formulaText": "Same as 13.16, only where cavity closer follows the full measured opening perimeter",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 Work Section 14, opening perimeters",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 217
+    },
+    {
+      "ref": "13.18",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide additional wall ties around masonry openings",
+      "unit": "nr",
+      "formulaText": "Opening perimeter ÷ specified tie spacing, adjusted for corners",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to masonry accessories",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 218
+    },
+    {
+      "ref": "13.19",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide flexible fire-resistant seal between masonry wall head and structural soffit",
+      "unit": "m",
+      "formulaText": "Measured wall-head L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to linear fire stopping",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 219
+    },
+    {
+      "ref": "13.2",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide fire stopping around individual service penetrations through masonry",
+      "unit": "nr",
+      "formulaText": "Count by penetration type, size and fire rating",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Fire-stopping work section",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 220
+    },
+    {
+      "ref": "13.21",
+      "elementKey": "MASONRY",
+      "elementLabel": "Masonry / Infill Walls",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide fire stopping to continuous wall junctions or interfaces",
+      "unit": "m",
+      "formulaText": "Measured fire-stopped junction L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Fire-stopping work section",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 221
+    },
+    {
+      "ref": "14.01",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install internal timber doorset, including leaf, frame, architraves, seals and specified finish",
+      "unit": "nr",
+      "formulaText": "Count by doorset type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 doors work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 222
+    },
+    {
+      "ref": "14.02",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install fire-rated timber doorset, including certified leaf, frame, seals and identification",
+      "unit": "nr",
+      "formulaText": "Count by doorset type, size and fire rating",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 doors work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 223
+    },
+    {
+      "ref": "14.03",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install internal steel doorset, including frame, leaf, finish and seals",
+      "unit": "nr",
+      "formulaText": "Count by doorset type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 metal doors work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 224
+    },
+    {
+      "ref": "14.04",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install external steel security doorset, including frame, weather seals, threshold and protective finish",
+      "unit": "nr",
+      "formulaText": "Count by type, size and security rating",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 metal doors work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 225
+    },
+    {
+      "ref": "14.05",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install aluminium glazed doorset, including frame, glazing, seals and threshold",
+      "unit": "nr",
+      "formulaText": "Count by doorset type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 doors and glazing work sections",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 226
+    },
+    {
+      "ref": "14.06",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install automatic sliding or swing doorset, including operator, sensors and controls",
+      "unit": "nr",
+      "formulaText": "Count complete automatic-door systems",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to powered doors",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 227
+    },
+    {
+      "ref": "14.07",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install roller shutter or sectional overhead door, including guides, hood, operation and controls",
+      "unit": "nr",
+      "formulaText": "Count by door type and opening size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 specialist doors",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 228
+    },
+    {
+      "ref": "14.08",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install internal glazed screen, including framing, glazing, gaskets and junctions",
+      "unit": "m²",
+      "formulaText": "Screen W × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 windows and glazing",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 229
+    },
+    {
+      "ref": "14.09",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install aluminium-framed windows, including opening lights, glazing, seals and finish",
+      "unit": "nr",
+      "formulaText": "Count by window type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 windows work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 230
+    },
+    {
+      "ref": "14.1",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install fixed louvre panels, including frame, blades, mesh and finish",
+      "unit": "m²",
+      "formulaText": "Overall louvre W × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to louvre installation",
+      "workCategory": "Reinforcement",
+      "sheet": "MODULE 2",
+      "sortOrder": 231
+    },
+    {
+      "ref": "14.11",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide insulated glazing to doors, windows or screens where glazing is measured separately",
+      "unit": "m²",
+      "formulaText": "Actual glazed W × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 glazing work section",
+      "workCategory": "Insulation",
+      "sheet": "MODULE 2",
+      "sortOrder": 232
+    },
+    {
+      "ref": "14.12",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide fire-rated, acoustic or security glazing where measured separately",
+      "unit": "m²",
+      "formulaText": "Actual specialist-glazing W × H",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 glazing work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 233
+    },
+    {
+      "ref": "14.13",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide complete standard ironmongery set to nominated doors",
+      "unit": "set",
+      "formulaText": "Same as applicable standard doorset quantity, one set per doorset",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 ironmongery work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 234
+    },
+    {
+      "ref": "14.14",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide complete fire-door ironmongery set, including closer and specified hardware",
+      "unit": "set",
+      "formulaText": "Same as 14.02, where every fire doorset receives one complete set",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 ironmongery work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 235
+    },
+    {
+      "ref": "14.15",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide panic or emergency-escape ironmongery to nominated escape doors",
+      "unit": "set",
+      "formulaText": "Same as nominated panic-door quantity, one set per applicable door",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 ironmongery work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 236
+    },
+    {
+      "ref": "14.16",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide access-control hardware or preparation to controlled doors",
+      "unit": "set",
+      "formulaText": "Same as controlled-door quantity, one set per applicable controlled door",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to specialist door accessories",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 237
+    },
+    {
+      "ref": "14.17",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide door closer separately to nominated doors",
+      "unit": "nr",
+      "formulaText": "Same as nominated closer-door quantity, one closer per applicable door",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 ironmongery work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 238
+    },
+    {
+      "ref": "14.18",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide door signage or identification plate to nominated doors",
+      "unit": "nr",
+      "formulaText": "Same as signed-door quantity, one sign per applicable door",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to door accessories",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 239
+    },
+    {
+      "ref": "14.19",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide internal timber, metal or stone window boards",
+      "unit": "m",
+      "formulaText": "Σ opening W + specified end returns",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 joinery or stonework",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 240
+    },
+    {
+      "ref": "14.2",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide external pressed-metal, concrete or stone window cills",
+      "unit": "m",
+      "formulaText": "Σ opening W + specified end projections or returns",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to sill measurement",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 241
+    },
+    {
+      "ref": "14.21",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply perimeter sealant to one side of door or window frame",
+      "unit": "m",
+      "formulaText": "2 × frame H + 2 × frame W, adjusted for threshold condition",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 sealant work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 242
+    },
+    {
+      "ref": "14.22",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply perimeter sealant to both sides of door or window frame",
+      "unit": "m",
+      "formulaText": "Single-face frame perimeter × 2",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 sealant work section",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 243
+    },
+    {
+      "ref": "14.23",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Finish reveals, jambs, soffits and sills around door and window openings",
+      "unit": "m²",
+      "formulaText": "Developed reveal D × applicable opening perimeter",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to narrow-width finishes",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 244
+    },
+    {
+      "ref": "14.24",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide protective bollards or door guards adjacent to openings",
+      "unit": "nr",
+      "formulaText": "Count by item type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to metalwork accessories",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 245
+    },
+    {
+      "ref": "14.25",
+      "elementKey": "DOORS_WINDOWS",
+      "elementLabel": "Doors & Windows",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide corner guards to door reveals or vulnerable wall corners",
+      "unit": "nr or m",
+      "formulaText": "Count complete guards, or Σ guard L where measured linearly",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to protective accessories",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 246
+    },
+    {
+      "ref": "15.01",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install precast concrete lintel, including specified end bearings",
+      "unit": "m",
+      "formulaText": "Opening W + left bearing + right bearing",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to precast concrete lintel",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 247
+    },
+    {
+      "ref": "15.02",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install prestressed concrete lintel of specified section and load capacity",
+      "unit": "m",
+      "formulaText": "Opening W + total specified bearing",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to precast concrete lintel",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 248
+    },
+    {
+      "ref": "15.03",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install galvanised-steel cavity lintel, including integral DPC where specified",
+      "unit": "m",
+      "formulaText": "Opening W + total specified bearing",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Masonry opening support",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 249
+    },
+    {
+      "ref": "15.04",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install stainless-steel cavity lintel",
+      "unit": "m",
+      "formulaText": "Opening W + total specified bearing",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to metal lintel",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 250
+    },
+    {
+      "ref": "15.05",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install structural-steel angle, channel or fabricated lintel",
+      "unit": "m",
+      "formulaText": "Opening W + total specified bearing",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 structural metalwork",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 251
+    },
+    {
+      "ref": "15.06",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install heavy-duty proprietary lintel over large door, window or equipment opening",
+      "unit": "m",
+      "formulaText": "Opening W + total specified bearing",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to proprietary lintel",
+      "workCategory": "Doors & Windows",
+      "sheet": "MODULE 2",
+      "sortOrder": 252
+    },
+    {
+      "ref": "15.07",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide padstones or bearing blocks beneath lintel ends",
+      "unit": "nr",
+      "formulaText": "Count required padstones or bearing blocks",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 masonry or concrete work",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 253
+    },
+    {
+      "ref": "15.08",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide fire-protection system to exposed faces of structural-steel lintel",
+      "unit": "m²",
+      "formulaText": "Exposed section G × lintel L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 fire-protection work",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 254
+    },
+    {
+      "ref": "15.09",
+      "elementKey": "LINTELS",
+      "elementLabel": "Lintels",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply protective coating to the same exposed faces of structural-steel lintel",
+      "unit": "m²",
+      "formulaText": "Same as 15.08, only where coating and fire protection cover identical surfaces",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 painting or protective coatings",
+      "workCategory": "Lintels",
+      "sheet": "MODULE 2",
+      "sortOrder": 255
+    },
+    {
+      "ref": "16.01",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Prepare concrete floor substrate by cleaning, grinding or mechanical preparation",
+      "unit": "m²",
+      "formulaText": "Actual floor area receiving preparation",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 floor finishes, preparation",
+      "workCategory": "Concrete",
+      "sheet": "MODULE 2",
+      "sortOrder": 256
+    },
+    {
+      "ref": "16.02",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply primer or bonding agent over the complete prepared substrate",
+      "unit": "m²",
+      "formulaText": "Same as 16.01, only where the entire prepared area is primed",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to floor preparation",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 257
+    },
+    {
+      "ref": "16.03",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply moisture-control or damp-proof treatment to nominated floor substrate",
+      "unit": "m²",
+      "formulaText": "Actual area receiving treatment",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to specialist floor preparation",
+      "workCategory": "Waterproofing",
+      "sheet": "MODULE 2",
+      "sortOrder": 258
+    },
+    {
+      "ref": "16.04",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Lay bonded cement-and-sand screed to specified thickness and finish",
+      "unit": "m²",
+      "formulaText": "Actual screeded floor area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 screeds work section",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 259
+    },
+    {
+      "ref": "16.05",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Lay unbonded or floating screed over membrane or insulation",
+      "unit": "m²",
+      "formulaText": "Actual floating-screed area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 screeds work section",
+      "workCategory": "Waterproofing",
+      "sheet": "MODULE 2",
+      "sortOrder": 260
+    },
+    {
+      "ref": "16.06",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form screed to falls around drains, channels or thresholds",
+      "unit": "m²",
+      "formulaText": "Actual area formed to falls",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to screed to falls",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 261
+    },
+    {
+      "ref": "16.07",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install raised-access floor, including pedestals, stringers and panels",
+      "unit": "m²",
+      "formulaText": "Net raised-floor plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 raised-access flooring",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 262
+    },
+    {
+      "ref": "16.08",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide raised-access floor ramps, steps, fascia panels or perimeter closures",
+      "unit": "nr or m",
+      "formulaText": "Count by component, or measured installed L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to raised-floor accessories",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 263
+    },
+    {
+      "ref": "16.09",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and lay sheet-vinyl flooring, including adhesive and welded joints",
+      "unit": "m²",
+      "formulaText": "Net area receiving sheet vinyl",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 floor coverings",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 264
+    },
+    {
+      "ref": "16.1",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and lay vinyl floor tiles, including adhesive and specified pattern",
+      "unit": "m²",
+      "formulaText": "Net area receiving vinyl tile",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 floor coverings",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 265
+    },
+    {
+      "ref": "16.11",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and lay carpet tiles, including adhesive or tackifier",
+      "unit": "m²",
+      "formulaText": "Net carpet-tile area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 floor coverings",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 266
+    },
+    {
+      "ref": "16.12",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and fix ceramic or porcelain floor tiles, including adhesive and grout",
+      "unit": "m²",
+      "formulaText": "Net tiled floor area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 tiling work section",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 267
+    },
+    {
+      "ref": "16.13",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and fix natural or engineered stone floor finish",
+      "unit": "m²",
+      "formulaText": "Net stone-finished floor area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 stone finishes",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 268
+    },
+    {
+      "ref": "16.14",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply resin flooring system comprising primer, body coat and wearing layer",
+      "unit": "m²",
+      "formulaText": "Net area receiving complete resin system",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 specialist floor coatings",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 269
+    },
+    {
+      "ref": "16.15",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply anti-static or conductive flooring system, including specified conductive components",
+      "unit": "m²",
+      "formulaText": "Net conductive-flooring area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to specialist flooring",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 270
+    },
+    {
+      "ref": "16.16",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide earthing connection to conductive flooring system",
+      "unit": "nr",
+      "formulaText": "Count required earthing connections",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to specialist flooring accessories",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 271
+    },
+    {
+      "ref": "16.17",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply floor paint or protective coating in specified number of coats",
+      "unit": "m²",
+      "formulaText": "Net painted floor area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 painting and coating",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 272
+    },
+    {
+      "ref": "16.18",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply slip-resistant aggregate dressing over the complete coated floor area",
+      "unit": "m²",
+      "formulaText": "Same as relevant coated-floor quantity, only where treatment covers the entire coating area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "Similar to specialist floor finish",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 273
+    },
+    {
+      "ref": "16.19",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide entrance matting system, including frame and mat well",
+      "unit": "m²",
+      "formulaText": "Mat L × W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to entrance flooring",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 274
+    },
+    {
+      "ref": "16.2",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide movement, expansion or isolation joint system within floor finish",
+      "unit": "m",
+      "formulaText": "Measured joint L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 floor-joint work",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 275
+    },
+    {
+      "ref": "16.21",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide thresholds, transition strips or dividing strips between different floor finishes",
+      "unit": "m",
+      "formulaText": "Measured finish-junction L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 floor-finish accessories",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 276
+    },
+    {
+      "ref": "16.22",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide tactile warning or directional floor finish",
+      "unit": "m²",
+      "formulaText": "Actual tactile-finish area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to specialist floor tiling",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 277
+    },
+    {
+      "ref": "16.23",
+      "elementKey": "FLOOR_FINISH",
+      "elementLabel": "Floor Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply sealant around floor penetrations, plinths or interfaces",
+      "unit": "m",
+      "formulaText": "Measured sealed perimeter",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 sealant work section",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 278
+    },
+    {
+      "ref": "17.01",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Prepare wall substrate by cleaning, filling, sanding or applying bonding treatment",
+      "unit": "m²",
+      "formulaText": "Actual wall area receiving preparation",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 wall finishes, preparation",
+      "workCategory": "Earthworks",
+      "sheet": "MODULE 2",
+      "sortOrder": 279
+    },
+    {
+      "ref": "17.02",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply internal backing plaster to masonry or concrete walls",
+      "unit": "m²",
+      "formulaText": "Actual wall area receiving backing plaster",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 plastering work section",
+      "workCategory": "Masonry",
+      "sheet": "MODULE 2",
+      "sortOrder": 280
+    },
+    {
+      "ref": "17.03",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply skim-coat plaster finish over complete backing-plaster area",
+      "unit": "m²",
+      "formulaText": "Same as 17.02, only where all backing plaster receives skim coat",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 plastering work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 281
+    },
+    {
+      "ref": "17.04",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide drylining comprising plasterboard, framing or adhesive and joint treatment",
+      "unit": "m²",
+      "formulaText": "Actual drylined wall area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 drylining work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 282
+    },
+    {
+      "ref": "17.05",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply mist coat, undercoat and finishing coats to complete plastered or drylined wall area",
+      "unit": "m²",
+      "formulaText": "Same as relevant finished substrate quantity, only where the complete substrate receives paint",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 painting work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 283
+    },
+    {
+      "ref": "17.06",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply durable, washable or hygiene-grade paint to nominated wall areas",
+      "unit": "m²",
+      "formulaText": "Actual area receiving specialist paint",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 specialist coatings",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 284
+    },
+    {
+      "ref": "17.07",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply epoxy or chemical-resistant coating to nominated wall areas",
+      "unit": "m²",
+      "formulaText": "Actual area receiving epoxy coating",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 specialist coatings",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 285
+    },
+    {
+      "ref": "17.08",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and fix ceramic or porcelain wall tiles, including adhesive, grout and trims",
+      "unit": "m²",
+      "formulaText": "Actual tiled wall area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 tiling work section",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 286
+    },
+    {
+      "ref": "17.09",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and fix natural or engineered stone wall cladding",
+      "unit": "m²",
+      "formulaText": "Actual stone-clad wall area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 stonework or cladding",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 287
+    },
+    {
+      "ref": "17.1",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install hygienic PVC wall-cladding panels, including joints and trims",
+      "unit": "m²",
+      "formulaText": "Actual PVC-clad wall area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 specialist wall finishes",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 288
+    },
+    {
+      "ref": "17.11",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install acoustic wall panels, including backing and perimeter trims",
+      "unit": "m²",
+      "formulaText": "Actual acoustic-panel area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to acoustic lining",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 289
+    },
+    {
+      "ref": "17.12",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install impact-resistant wall-protection panels",
+      "unit": "m²",
+      "formulaText": "Actual protected wall area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to specialist wall protection",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 290
+    },
+    {
+      "ref": "17.13",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install crash rails, bumper rails or wall-protection rails",
+      "unit": "m",
+      "formulaText": "Measured centre-line L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Wall-protection accessories",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 291
+    },
+    {
+      "ref": "17.14",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install angle beads, stop beads, movement beads and finish trims",
+      "unit": "m",
+      "formulaText": "Measured installed bead or trim L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 plastering accessories",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 292
+    },
+    {
+      "ref": "17.15",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply sealant between different wall finishes or adjoining components",
+      "unit": "m",
+      "formulaText": "Measured sealed-junction L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 sealant work section",
+      "workCategory": "Other",
+      "sheet": "MODULE 2",
+      "sortOrder": 293
+    },
+    {
+      "ref": "17.16",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Finish reveals, jambs, soffits and sills around openings",
+      "unit": "m²",
+      "formulaText": "Developed reveal D × applicable opening perimeter",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to narrow-width finishes",
+      "workCategory": "Formwork",
+      "sheet": "MODULE 2",
+      "sortOrder": 294
+    },
+    {
+      "ref": "17.17",
+      "elementKey": "WALL_FINISH",
+      "elementLabel": "Wall Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply paint to the complete measured plastered reveal area",
+      "unit": "m²",
+      "formulaText": "Same as 17.16, only where the full reveal area receives paint",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 painting work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 295
+    },
+    {
+      "ref": "18.01",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install suspended mineral-fibre tile ceiling, including grid and suspension",
+      "unit": "m²",
+      "formulaText": "Net mineral-fibre ceiling plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 suspended ceilings",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 296
+    },
+    {
+      "ref": "18.02",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install metal tile or linear metal ceiling, including grid and suspension",
+      "unit": "m²",
+      "formulaText": "Net metal-ceiling plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 suspended ceilings",
+      "workCategory": "Floor Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 297
+    },
+    {
+      "ref": "18.03",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install acoustic ceiling panels or rafts",
+      "unit": "m²",
+      "formulaText": "Σ panel L × W",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 acoustic ceilings",
+      "workCategory": "Ceiling Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 298
+    },
+    {
+      "ref": "18.04",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install suspended acoustic baffles",
+      "unit": "nr",
+      "formulaText": "Count baffles by type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to acoustic ceiling items",
+      "workCategory": "Ceiling Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 299
+    },
+    {
+      "ref": "18.05",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Supply and install hygienic or moisture-resistant suspended ceiling system",
+      "unit": "m²",
+      "formulaText": "Net hygienic-ceiling plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 specialist ceilings",
+      "workCategory": "Ceiling Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 300
+    },
+    {
+      "ref": "18.06",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct suspended plasterboard ceiling on metal framing",
+      "unit": "m²",
+      "formulaText": "Net plasterboard-ceiling plan area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 drylining work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 301
+    },
+    {
+      "ref": "18.07",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct fire-rated plasterboard ceiling to specified resistance",
+      "unit": "m²",
+      "formulaText": "Net fire-rated ceiling area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 fire-resistant lining",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 302
+    },
+    {
+      "ref": "18.08",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Construct moisture-resistant plasterboard ceiling",
+      "unit": "m²",
+      "formulaText": "Net moisture-resistant ceiling area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 drylining work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 303
+    },
+    {
+      "ref": "18.09",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply paint finish to the complete plasterboard ceiling surface",
+      "unit": "m²",
+      "formulaText": "Same as relevant plasterboard-ceiling quantity, only where the complete ceiling is painted",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 painting work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 304
+    },
+    {
+      "ref": "18.1",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form plasterboard bulkheads, vertical fascias, upstands or changes in ceiling level",
+      "unit": "m²",
+      "formulaText": "Developed bulkhead or fascia face area",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 drylining work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 305
+    },
+    {
+      "ref": "18.11",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply paint finish to all measured bulkhead and fascia surfaces",
+      "unit": "m²",
+      "formulaText": "Same as 18.10, only where all measured surfaces receive the same paint system",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 painting work section",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 306
+    },
+    {
+      "ref": "18.12",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form recessed ceiling margins, lighting troughs or shadow gaps",
+      "unit": "m",
+      "formulaText": "Measured centre-line L",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to ceiling features",
+      "workCategory": "Ceiling Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 307
+    },
+    {
+      "ref": "18.13",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide proprietary ceiling access hatch, including frame and matching finish",
+      "unit": "nr",
+      "formulaText": "Count by hatch type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 ceiling accessories",
+      "workCategory": "Ceiling Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 308
+    },
+    {
+      "ref": "18.14",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide ceiling perimeter angle, trim or shadow-gap profile",
+      "unit": "m",
+      "formulaText": "Measured ceiling or room perimeter",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 ceiling trims",
+      "workCategory": "Ceiling Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 309
+    },
+    {
+      "ref": "18.15",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Form openings in ceiling for lighting, diffusers, detectors, speakers or services",
+      "unit": "nr",
+      "formulaText": "Count by opening type and size",
+      "quantityBasis": "independent",
+      "nrm2Ref": "Similar to formed ceiling openings",
+      "workCategory": "Ceiling Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 310
+    },
+    {
+      "ref": "18.16",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Apply paint finish to exposed structural soffit",
+      "unit": "m²",
+      "formulaText": "Actual exposed soffit area receiving paint",
+      "quantityBasis": "independent",
+      "nrm2Ref": "NRM2 painting or specialist coating",
+      "workCategory": "Wall Finishes",
+      "sheet": "MODULE 2",
+      "sortOrder": 311
+    },
+    {
+      "ref": "18.17",
+      "elementKey": "CEILING_FINISH",
+      "elementLabel": "Ceiling Finishes",
+      "applicableLevels": [
+        "All"
+      ],
+      "description": "Provide acoustic or thermal insulation over the entire suspended-ceiling area",
+      "unit": "m²",
+      "formulaText": "Same as relevant suspended-ceiling quantity, only where insulation covers the complete ceiling area",
+      "quantityBasis": "conditional",
+      "nrm2Ref": "NRM2 insulation work section",
+      "workCategory": "Insulation",
+      "sheet": "MODULE 2",
+      "sortOrder": 312
+    }
+  ]
+}

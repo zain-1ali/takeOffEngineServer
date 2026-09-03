@@ -14,6 +14,12 @@ export type ReportLine = {
   isRebar?: boolean;
   dec?: number;
   source?: ReportSource;
+  /** Client catalogue NRM2 / similar reference */
+  nrm2Ref?: string;
+  /** Independent | derived | conditional (catalogue) */
+  quantityBasis?: 'independent' | 'derived' | 'conditional';
+  /** Cost-plan / BOQ work category from catalogue */
+  workCategory?: string;
 };
 
 export type LabourActivity = {

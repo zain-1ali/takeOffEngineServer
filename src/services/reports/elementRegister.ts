@@ -1,9 +1,12 @@
+import type { FloorLevelType } from '../../lib/levelCompatibility';
+
 /**
  * Element Register — master list every takeoff object maps to.
  * Governs unit, measurement rule, default material, takeoff method,
  * NRM2 reference, and overlap rank (lower rank owns shared volume).
  *
  * Keep in sync with frontend/src/constants/elementRegister.ts
+ * (including optional allowedLevelTypes stubs).
  */
 
 export type ElementModuleId = 1 | 2 | 3;
@@ -33,6 +36,8 @@ export type ElementRegisterEntry = {
   overlapRank: number;
   implemented: boolean;
   kind: 'structural' | 'masonry' | 'finish' | 'earthworks' | 'openings' | 'mep';
+  /** Omit = all level types. Keep in sync with frontend register stubs. */
+  allowedLevelTypes?: FloorLevelType[];
 };
 
 export const ELEMENT_MODULE_TITLES: Record<ElementModuleId, string> = {

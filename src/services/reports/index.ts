@@ -13,6 +13,7 @@ import {
 import { ELEMENT_META } from './elementMeta';
 import {
   aggregateStructural,
+  buildFloorLevelTypesById,
   makeEntries,
   type ReportEntry,
 } from './builders';
@@ -450,7 +451,14 @@ export type BuildReportsOptions = {
   floorId?: string | null;
   /** When set, only that element's tables are returned in byElement (and consolidated mirrors it). */
   elementKey?: string | null;
+  /**
+   * Floor docs (or lightweight stubs) used to resolve levelTypes for catalogue
+   * Applicable Level filtering. When omitted, catalogue uses project-wide ('all').
+   */
+  floors?: Array<{ floorId: string; label?: string; levelTypes?: unknown }>;
 };
+
+export { buildFloorLevelTypesById } from './builders';
 
 export function buildProjectReports(
   project: IProject,
@@ -475,7 +483,7 @@ export function buildProjectReports(
     filtered = filtered.filter((i) => i.elementKey === opts.elementKey);
   }
 
-  const entries = makeEntries(filtered);
+  const entries = makeEntries(filtered, buildFloorLevelTypesById(opts.floors));
   const byKey: Record<string, ReportEntry[]> = {};
   entries.forEach((e) => {
     if (!byKey[e.elementKey]) byKey[e.elementKey] = [];

@@ -28,6 +28,10 @@ import {
 import { normalizeReportTheme } from '../services/costPlan/reportThemes';
 import { duplicateToFloor } from '../services/duplicateToFloor';
 import {
+  normalizeLevelTypes,
+  resolveFloorLevelTypes,
+} from '../lib/levelCompatibility';
+import {
   defaultLocationForElement,
   LOCATION_DEPENDENT_ELEMENTS,
   LOCATION_OPTIONS,
@@ -120,6 +124,11 @@ function publicProject(p: IProject) {
 }
 
 function publicFloor(f: IFloor) {
+  const levelTypes = resolveFloorLevelTypes({
+    floorId: f.floorId,
+    label: f.label,
+    levelTypes: f.levelTypes,
+  });
   return {
     id: f._id.toString(),
     floorId: f.floorId,
@@ -127,6 +136,7 @@ function publicFloor(f: IFloor) {
     elevation: f.elevation,
     height: f.height,
     sortOrder: f.sortOrder,
+    levelTypes,
   };
 }
 
@@ -511,6 +521,12 @@ router.post('/:projectId/floors', loadOwnedProject, async (req: Request, res: Re
         ? Number(req.body.sortOrder)
         : (maxSort[0]?.sortOrder ?? -1) + 1;
 
+    const levelTypes = resolveFloorLevelTypes({
+      floorId,
+      label,
+      levelTypes: req.body?.levelTypes,
+    });
+
     const floor = await Floor.create({
       projectId: req.project!._id,
       floorId,
@@ -518,6 +534,7 @@ router.post('/:projectId/floors', loadOwnedProject, async (req: Request, res: Re
       elevation: Number(req.body?.elevation ?? 0),
       height: Number(req.body?.height ?? 3),
       sortOrder,
+      levelTypes,
     });
     res.status(201).json({ floor: publicFloor(floor) });
   } catch (err) {
@@ -610,6 +627,15 @@ router.patch(
       if (req.body?.elevation !== undefined) floor.elevation = Number(req.body.elevation);
       if (req.body?.height !== undefined) floor.height = Number(req.body.height);
       if (req.body?.sortOrder !== undefined) floor.sortOrder = Number(req.body.sortOrder);
+
+      if (req.body?.levelTypes !== undefined) {
+        const next = normalizeLevelTypes(req.body.levelTypes);
+        if (next.length < 1) {
+          res.status(400).json({ error: 'levelTypes must include at least one type' });
+          return;
+        }
+        floor.levelTypes = next;
+      }
 
       if (req.body?.floorId !== undefined) {
         const newFloorId = String(req.body.floorId).trim();
@@ -842,12 +868,15 @@ router.get(
       const filter: Record<string, unknown> = { projectId: req.project!._id };
       if (scope === 'floor') filter.floorId = floorId;
 
-      const instances = await Instance.find(filter).sort({
-        elementKey: 1,
-        floorId: 1,
-        mark: 1,
-        createdAt: 1,
-      });
+      const [instances, floors] = await Promise.all([
+        Instance.find(filter).sort({
+          elementKey: 1,
+          floorId: 1,
+          mark: 1,
+          createdAt: 1,
+        }),
+        Floor.find({ projectId: req.project!._id }),
+      ]);
 
       const manualFilter: Record<string, unknown> = {
         projectId: req.project!._id,
@@ -863,6 +892,11 @@ router.get(
         {
           scope,
           floorId: scope === 'floor' ? floorId : null,
+          floors: floors.map((f) => ({
+            floorId: f.floorId,
+            label: f.label,
+            levelTypes: f.levelTypes,
+          })),
         },
         manualItems.map((m) => ({
           ...toManualBoqReportItem(m as any),
@@ -916,12 +950,15 @@ router.get(
       if (scope === 'floor') filter.floorId = floorId;
       if (elementKey) filter.elementKey = elementKey;
 
-      const instances = await Instance.find(filter).sort({
-        elementKey: 1,
-        floorId: 1,
-        mark: 1,
-        createdAt: 1,
-      });
+      const [instances, floors] = await Promise.all([
+        Instance.find(filter).sort({
+          elementKey: 1,
+          floorId: 1,
+          mark: 1,
+          createdAt: 1,
+        }),
+        Floor.find({ projectId: req.project!._id }),
+      ]);
 
       const manualFilter: Record<string, unknown> = {
         projectId: req.project!._id,
@@ -941,6 +978,11 @@ router.get(
           scope,
           floorId: scope === 'floor' ? floorId : null,
           elementKey: elementKey || null,
+          floors: floors.map((f) => ({
+            floorId: f.floorId,
+            label: f.label,
+            levelTypes: f.levelTypes,
+          })),
         },
         manualItems.map((m) => toManualBoqReportItem(m as any)),
       );

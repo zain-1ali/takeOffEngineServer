@@ -12,7 +12,7 @@ import { DEFAULT_PRICING } from '../../defaults/projectDefaults';
 import { ELEMENT_ENGINES } from '../../elementEngines';
 import { round } from '../../engines/math';
 import { ELEMENT_META } from '../reports/elementMeta';
-import { makeEntries } from '../reports/builders';
+import { makeEntries, buildFloorLevelTypesById, type FloorLevelTypesById } from '../reports/builders';
 import { makeRateAccessors, lineAmount } from '../reports/pricing';
 import { materialsForBom } from '../materialsMix';
 import type { ManualBoqReportItem } from '../manualBoqPricing';
@@ -126,12 +126,15 @@ export function categoryOrderForElement(
 }
 
 export function classifyWorkCategory(
-  line: Pick<ReportLine, 'description' | 'unit' | 'isRebar'> & {
+  line: Pick<ReportLine, 'description' | 'unit' | 'isRebar' | 'workCategory'> & {
     elementKey?: string;
     source?: string;
     summaryKey?: string;
   },
 ): CostPlanWorkCategory {
+  const fromCatalogue = mapCatalogueWorkCategory(line);
+  if (fromCatalogue) return fromCatalogue;
+
   if (line.isRebar) return 'Reinforcement';
 
   const key = (line.summaryKey || '').toLowerCase();
@@ -218,6 +221,43 @@ export function classifyWorkCategory(
   }
 
   return 'Other';
+}
+
+const KNOWN_COST_PLAN_CATEGORIES = new Set<string>(WORK_CATEGORY_ORDER);
+
+/** Map client catalogue workCategory → cost-plan bucket when unambiguous. */
+function mapCatalogueWorkCategory(
+  line: Pick<ReportLine, 'description' | 'unit' | 'isRebar' | 'workCategory'>,
+): CostPlanWorkCategory | null {
+  const raw = (line.workCategory || '').trim();
+  if (!raw) return null;
+
+  if (raw === 'Earthworks') {
+    const d = (line.description || '').toLowerCase();
+    if (/\bexcavat/.test(d)) return 'Excavation';
+    if (/\bdispos|\bcart away|\bspoil|\bhaul/.test(d)) return 'Disposal';
+    return 'Other';
+  }
+
+  if (
+    raw === 'Floor Finishes' ||
+    raw === 'Wall Finishes' ||
+    raw === 'Ceiling Finishes' ||
+    raw === 'Doors & Windows'
+  ) {
+    return 'Finishes';
+  }
+
+  // Excel sometimes tags concrete under Reinforcement — defer to heuristics.
+  if (raw === 'Reinforcement' && !line.isRebar) {
+    const u = (line.unit || '').toLowerCase();
+    if (u === 'm³' || u === 'm3' || u === 'm²' || u === 'm2') return null;
+  }
+
+  if (KNOWN_COST_PLAN_CATEGORIES.has(raw)) {
+    return raw as CostPlanWorkCategory;
+  }
+  return null;
 }
 
 function categoryHeader(category: CostPlanWorkCategory): CostPlanLine {
@@ -380,8 +420,9 @@ function itemFromReport(
   uniformatCode: string,
   elementKey: string,
 ): CostPlanLine {
+  const { workCategory: _catalogueWc, ...rest } = line;
   return {
-    ...line,
+    ...rest,
     uniformatCode,
     elementKey,
     source: line.source || 'MODELLED',
@@ -392,6 +433,7 @@ function buildBundleForInstances(
   elementKey: string,
   instances: IInstance[],
   project: IProject,
+  floorLevelTypesById?: FloorLevelTypesById,
 ): ElementReportBundle | null {
   const engine = ELEMENT_ENGINES[elementKey];
   if (!engine || !instances.length) return null;
@@ -401,7 +443,7 @@ function buildBundleForInstances(
     project.useRateAnalysis !== false,
   );
   const materials = materialsForBom(project.materials);
-  const entries = makeEntries(instances);
+  const entries = makeEntries(instances, floorLevelTypesById);
   return engine.buildReports(entries, materials, rates);
 }
 
@@ -470,6 +512,7 @@ function collectFromBundle(
       const row = itemFromReport(line, defaultUniformat, elementKey);
       row.workCategory = classifyWorkCategory({
         ...row,
+        workCategory: line.workCategory,
         elementKey,
         summaryKey: structuralSummaryKey(line),
       });
@@ -500,6 +543,7 @@ function collectFromBundle(
       const row = itemFromReport(line, defaultUniformat, elementKey);
       row.workCategory = classifyWorkCategory({
         ...row,
+        workCategory: line.workCategory,
         elementKey,
         summaryKey: masonrySummaryKey(line),
       });
@@ -508,7 +552,24 @@ function collectFromBundle(
     return collected;
   }
 
-  // earthworks — priced summary keys
+  if (bundle.kind === 'earthworks') {
+    for (const line of bundle.boq) {
+      if (line.kind !== 'item') continue;
+      const row = itemFromReport(line, defaultUniformat, elementKey);
+      row.workCategory = classifyWorkCategory({
+        ...row,
+        workCategory: line.workCategory,
+        elementKey,
+        summaryKey: /\bdispos|\bcart|\bspoil|\bhaul/i.test(line.description || '')
+          ? 'disposal'
+          : 'excavation',
+      });
+      collected.push(row);
+    }
+    return collected;
+  }
+
+  // priced summary keys (legacy / other kinds)
   const rates = makeRateAccessors(
     project.rateLib as any,
     DEFAULT_PRICING,
@@ -572,7 +633,11 @@ const MANUAL_SECTION_ID = 'MANUAL';
 export function buildCostPlan(
   project: IProject,
   instances: IInstance[],
-  opts: { scope: 'floor' | 'project'; floorId?: string | null },
+  opts: {
+    scope: 'floor' | 'project';
+    floorId?: string | null;
+    floors?: Array<{ floorId: string; label?: string; levelTypes?: unknown }>;
+  },
   manualItems: ManualBoqCostPlanItem[] = [],
 ): CostPlanPayload {
   let filtered = instances.filter((i) => Boolean(ELEMENT_ENGINES[i.elementKey]));
@@ -580,6 +645,8 @@ export function buildCostPlan(
     if (!opts.floorId) throw new Error('floorId is required when scope=floor');
     filtered = filtered.filter((i) => i.floorId === opts.floorId);
   }
+
+  const floorLevelTypesById = buildFloorLevelTypesById(opts.floors);
 
   /** elementKey → instances */
   const byElement: Map<string, IInstance[]> = new Map();
@@ -616,7 +683,12 @@ export function buildCostPlan(
     }
     const defaultUf = uniformatCodes[0] || 'Z9990';
 
-    const bundle = buildBundleForInstances(elementKey, insts, project);
+    const bundle = buildBundleForInstances(
+      elementKey,
+      insts,
+      project,
+      floorLevelTypesById,
+    );
     if (!bundle) continue;
 
     const collected = collectFromBundle(elementKey, bundle, project, defaultUf);

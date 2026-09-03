@@ -17,6 +17,7 @@ import {
   markPrefixForElement,
   nextUniqueMark,
 } from '../utils/instanceMarks';
+import { resolveFloorLevelTypes } from '../lib/levelCompatibility';
 import {
   defaultLocationForElement,
   LOCATION_DEPENDENT_ELEMENTS,
@@ -29,6 +30,7 @@ export type NewFloorSpec = {
   elevation?: number;
   height?: number;
   sortOrder?: number;
+  levelTypes?: string[];
 };
 
 export type DuplicateToFloorInput = {
@@ -106,6 +108,11 @@ async function resolveTargetFloor(
       elevation: Number(input.newFloor.elevation ?? 0),
       height: Number(input.newFloor.height ?? 3),
       sortOrder,
+      levelTypes: resolveFloorLevelTypes({
+        floorId,
+        label,
+        levelTypes: input.newFloor.levelTypes,
+      }),
     });
   }
 

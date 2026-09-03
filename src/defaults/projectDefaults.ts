@@ -68,9 +68,30 @@ export const DEFAULT_GRID = {
 };
 
 export const DEFAULT_FLOORS = [
-  { floorId: 'FDN', label: 'Foundation Level', elevation: -1.5, height: 1.5, sortOrder: 0 },
-  { floorId: 'GF', label: 'Ground Floor', elevation: 0, height: 3.5, sortOrder: 1 },
-  { floorId: 'L01', label: 'Level 01', elevation: 3.5, height: 3.2, sortOrder: 2 },
+  {
+    floorId: 'FND',
+    label: 'Foundation',
+    elevation: -1.5,
+    height: 1.5,
+    sortOrder: 0,
+    levelTypes: ['Foundation'],
+  },
+  {
+    floorId: '00',
+    label: 'Ground Floor',
+    elevation: 0,
+    height: 3.5,
+    sortOrder: 1,
+    levelTypes: ['Above-Grade'],
+  },
+  {
+    floorId: '01',
+    label: 'First Floor',
+    elevation: 3.5,
+    height: 3.2,
+    sortOrder: 2,
+    levelTypes: ['Above-Grade'],
+  },
 ];
 
 /** Pricing rate book defaults from AgileQS-Takeoff.html state.pricing */

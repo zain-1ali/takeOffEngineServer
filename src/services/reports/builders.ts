@@ -42,12 +42,20 @@ import type {
   ReportLine,
   TradeSummary,
 } from './types';
+import { buildCatalogueCoreBoq } from './boqCatalogue/buildCatalogueCoreBoq';
+import { isBoqCatalogueEnabled } from './boqCatalogue/types';
+import {
+  resolveFloorLevelTypes,
+  type FloorLevelType,
+} from '../../lib/levelCompatibility';
 
 export type ReportEntry = {
   elementKey: string;
   floorId: string;
   inst: IInstance;
   flat: Record<string, unknown>;
+  /** Resolved floor level types for BOQ catalogue Applicable Level filtering. */
+  floorLevelTypes?: FloorLevelType[];
 };
 
 function group(description: string): ReportLine {
@@ -201,6 +209,17 @@ export function aggregateStructural(
   };
 }
 
+function floorLevelTypesFromEntries(
+  entries: ReportEntry[],
+): FloorLevelType[] | 'all' {
+  const all: FloorLevelType[] = []
+  for (const e of entries) {
+    if (e.floorLevelTypes?.length) all.push(...e.floorLevelTypes)
+  }
+  if (!all.length) return 'all'
+  return [...new Set(all)]
+}
+
 export function buildStructuralReports(
   meta: ElementMeta,
   entries: ReportEntry[],
@@ -209,51 +228,72 @@ export function buildStructuralReports(
   materials?: MaterialsConfig | null,
 ): ElementReportBundle {
   const agg = aggregateStructural(entries, calculate);
-  const boq: ReportLine[] = [];
+  const floorLevelTypes = floorLevelTypesFromEntries(entries);
+  let boq: ReportLine[] = [];
   let boqTot = 0;
 
-  boq.push(group('A — In-situ concrete'));
-  let ai = 0;
-  Object.keys(agg.concreteByGrade)
-    .sort()
-    .forEach((grade) => {
-      const q = agg.concreteByGrade[grade];
-      if (!(q > 0)) return;
-      ai++;
-      const rate = rates.boqRate('concrete');
-      const desc = meta.concreteDesc?.(grade) || `Concrete grade ${grade}`;
-      boq.push(item(`A${ai}`, desc, q, 'm³', rate));
-      const a = lineAmount(q, rate);
-      if (a != null) boqTot += a;
-    });
+  const catalogueBoq =
+    isBoqCatalogueEnabled()
+      ? buildCatalogueCoreBoq({
+          elementKey: meta.key,
+          agg: {
+            concreteByGrade: agg.concreteByGrade,
+            totalFormwork: agg.totalFormwork,
+            steelByDia: agg.steelByDia,
+            totalConcrete: agg.totalConcrete,
+            totalSteel: agg.totalSteel,
+          },
+          rates,
+          floorLevelTypes,
+        })
+      : null;
 
-  boq.push(group('B — Formwork'));
-  {
-    const rate = rates.boqRate('formwork');
-    boq.push(item('B1', meta.formworkDesc || 'Formwork', agg.totalFormwork, 'm²', rate));
-    const a = lineAmount(agg.totalFormwork, rate);
-    if (a != null) boqTot += a;
+  if (catalogueBoq) {
+    boq = catalogueBoq.lines;
+    boqTot = catalogueBoq.boqTot;
+  } else {
+    boq.push(group('A — In-situ concrete'));
+    let ai = 0;
+    Object.keys(agg.concreteByGrade)
+      .sort()
+      .forEach((grade) => {
+        const q = agg.concreteByGrade[grade];
+        if (!(q > 0)) return;
+        ai++;
+        const rate = rates.boqRate('concrete');
+        const desc = meta.concreteDesc?.(grade) || `Concrete grade ${grade}`;
+        boq.push(item(`A${ai}`, desc, q, 'm³', rate));
+        const a = lineAmount(q, rate);
+        if (a != null) boqTot += a;
+      });
+
+    boq.push(group('B — Formwork'));
+    {
+      const rate = rates.boqRate('formwork');
+      boq.push(item('B1', meta.formworkDesc || 'Formwork', agg.totalFormwork, 'm²', rate));
+      const a = lineAmount(agg.totalFormwork, rate);
+      if (a != null) boqTot += a;
+    }
+
+    boq.push(group('C — Reinforcement / steel'));
+    let ci = 0;
+    Object.keys(agg.steelByDia)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .forEach((dia) => {
+        const kg = agg.steelByDia[String(dia)];
+        if (!(kg > 0)) return;
+        ci++;
+        const t = kg / 1000;
+        const rate = rates.boqRate('rebar');
+        const desc = meta.rebarDesc?.(dia) || `Reinforcement H${dia}`;
+        boq.push(item(`C${ci}`, desc, t, 't', rate, { isRebar: true, dec: 3 }));
+        const a = lineAmount(t, rate);
+        if (a != null) boqTot += a;
+      });
+
+    boq.push(total('Element total (excl. prelims & OH&P)', boqTot));
   }
-
-  boq.push(group('C — Reinforcement / steel'));
-  let ci = 0;
-  Object.keys(agg.steelByDia)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .forEach((dia) => {
-      const kg = agg.steelByDia[String(dia)];
-      if (!(kg > 0)) return;
-      ci++;
-      const t = kg / 1000;
-      const rate = rates.boqRate('rebar');
-      const desc = meta.rebarDesc?.(dia) || `Reinforcement H${dia}`;
-      boq.push(item(`C${ci}`, desc, t, 't', rate, { isRebar: true, dec: 3 }));
-      const a = lineAmount(t, rate);
-      if (a != null) boqTot += a;
-    });
-
-  boq.push(total('Element total (excl. prelims & OH&P)', boqTot));
-
   /* BOM */
   const bom: ReportLine[] = [];
   let bomTot = 0;
@@ -679,31 +719,54 @@ export function buildStoneReports(
   const blindMix = mixFor('C15/20', materials as any);
   const ratio = materials.stoneMortarRatio || '1:4';
 
-  const boq: ReportLine[] = [];
+  let boq: ReportLine[] = [];
   let boqTot = 0;
-  boq.push(group('A — Stone masonry'));
-  {
-    const rate = rates.boqRate('stoneMasonry');
-    boq.push(
-      item(
-        'A1',
-        `Random rubble stone masonry in cement mortar (${ratio}), in strip foundations`,
-        mas,
-        'm³',
-        rate,
-      ),
-    );
-    const a = lineAmount(mas, rate);
-    if (a != null) boqTot += a;
+  const catalogueBoq =
+    isBoqCatalogueEnabled()
+      ? buildCatalogueCoreBoq({
+          elementKey: meta.key,
+          agg: {
+            concreteByGrade: {},
+            totalFormwork: 0,
+            steelByDia: {},
+            totalConcrete: 0,
+            totalSteel: 0,
+          },
+          rates,
+          floorLevelTypes: floorLevelTypesFromEntries(entries),
+          extras: { masonryM3: mas, blindingM3: blinding },
+        })
+      : null;
+  if (catalogueBoq) {
+    boq = catalogueBoq.lines;
+    boqTot = catalogueBoq.boqTot;
+  } else {
+    boq.push(group('A — Stone masonry'));
+    {
+      const rate = rates.boqRate('stoneMasonry');
+      boq.push(
+        item(
+          'A1',
+          `Random rubble stone masonry in cement mortar (${ratio}), in strip foundations`,
+          mas,
+          'm³',
+          rate,
+        ),
+      );
+      const a = lineAmount(mas, rate);
+      if (a != null) boqTot += a;
+    }
+    if (blinding > 0) {
+      boq.push(group('B — Blinding'));
+      const rate = rates.boqRate('blinding');
+      boq.push(
+        item('B1', 'Lean concrete blinding, grade C15/20, under stone footing', blinding, 'm³', rate),
+      );
+      const a = lineAmount(blinding, rate);
+      if (a != null) boqTot += a;
+    }
+    boq.push(total('Stone foundation total', boqTot));
   }
-  if (blinding > 0) {
-    boq.push(group('B — Blinding'));
-    const rate = rates.boqRate('blinding');
-    boq.push(item('B1', 'Lean concrete blinding, grade C15/20, under stone footing', blinding, 'm³', rate));
-    const a = lineAmount(blinding, rate);
-    if (a != null) boqTot += a;
-  }
-  boq.push(total('Stone foundation total', boqTot));
 
   const bom: ReportLine[] = [];
   let bomTot = 0;
@@ -998,25 +1061,49 @@ export function buildEarthworkReports(
   const disposalRate = rates.boqRate('disposal');
   const excavationAmount = lineAmount(excavation, excavationRate) || 0;
   const disposalAmount = lineAmount(disposal, disposalRate) || 0;
-  const boq: ReportLine[] = [
-    group('A — Excavation'),
-    item(
-      'A1',
-      'Excavate material to required formation; measured in situ',
-      excavation,
-      'm³',
-      excavationRate,
-    ),
-    group('B — Disposal'),
-    item(
-      'B1',
-      'Load, haul and dispose excavated material; bulked volume',
-      disposal,
-      'm³',
-      disposalRate,
-    ),
-    total('Earthworks total', excavationAmount + disposalAmount),
-  ];
+
+  let boq: ReportLine[];
+  let boqTot = excavationAmount + disposalAmount;
+  const catalogueBoq =
+    isBoqCatalogueEnabled()
+      ? buildCatalogueCoreBoq({
+          elementKey: meta.key,
+          agg: {
+            concreteByGrade: {},
+            totalFormwork: 0,
+            steelByDia: {},
+            totalConcrete: 0,
+            totalSteel: 0,
+          },
+          rates,
+          floorLevelTypes: floorLevelTypesFromEntries(entries),
+          extras: { excavationM3: excavation, disposalM3: disposal },
+        })
+      : null;
+  if (catalogueBoq) {
+    boq = catalogueBoq.lines;
+    boqTot = catalogueBoq.boqTot;
+  } else {
+    boq = [
+      group('A — Excavation'),
+      item(
+        'A1',
+        'Excavate material to required formation; measured in situ',
+        excavation,
+        'm³',
+        excavationRate,
+      ),
+      group('B — Disposal'),
+      item(
+        'B1',
+        'Load, haul and dispose excavated material; bulked volume',
+        disposal,
+        'm³',
+        disposalRate,
+      ),
+      total('Earthworks total', boqTot),
+    ];
+  }
 
   const days = Math.ceil(excavation / 25) || 0;
   const labour =
@@ -1050,7 +1137,7 @@ export function buildEarthworkReports(
     labour,
     summary: { excavation, disposal },
     cost: {
-      boq: excavationAmount + disposalAmount,
+      boq: boqTot,
       bom: 0,
       labour: labour.totalCost,
     },
@@ -1767,11 +1854,32 @@ export function buildDuctFittingReports(
   };
 }
 
-export function makeEntries(instances: IInstance[]): ReportEntry[] {
+export type FloorLevelTypesById = Record<string, FloorLevelType[]>;
+
+export function buildFloorLevelTypesById(
+  floors?: Array<{ floorId: string; label?: string; levelTypes?: unknown }>,
+): FloorLevelTypesById {
+  const map: FloorLevelTypesById = {};
+  for (const f of floors || []) {
+    if (!f?.floorId) continue;
+    map[f.floorId] = resolveFloorLevelTypes({
+      floorId: f.floorId,
+      label: f.label,
+      levelTypes: f.levelTypes,
+    });
+  }
+  return map;
+}
+
+export function makeEntries(
+  instances: IInstance[],
+  floorLevelTypesById?: FloorLevelTypesById,
+): ReportEntry[] {
   return instances.map((inst) => ({
     elementKey: inst.elementKey,
     floorId: inst.floorId,
     inst,
     flat: flattenInstance(inst),
+    floorLevelTypes: floorLevelTypesById?.[inst.floorId],
   }));
 }
