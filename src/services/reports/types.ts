@@ -1,7 +1,7 @@
 /** Structured report types (JSON instead of HTML strings). */
 
-/** Where a report line came from — modelled elements vs ad-hoc Manual BOQ. */
-export type ReportSource = 'MODELLED' | 'MANUAL';
+/** Where a report line came from — modelled elements vs ad-hoc Manual BOQ vs catalogue pick. */
+export type ReportSource = 'MODELLED' | 'MANUAL' | 'CATALOGUE';
 
 export type ReportLine = {
   kind: 'group' | 'item' | 'total';
@@ -20,6 +20,10 @@ export type ReportLine = {
   quantityBasis?: 'independent' | 'derived' | 'conditional';
   /** Cost-plan / BOQ work category from catalogue */
   workCategory?: string;
+  /** Catalogue formula text (reference / display) */
+  formulaText?: string;
+  /** Catalogue applicable levels */
+  applicableLevels?: string[];
 };
 
 export type LabourActivity = {

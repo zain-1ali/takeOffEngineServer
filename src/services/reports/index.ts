@@ -6,6 +6,9 @@ import {
   ELEMENT_ENGINES,
   structuralCalculator,
 } from '../../elementEngines';
+import type { SelectedBoqReportItem } from '../selectedBoq';
+import { mergeSelectedBoqIntoByElement } from './mergeSelectedBoq';
+import { normalizeRef } from './boqCatalogue';
 import {
   buildManualReportContribution,
   type ManualBoqReportItem,
@@ -111,11 +114,15 @@ function consolidateBoq(
       let n = 0;
       let elTot = 0;
 
-      if (be.kind === 'structural' || be.kind === 'finish' || be.kind === 'mep') {
-        be.boq.forEach((line) => {
-          if (line.kind !== 'item') return;
+      const boqItems = be.boq.filter((line) => line.kind === 'item');
+      if (boqItems.length > 0) {
+        boqItems.forEach((line) => {
           n++;
-          lines.push({ ...line, ref: `${be.num}.${n}`, source: line.source || 'MODELLED' });
+          lines.push({
+            ...line,
+            ref: line.ref || `${be.num}.${n}`,
+            source: line.source || 'MODELLED',
+          });
           if (line.amount != null) elTot += line.amount;
         });
         elTot = be.cost.boq;
@@ -460,11 +467,32 @@ export type BuildReportsOptions = {
 
 export { buildFloorLevelTypesById } from './builders';
 
+/** Project scope: same catalogue ref on multiple floors → one line, qty summed. */
+function dedupeSelectedAcrossFloors(
+  items: SelectedBoqReportItem[],
+): SelectedBoqReportItem[] {
+  const map = new Map<string, SelectedBoqReportItem>();
+  for (const s of items) {
+    const key = `${s.elementKey}::${normalizeRef(s.catalogueRef)}`;
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, { ...s });
+    } else {
+      map.set(key, {
+        ...prev,
+        quantity: (Number(prev.quantity) || 0) + (Number(s.quantity) || 0),
+      });
+    }
+  }
+  return [...map.values()];
+}
+
 export function buildProjectReports(
   project: IProject,
   instances: IInstance[],
   opts: BuildReportsOptions,
   manualItems: ManualBoqReportItem[] = [],
+  selectedBoqItems: SelectedBoqReportItem[] = [],
 ): ProjectReportsPayload {
   const rates = makeRateAccessors(
     project.rateLib as any,
@@ -490,13 +518,24 @@ export function buildProjectReports(
     byKey[e.elementKey].push(e);
   });
 
-  const byElement: ElementReportBundle[] = [];
+  let byElement: ElementReportBundle[] = [];
   Object.keys(byKey)
     .sort((a, b) => (ELEMENT_META[a]?.num || 0) - (ELEMENT_META[b]?.num || 0))
     .forEach((key) => {
       const bundle = ELEMENT_ENGINES[key]?.buildReports(byKey[key], materials, rates);
       if (bundle) byElement.push(bundle);
     });
+
+  byElement = mergeSelectedBoqIntoByElement(
+    byElement,
+    opts.scope === 'project'
+      ? dedupeSelectedAcrossFloors(selectedBoqItems)
+      : selectedBoqItems,
+    {
+      floorId: opts.scope === 'floor' ? opts.floorId : null,
+      elementKey: opts.elementKey,
+    },
+  );
 
   const structuralEntries = entries.filter(
     (e) => ELEMENT_ENGINES[e.elementKey]?.reportKind === 'structural',

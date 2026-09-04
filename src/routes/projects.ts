@@ -3,6 +3,9 @@ import { Project, type IProject } from '../models/Project';
 import { Floor, type IFloor } from '../models/Floor';
 import { Instance, type IInstance } from '../models/Instance';
 import { ManualBoqItem } from '../models/ManualBoqItem';
+import selectedBoqItemsRouter from './selectedBoqItems';
+import { SelectedBoqItem } from '../models/SelectedBoqItem';
+import { toSelectedBoqReportItem } from '../services/selectedBoq';
 import { DEFAULT_FLOORS } from '../defaults/projectDefaults';
 import { loadOwnedProject } from '../middleware/loadOwnedProject';
 import { calculateInstances, SUPPORTED_ELEMENT_KEYS } from '../services/calculate';
@@ -57,6 +60,7 @@ const router = Router();
 
 router.use('/:projectId/rate-lib/import-pdf', ratePdfImportRouter);
 router.use('/:projectId/manual-boq', manualBoqItemsRouter);
+router.use('/:projectId/selected-boq', selectedBoqItemsRouter);
 router.use('/:projectId/ifc-import', ifcImportRouter);
 router.use('/:projectId/sheets', loadOwnedProject, sheetsRouter);
 router.use('/:projectId/layers', loadOwnedProject, layersRouter);
@@ -405,6 +409,7 @@ router.delete('/:projectId', loadOwnedProject, async (req: Request, res: Respons
     const id = req.project!._id;
     await Instance.deleteMany({ projectId: id });
     await ManualBoqItem.deleteMany({ projectId: id });
+    await SelectedBoqItem.deleteMany({ projectId: id });
     await Floor.deleteMany({ projectId: id });
     await Project.deleteOne({ _id: id });
     res.json({ ok: true });
@@ -971,6 +976,16 @@ router.get(
         ? []
         : await ManualBoqItem.find(manualFilter).sort({ createdAt: 1 });
 
+      const selectedFilter: Record<string, unknown> = {
+        projectId: req.project!._id,
+      };
+      if (scope === 'floor') selectedFilter.floorId = floorId;
+      if (elementKey) selectedFilter.elementKey = elementKey;
+      const selectedDocs = await SelectedBoqItem.find(selectedFilter).sort({
+        elementKey: 1,
+        catalogueRef: 1,
+      });
+
       const reports = buildProjectReports(
         req.project!,
         instances,
@@ -985,6 +1000,7 @@ router.get(
           })),
         },
         manualItems.map((m) => toManualBoqReportItem(m as any)),
+        selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
       );
 
       res.json(reports);
