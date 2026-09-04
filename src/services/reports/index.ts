@@ -511,7 +511,8 @@ export function buildProjectReports(
     filtered = filtered.filter((i) => i.elementKey === opts.elementKey);
   }
 
-  const entries = makeEntries(filtered, buildFloorLevelTypesById(opts.floors));
+  const floorLevelTypesById = buildFloorLevelTypesById(opts.floors);
+  const entries = makeEntries(filtered, floorLevelTypesById);
   const byKey: Record<string, ReportEntry[]> = {};
   entries.forEach((e) => {
     if (!byKey[e.elementKey]) byKey[e.elementKey] = [];
@@ -526,6 +527,19 @@ export function buildProjectReports(
       if (bundle) byElement.push(bundle);
     });
 
+  const floorLevelTypesByElement: Record<string, import('../../lib/levelCompatibility').FloorLevelType[] | 'all'> = {};
+  for (const e of entries) {
+    if (!e.floorLevelTypes?.length) continue;
+    const prev = floorLevelTypesByElement[e.elementKey];
+    if (!prev || prev === 'all') {
+      floorLevelTypesByElement[e.elementKey] = [...e.floorLevelTypes];
+    } else {
+      floorLevelTypesByElement[e.elementKey] = [
+        ...new Set([...prev, ...e.floorLevelTypes]),
+      ];
+    }
+  }
+
   byElement = mergeSelectedBoqIntoByElement(
     byElement,
     opts.scope === 'project'
@@ -534,6 +548,8 @@ export function buildProjectReports(
     {
       floorId: opts.scope === 'floor' ? opts.floorId : null,
       elementKey: opts.elementKey,
+      rates,
+      floorLevelTypesByElement,
     },
   );
 
