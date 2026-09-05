@@ -20,6 +20,7 @@ export type PublicSelectedBoqItem = {
 
 /** Lean shape passed into report builders (no Mongo fields). */
 export type SelectedBoqReportItem = {
+  id: string;
   floorId: string;
   elementKey: string;
   catalogueRef: string;
@@ -55,6 +56,7 @@ export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqI
 
 export function toSelectedBoqReportItem(doc: ISelectedBoqItem): SelectedBoqReportItem {
   return {
+    id: doc._id.toString(),
     floorId: doc.floorId,
     elementKey: doc.elementKey,
     catalogueRef: doc.catalogueRef,

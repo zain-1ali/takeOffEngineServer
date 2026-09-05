@@ -1,10 +1,8 @@
 import type { SelectedBoqReportItem } from '../selectedBoq';
 import { lineAmount, type RateAccessors } from './pricing';
-import { normalizeRef } from './boqCatalogue';
 import {
   qtyContextFromSummary,
   resolveCatalogueQty,
-  type CatalogueQtyContext,
 } from './boqCatalogue/resolveCatalogueQty';
 import { ELEMENT_META } from './elementMeta';
 import type { ElementReportBundle, ReportLine, ReportSource } from './types';
@@ -28,23 +26,12 @@ export function emptyElementBundle(elementKey: string): ElementReportBundle | nu
   };
 }
 
-function indexMeasuredByRef(boq: ReportLine[]): Map<string, ReportLine[]> {
-  const map = new Map<string, ReportLine[]>();
-  for (const line of boq) {
-    if (line.kind !== 'item' || !line.ref) continue;
-    const key = normalizeRef(line.ref);
-    const list = map.get(key) || [];
-    list.push(line);
-    map.set(key, list);
-  }
-  return map;
-}
-
 function selectedLine(args: {
   sel: SelectedBoqReportItem;
   qty: number;
   unit: string;
   rate: number | null;
+  suggestedQty?: number;
   isRebar?: boolean;
   dec?: number;
 }): ReportLine {
@@ -62,18 +49,17 @@ function selectedLine(args: {
     workCategory: args.sel.workCategory,
     formulaText: args.sel.formulaText,
     applicableLevels: args.sel.applicableLevels,
+    selectedBoqId: args.sel.id,
+    suggestedQty: args.suggestedQty,
     isRebar: args.isRebar,
     dec: args.dec,
   };
 }
 
 /**
- * When the user has Add-to-BOQ selections for an element:
- * rebuild that element's BOQ from those selections and fill qty from
- * schedule/engine measured lines (or summary bindings).
- *
- * When there are no selections for an element, leave engine BOQ as-is.
- * BOM / Labour stay engine-driven from instances (unchanged).
+ * BOQ is only user-added catalogue items. Engine A/B/C lines are dropped.
+ * Qty comes from the stored selection (manual / takeoff / applied schedule).
+ * A bound schedule qty is exposed as suggestedQty — not auto-applied.
  */
 export function mergeSelectedBoqIntoByElement(
   byElement: ElementReportBundle[],
@@ -85,16 +71,14 @@ export function mergeSelectedBoqIntoByElement(
     floorLevelTypesByElement?: Record<string, FloorLevelType[] | 'all'>;
   },
 ): ElementReportBundle[] {
-  if (!selected.length) return byElement;
-
   const map = new Map<string, ElementReportBundle>();
   for (const be of byElement) {
     map.set(be.elementKey, {
       ...be,
-      boq: [...be.boq],
+      boq: [],
       bom: [...be.bom],
       summary: { ...be.summary },
-      cost: { ...be.cost },
+      cost: { ...be.cost, boq: 0 },
       labour: {
         ...be.labour,
         activities: [...be.labour.activities],
@@ -125,8 +109,7 @@ export function mergeSelectedBoqIntoByElement(
       map.set(elementKey, bundle);
     }
 
-    const measured = indexMeasuredByRef(bundle.boq);
-    const ctx: CatalogueQtyContext = qtyContextFromSummary(bundle.summary);
+    const ctx = qtyContextFromSummary(bundle.summary);
     const floorTypes =
       opts?.floorLevelTypesByElement?.[elementKey] ?? ('all' as const);
     const rates = opts?.rates;
@@ -134,15 +117,11 @@ export function mergeSelectedBoqIntoByElement(
     const newBoq: ReportLine[] = [];
     let boqTot = 0;
 
-    // Stable order by catalogue ref
     const ordered = [...sels].sort((a, b) =>
       a.catalogueRef.localeCompare(b.catalogueRef, undefined, { numeric: true }),
     );
 
     for (const sel of ordered) {
-      const want = normalizeRef(sel.catalogueRef);
-      const existing = measured.get(want);
-
       if (
         sel.workCategory &&
         !newBoq.some(
@@ -157,54 +136,36 @@ export function mergeSelectedBoqIntoByElement(
         });
       }
 
-      if (existing && existing.length) {
-        for (const line of existing) {
-          newBoq.push({
-            ...line,
-            // Keep measured wording/qty; mark as catalogue pick when selected
-            source: line.source || 'CATALOGUE',
-          });
-          if (line.amount != null) boqTot += line.amount;
-        }
-        continue;
-      }
-
       const resolved = resolveCatalogueQty({
         elementKey,
         catalogueRef: sel.catalogueRef,
         ctx,
         floorLevelTypes: floorTypes,
       });
-
-      if (resolved) {
-        const rate = rates ? rates.boqRate(resolved.rateKey) : null;
-        const line = selectedLine({
-          sel,
-          qty: resolved.qty,
-          unit: sel.unit || resolved.unit,
-          rate,
-          isRebar: resolved.isRebar,
-          dec: resolved.dec,
-        });
-        newBoq.push(line);
-        if (line.amount != null) boqTot += line.amount;
-      } else {
-        newBoq.push(
-          selectedLine({
-            sel,
-            qty: Number(sel.quantity) || 0,
-            unit: sel.unit,
-            rate: null,
-          }),
-        );
-      }
+      const suggestedQty =
+        resolved && resolved.qty > 0 ? resolved.qty : undefined;
+      const rate = resolved && rates ? rates.boqRate(resolved.rateKey) : null;
+      const qty = Number(sel.quantity) || 0;
+      const line = selectedLine({
+        sel,
+        qty,
+        unit: sel.unit || resolved?.unit || '',
+        rate,
+        suggestedQty,
+        isRebar: resolved?.isRebar,
+        dec: resolved?.dec,
+      });
+      newBoq.push(line);
+      if (line.amount != null) boqTot += line.amount;
     }
 
-    newBoq.push({
-      kind: 'total',
-      description: 'Element total (excl. prelims & OH&P)',
-      amount: boqTot,
-    });
+    if (newBoq.some((l) => l.kind === 'item')) {
+      newBoq.push({
+        kind: 'total',
+        description: 'Element total (excl. prelims & OH&P)',
+        amount: boqTot,
+      });
+    }
 
     bundle.boq = newBoq;
     bundle.cost = { ...bundle.cost, boq: boqTot };

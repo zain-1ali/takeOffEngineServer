@@ -9,6 +9,8 @@ import {
 } from '../services/reports/boqCatalogue';
 import { resolveFloorLevelTypes } from '../lib/levelCompatibility';
 import { Floor } from '../models/Floor';
+import { BlueprintSheet } from '../models/BlueprintSheet';
+import { TakeoffItemModel } from '../models/TakeoffItem';
 import { publicSelectedBoqItem } from '../services/selectedBoq';
 
 const router = Router({ mergeParams: true });
@@ -163,6 +165,94 @@ router.post(
       }
 
       res.status(201).json({ items: created, skipped });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /takeoffs?q= — previous PDF takeoffs for this project (search by label / code).
+ */
+router.get(
+  '/takeoffs',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const q = String(req.query.q ?? '').trim().toLowerCase();
+      const sheets = await BlueprintSheet.find({
+        projectId: req.project!._id,
+      }).select({ _id: 1, name: 1, title: 1, floorId: 1 });
+      const sheetIds = sheets.map((s) => s._id);
+      const sheetById = new Map(
+        sheets.map((s) => [
+          s._id.toString(),
+          {
+            name: s.title || s.name,
+            floorId: s.floorId || '',
+          },
+        ]),
+      );
+      const docs = await TakeoffItemModel.find({
+        sheetId: { $in: sheetIds },
+      })
+        .sort({ updatedAt: -1 })
+        .limit(200);
+      const items = docs
+        .map((d) => {
+          const sheet = sheetById.get(d.sheetId.toString());
+          const label = (d.label || '').trim();
+          return {
+            id: d._id.toString(),
+            sheetId: d.sheetId.toString(),
+            sheetName: sheet?.name || '',
+            floorId: sheet?.floorId || '',
+            type: d.type,
+            label,
+            qty: Number(d.calculatedValue) || 0,
+            unit: d.unit,
+          };
+        })
+        .filter((row) => {
+          if (!q) return true;
+          return (
+            row.label.toLowerCase().includes(q) ||
+            row.sheetName.toLowerCase().includes(q) ||
+            row.type.toLowerCase().includes(q) ||
+            row.unit.toLowerCase().includes(q)
+          );
+        })
+        .slice(0, 50);
+      res.json({ items });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.patch(
+  '/:itemId',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const item = await SelectedBoqItem.findOne({
+        _id: req.params.itemId,
+        projectId: req.project!._id,
+      });
+      if (!item) {
+        res.status(404).json({ error: 'Selected BOQ item not found' });
+        return;
+      }
+      if (req.body?.quantity != null && req.body.quantity !== '') {
+        const qty = Number(req.body.quantity);
+        if (!Number.isFinite(qty) || qty < 0) {
+          res.status(400).json({ error: 'quantity must be a number ≥ 0' });
+          return;
+        }
+        item.quantity = qty;
+      }
+      await item.save();
+      res.json({ item: publicSelectedBoqItem(item as any) });
     } catch (err) {
       next(err);
     }

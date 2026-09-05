@@ -24,6 +24,10 @@ export type ReportLine = {
   formulaText?: string;
   /** Catalogue applicable levels */
   applicableLevels?: string[];
+  /** Selected catalogue row id — lets the UI edit qty. */
+  selectedBoqId?: string;
+  /** Engine/schedule qty if this ref is bound; user must apply it. */
+  suggestedQty?: number;
 };
 
 export type LabourActivity = {
