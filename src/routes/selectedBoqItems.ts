@@ -12,6 +12,13 @@ import { Floor } from '../models/Floor';
 import { BlueprintSheet } from '../models/BlueprintSheet';
 import { TakeoffItemModel } from '../models/TakeoffItem';
 import { publicSelectedBoqItem } from '../services/selectedBoq';
+import {
+  applyBbsTakeoff,
+  applyDimTakeoff,
+  cleanupItemMeasurementSet,
+  getTakeoffDetail,
+} from '../services/boqTakeoff/applyTakeoff';
+import { numOr, takeoffKindFor } from '../services/boqTakeoff/measurement';
 
 const router = Router({ mergeParams: true });
 
@@ -230,6 +237,69 @@ router.get(
   },
 );
 
+router.get(
+  '/:itemId/takeoff',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const item = await SelectedBoqItem.findOne({
+        _id: req.params.itemId,
+        projectId: req.project!._id,
+      });
+      if (!item) {
+        res.status(404).json({ error: 'Selected BOQ item not found' });
+        return;
+      }
+      const takeoff = await getTakeoffDetail(req.project!._id, item as any);
+      res.json({ takeoff });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.patch(
+  '/:itemId/takeoff',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const item = await SelectedBoqItem.findOne({
+        _id: req.params.itemId,
+        projectId: req.project!._id,
+      });
+      if (!item) {
+        res.status(404).json({ error: 'Selected BOQ item not found' });
+        return;
+      }
+      const kind = String(req.body?.kind ?? takeoffKindFor(item.unit)).trim();
+      const wastePct = Math.max(0, numOr(req.body?.wastePct, 0));
+      if (kind === 'bbs') {
+        await applyBbsTakeoff({
+          projectId: req.project!._id,
+          item: item as any,
+          wastePct,
+          bars: req.body?.bars,
+        });
+      } else {
+        await applyDimTakeoff({
+          projectId: req.project!._id,
+          item: item as any,
+          wastePct,
+          lines: req.body?.lines,
+          measurementSetId: req.body?.measurementSetId ?? null,
+        });
+      }
+      const takeoff = await getTakeoffDetail(req.project!._id, item as any);
+      res.json({
+        item: publicSelectedBoqItem(item as any),
+        takeoff,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.patch(
   '/:itemId',
   loadOwnedProject,
@@ -264,14 +334,16 @@ router.delete(
   loadOwnedProject,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await SelectedBoqItem.deleteOne({
+      const item = await SelectedBoqItem.findOne({
         _id: req.params.itemId,
         projectId: req.project!._id,
       });
-      if (result.deletedCount === 0) {
+      if (!item) {
         res.status(404).json({ error: 'Selected BOQ item not found' });
         return;
       }
+      await cleanupItemMeasurementSet(item as any);
+      await item.deleteOne();
       res.json({ ok: true });
     } catch (err) {
       next(err);

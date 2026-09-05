@@ -25,6 +25,12 @@ export interface ISelectedBoqItem extends Document {
   applicableLevels?: string[];
   /** Filled later from schedule / measure; 0 after Add to BOQ. */
   quantity: number;
+  wastePct: number;
+  takeoffKind: '' | 'dim' | 'bbs';
+  measurementSetId?: Types.ObjectId | null;
+  takeoffLineCount: number;
+  bbsBars?: unknown[];
+  bbsTotalKg?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +58,20 @@ const selectedBoqItemSchema = new Schema(
     workCategory: { type: String, default: '' },
     applicableLevels: { type: [String], default: [] },
     quantity: { type: Number, required: true, min: 0, default: 0 },
+    wastePct: { type: Number, default: 0 },
+    takeoffKind: {
+      type: String,
+      enum: ['', 'dim', 'bbs'],
+      default: '',
+    },
+    measurementSetId: {
+      type: Schema.Types.ObjectId,
+      ref: 'BoqMeasurementSet',
+      default: null,
+    },
+    takeoffLineCount: { type: Number, default: 0 },
+    bbsBars: { type: [Schema.Types.Mixed], default: undefined },
+    bbsTotalKg: { type: Number, default: undefined },
   },
   { timestamps: true },
 );

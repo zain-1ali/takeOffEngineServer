@@ -34,6 +34,7 @@ function selectedLine(args: {
   suggestedQty?: number;
   isRebar?: boolean;
   dec?: number;
+  takeoffLinked?: boolean;
 }): ReportLine {
   return {
     kind: 'item',
@@ -53,6 +54,10 @@ function selectedLine(args: {
     suggestedQty: args.suggestedQty,
     isRebar: args.isRebar,
     dec: args.dec,
+    takeoffKind: args.sel.takeoffKind,
+    measurementSetId: args.sel.measurementSetId,
+    takeoffLineCount: args.sel.takeoffLineCount,
+    takeoffLinked: args.takeoffLinked,
   };
 }
 
@@ -94,10 +99,17 @@ export function mergeSelectedBoqIntoByElement(
   });
 
   const byElementSelections = new Map<string, SelectedBoqReportItem[]>();
+  const setUsers = new Map<string, number>();
   for (const sel of filtered) {
     const list = byElementSelections.get(sel.elementKey) || [];
     list.push(sel);
     byElementSelections.set(sel.elementKey, list);
+    if (sel.measurementSetId) {
+      setUsers.set(
+        sel.measurementSetId,
+        (setUsers.get(sel.measurementSetId) || 0) + 1,
+      );
+    }
   }
 
   for (const [elementKey, sels] of byElementSelections) {
@@ -154,6 +166,9 @@ export function mergeSelectedBoqIntoByElement(
         suggestedQty,
         isRebar: resolved?.isRebar,
         dec: resolved?.dec,
+        takeoffLinked: Boolean(
+          sel.measurementSetId && (setUsers.get(sel.measurementSetId) || 0) > 1,
+        ),
       });
       newBoq.push(line);
       if (line.amount != null) boqTot += line.amount;

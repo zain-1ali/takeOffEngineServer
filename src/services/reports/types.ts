@@ -28,6 +28,10 @@ export type ReportLine = {
   selectedBoqId?: string;
   /** Engine/schedule qty if this ref is bound; user must apply it. */
   suggestedQty?: number;
+  takeoffKind?: '' | 'dim' | 'bbs';
+  measurementSetId?: string | null;
+  takeoffLineCount?: number;
+  takeoffLinked?: boolean;
 };
 
 export type LabourActivity = {

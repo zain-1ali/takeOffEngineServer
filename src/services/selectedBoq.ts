@@ -14,6 +14,10 @@ export type PublicSelectedBoqItem = {
   workCategory: string;
   applicableLevels: string[];
   quantity: number;
+  wastePct: number;
+  takeoffKind: '' | 'dim' | 'bbs';
+  measurementSetId: string | null;
+  takeoffLineCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -32,6 +36,10 @@ export type SelectedBoqReportItem = {
   workCategory?: string;
   applicableLevels?: string[];
   quantity: number;
+  wastePct?: number;
+  takeoffKind?: '' | 'dim' | 'bbs';
+  measurementSetId?: string | null;
+  takeoffLineCount?: number;
 };
 
 export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqItem {
@@ -49,6 +57,12 @@ export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqI
     workCategory: doc.workCategory || '',
     applicableLevels: doc.applicableLevels || [],
     quantity: Number(doc.quantity) || 0,
+    wastePct: Number(doc.wastePct) || 0,
+    takeoffKind: doc.takeoffKind || '',
+    measurementSetId: doc.measurementSetId
+      ? doc.measurementSetId.toString()
+      : null,
+    takeoffLineCount: Number(doc.takeoffLineCount) || 0,
     createdAt: doc.createdAt?.toISOString?.() || '',
     updatedAt: doc.updatedAt?.toISOString?.() || '',
   };
@@ -70,5 +84,11 @@ export function toSelectedBoqReportItem(doc: ISelectedBoqItem): SelectedBoqRepor
       ? [...doc.applicableLevels]
       : undefined,
     quantity: Number(doc.quantity) || 0,
+    wastePct: Number(doc.wastePct) || 0,
+    takeoffKind: doc.takeoffKind || '',
+    measurementSetId: doc.measurementSetId
+      ? doc.measurementSetId.toString()
+      : null,
+    takeoffLineCount: Number(doc.takeoffLineCount) || 0,
   };
 }
