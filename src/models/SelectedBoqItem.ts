@@ -31,6 +31,8 @@ export interface ISelectedBoqItem extends Document {
   takeoffLineCount: number;
   bbsBars?: unknown[];
   bbsTotalKg?: number;
+  /** Extra line typed by the user — not from the catalogue. */
+  isManual: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +74,7 @@ const selectedBoqItemSchema = new Schema(
     takeoffLineCount: { type: Number, default: 0 },
     bbsBars: { type: [Schema.Types.Mixed], default: undefined },
     bbsTotalKg: { type: Number, default: undefined },
+    isManual: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

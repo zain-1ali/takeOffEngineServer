@@ -18,6 +18,7 @@ export type PublicSelectedBoqItem = {
   takeoffKind: '' | 'dim' | 'bbs';
   measurementSetId: string | null;
   takeoffLineCount: number;
+  isManual: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -40,6 +41,7 @@ export type SelectedBoqReportItem = {
   takeoffKind?: '' | 'dim' | 'bbs';
   measurementSetId?: string | null;
   takeoffLineCount?: number;
+  isManual?: boolean;
 };
 
 export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqItem {
@@ -63,6 +65,7 @@ export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqI
       ? doc.measurementSetId.toString()
       : null,
     takeoffLineCount: Number(doc.takeoffLineCount) || 0,
+    isManual: Boolean(doc.isManual),
     createdAt: doc.createdAt?.toISOString?.() || '',
     updatedAt: doc.updatedAt?.toISOString?.() || '',
   };
@@ -90,5 +93,6 @@ export function toSelectedBoqReportItem(doc: ISelectedBoqItem): SelectedBoqRepor
       ? doc.measurementSetId.toString()
       : null,
     takeoffLineCount: Number(doc.takeoffLineCount) || 0,
+    isManual: Boolean(doc.isManual),
   };
 }

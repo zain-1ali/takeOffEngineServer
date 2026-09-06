@@ -26,6 +26,16 @@ export function catalogueItemsForElement(elementKey: string): BoqCatalogueItem[]
   return byElement.get(elementKey) || []
 }
 
+/** Unique work categories for an element, in catalogue sheet order. */
+export function workCategoriesForElement(elementKey: string): string[] {
+  const cats: string[] = []
+  for (const item of catalogueItemsForElement(elementKey)) {
+    const cat = (item.workCategory || '').trim()
+    if (cat && !cats.includes(cat)) cats.push(cat)
+  }
+  return cats
+}
+
 export function findCatalogueItem(
   elementKey: string,
   ref: string,

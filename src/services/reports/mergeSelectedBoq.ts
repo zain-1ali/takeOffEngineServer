@@ -4,6 +4,7 @@ import {
   qtyContextFromSummary,
   resolveCatalogueQty,
 } from './boqCatalogue/resolveCatalogueQty';
+import { workCategoriesForElement } from './boqCatalogue';
 import { ELEMENT_META } from './elementMeta';
 import type { ElementReportBundle, ReportLine, ReportSource } from './types';
 import type { FloorLevelType } from '../../lib/levelCompatibility';
@@ -44,7 +45,7 @@ function selectedLine(args: {
     unit: args.unit || args.sel.unit,
     rate: args.rate,
     amount: lineAmount(args.qty, args.rate),
-    source: 'CATALOGUE' as ReportSource,
+    source: (args.sel.isManual ? 'MANUAL' : 'CATALOGUE') as ReportSource,
     nrm2Ref: args.sel.nrm2Ref,
     quantityBasis: args.sel.quantityBasis,
     workCategory: args.sel.workCategory,
@@ -129,9 +130,25 @@ export function mergeSelectedBoqIntoByElement(
     const newBoq: ReportLine[] = [];
     let boqTot = 0;
 
-    const ordered = [...sels].sort((a, b) =>
-      a.catalogueRef.localeCompare(b.catalogueRef, undefined, { numeric: true }),
-    );
+    const catOrder = workCategoriesForElement(elementKey);
+    const catIndex = (cat: string) => {
+      const i = catOrder.indexOf(cat);
+      return i === -1 ? catOrder.length : i;
+    };
+    const ordered = [...sels].sort((a, b) => {
+      const ca = (a.workCategory || '').trim();
+      const cb = (b.workCategory || '').trim();
+      const ia = ca ? catIndex(ca) : catOrder.length + 1;
+      const ib = cb ? catIndex(cb) : catOrder.length + 1;
+      if (ia !== ib) return ia - ib;
+      if (ca !== cb) return ca.localeCompare(cb);
+      if (Boolean(a.isManual) !== Boolean(b.isManual)) {
+        return a.isManual ? 1 : -1;
+      }
+      return a.catalogueRef.localeCompare(b.catalogueRef, undefined, {
+        numeric: true,
+      });
+    });
 
     for (const sel of ordered) {
       if (

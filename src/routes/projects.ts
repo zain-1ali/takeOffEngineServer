@@ -6,6 +6,7 @@ import { ManualBoqItem } from '../models/ManualBoqItem';
 import selectedBoqItemsRouter from './selectedBoqItems';
 import { SelectedBoqItem } from '../models/SelectedBoqItem';
 import { toSelectedBoqReportItem } from '../services/selectedBoq';
+import { ensureCatalogueSelected } from '../services/boqTakeoff/ensureCatalogueSelected';
 import { DEFAULT_FLOORS } from '../defaults/projectDefaults';
 import { loadOwnedProject } from '../middleware/loadOwnedProject';
 import { calculateInstances, SUPPORTED_ELEMENT_KEYS } from '../services/calculate';
@@ -981,6 +982,16 @@ router.get(
       };
       if (scope === 'floor') selectedFilter.floorId = floorId;
       if (elementKey) selectedFilter.elementKey = elementKey;
+      await ensureCatalogueSelected({
+        projectId: req.project!._id,
+        floors: floors.map((f) => ({
+          floorId: f.floorId,
+          label: f.label,
+          levelTypes: f.levelTypes,
+        })),
+        floorId: scope === 'floor' ? floorId : null,
+        elementKey: elementKey || null,
+      });
       const selectedDocs = await SelectedBoqItem.find(selectedFilter).sort({
         elementKey: 1,
         catalogueRef: 1,

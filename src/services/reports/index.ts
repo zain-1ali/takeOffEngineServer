@@ -8,6 +8,7 @@ import {
 } from '../../elementEngines';
 import type { SelectedBoqReportItem } from '../selectedBoq';
 import { mergeSelectedBoqIntoByElement } from './mergeSelectedBoq';
+import { applyBoqQuantitiesToBomLabour } from './applyBoqToBomLabour';
 import { normalizeRef } from './boqCatalogue';
 import {
   buildManualReportContribution,
@@ -166,7 +167,28 @@ function consolidateBom(
   const hasStructural = byElement.some((be) => be.kind === 'structural');
 
   if (hasStructural) {
-    const agg = aggregateStructural(structuralEntries, structuralCalculator);
+    const boqDriven = byElement.some((be) =>
+      be.bom.some((l) => l.source === 'CATALOGUE'),
+    );
+    const agg = boqDriven
+      ? {
+          concreteByGrade: {
+            [materials.defaultConcreteGrade || 'C25/30']: byElement
+              .filter((be) => be.kind === 'structural')
+              .reduce((s, be) => s + (Number(be.summary.concrete) || 0), 0),
+          },
+          steelByDia: {
+            '0': byElement
+              .filter((be) => be.kind === 'structural')
+              .reduce((s, be) => s + (Number(be.summary.steel) || 0), 0),
+          },
+          totalFormwork: byElement
+            .filter((be) => be.kind === 'structural')
+            .reduce((s, be) => s + (Number(be.summary.formwork) || 0), 0),
+          totalVerticalFormwork: 0,
+          totalSoffitFormwork: 0,
+        }
+      : aggregateStructural(structuralEntries, structuralCalculator);
     let cement = 0;
     let sand = 0;
     let aggr = 0;
@@ -246,7 +268,9 @@ function consolidateBom(
         tot += kg;
         const label =
           d === 0
-            ? 'Structural steel H-section piles'
+            ? boqDriven
+              ? 'Reinforcement bars'
+              : 'Structural steel H-section piles'
             : `Reinforcement bars, H${d}`;
         lines.push(
           item(`C${ci}`, label, kg, 'kg', rates.matRate('rebarKg'), {
@@ -316,6 +340,45 @@ function consolidateBom(
     });
 
   return lines;
+}
+
+function consolidateLabourFromBundles(
+  byElement: ElementReportBundle[],
+  floorId: string | null,
+  rates: ReturnType<typeof makeRateAccessors>,
+): ProjectReportsPayload['labour'] {
+  const allActivities: LabourActivity[] = [];
+  const allManDays: Record<string, number> = {};
+  let ref = 0;
+  for (const be of byElement) {
+    for (const a of be.labour.activities) {
+      ref++;
+      allActivities.push({
+        ...a,
+        ref: `L${ref}`,
+        floorId: floorId || a.floorId || null,
+        source: a.source || 'CATALOGUE',
+      });
+    }
+    for (const t of be.labour.trades) {
+      allManDays[t.trade] = (allManDays[t.trade] || 0) + t.manDays;
+    }
+  }
+  const trades = tradesFromManDays(allManDays, rates);
+  const totalManDays = trades.reduce((s, t) => s + t.manDays, 0);
+  const totalCost = trades.reduce((s, t) => s + t.cost, 0);
+  const byFloor: LabourFloorLoad[] = floorId
+    ? [
+        {
+          floorId,
+          activities: allActivities,
+          trades,
+          totalManDays,
+          totalCost,
+        },
+      ]
+    : [];
+  return { activities: allActivities, trades, totalManDays, totalCost, byFloor };
 }
 
 function tradesFromManDays(
@@ -553,10 +616,36 @@ export function buildProjectReports(
     },
   );
 
+  byElement = applyBoqQuantitiesToBomLabour(byElement, {
+    materials,
+    rates,
+    floorLevelTypesByElement,
+  });
+
   const structuralEntries = entries.filter(
     (e) => ELEMENT_ENGINES[e.elementKey]?.reportKind === 'structural',
   );
   const structuralAgg = aggregateStructural(structuralEntries, structuralCalculator);
+  const boqDriven = byElement.some(
+    (be) =>
+      be.bom.some((l) => l.source === 'CATALOGUE') ||
+      be.labour.activities.some((a) => a.source === 'CATALOGUE'),
+  );
+  if (boqDriven) {
+    const structuralBundles = byElement.filter((be) => be.kind === 'structural');
+    structuralAgg.totalConcrete = structuralBundles.reduce(
+      (s, be) => s + (Number(be.summary.concrete) || 0),
+      0,
+    );
+    structuralAgg.totalFormwork = structuralBundles.reduce(
+      (s, be) => s + (Number(be.summary.formwork) || 0),
+      0,
+    );
+    structuralAgg.totalSteel = structuralBundles.reduce(
+      (s, be) => s + (Number(be.summary.steel) || 0),
+      0,
+    );
+  }
   const modelledPriced = byElement.reduce((s, be) => s + (be.cost.boq || 0), 0);
 
   // Manual BOQ uses applied* rate snapshots (revision-gated), never live rateLib.
@@ -586,7 +675,13 @@ export function buildProjectReports(
     ...manual.bom,
   ];
 
-  const modelledLabour = consolidateLabour(entries, materials, rates);
+  const modelledLabour = boqDriven
+    ? consolidateLabourFromBundles(
+        byElement,
+        opts.scope === 'floor' ? opts.floorId || null : null,
+        rates,
+      )
+    : consolidateLabour(entries, materials, rates);
   const byFloor = modelledLabour.byFloor.map((f) => ({
     ...f,
     activities: [...f.activities],

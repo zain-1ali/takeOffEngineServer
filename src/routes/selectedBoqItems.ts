@@ -237,6 +237,88 @@ router.get(
   },
 );
 
+/**
+ * POST /manual — extra BOQ line (description, unit, qty, category) on this element.
+ * Body: { floorId, elementKey, description, unit?, quantity?, workCategory? }
+ */
+router.post(
+  '/manual',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const floorId = String(req.body?.floorId ?? '').trim();
+      const elementKey = String(req.body?.elementKey ?? '').trim();
+      const description = String(req.body?.description ?? '').trim();
+      const unit = String(req.body?.unit ?? 'nr').trim() || 'nr';
+      const workCategory =
+        String(req.body?.workCategory ?? '').trim().slice(0, 80) || 'Other';
+      const qtyRaw = req.body?.quantity;
+      const quantity =
+        qtyRaw == null || qtyRaw === '' ? 0 : Number(qtyRaw);
+
+      if (!floorId || !elementKey) {
+        res.status(400).json({ error: 'floorId and elementKey are required' });
+        return;
+      }
+      if (!description) {
+        res.status(400).json({ error: 'description is required' });
+        return;
+      }
+      if (!Number.isFinite(quantity) || quantity < 0) {
+        res.status(400).json({ error: 'quantity must be a number ≥ 0' });
+        return;
+      }
+
+      const floor = await Floor.findOne({
+        projectId: req.project!._id,
+        floorId,
+      });
+      if (!floor) {
+        res.status(400).json({ error: 'floorId does not exist on this project' });
+        return;
+      }
+
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const existing = await SelectedBoqItem.find({
+          projectId: req.project!._id,
+          floorId,
+          elementKey,
+          isManual: true,
+        }).select({ catalogueRef: 1 });
+        let max = 0;
+        for (const d of existing) {
+          const m = /^M\.(\d+)$/.exec(d.catalogueRef);
+          if (m) max = Math.max(max, Number(m[1]));
+        }
+        try {
+          const doc = await SelectedBoqItem.create({
+            projectId: req.project!._id,
+            floorId,
+            elementKey,
+            catalogueRef: `M.${max + 1}`,
+            description,
+            unit,
+            formulaText: '',
+            quantityBasis: 'independent',
+            nrm2Ref: '',
+            workCategory,
+            applicableLevels: [],
+            quantity,
+            isManual: true,
+          });
+          res.status(201).json({ item: publicSelectedBoqItem(doc as any) });
+          return;
+        } catch (err: any) {
+          if (err?.code === 11000 && attempt < 3) continue;
+          throw err;
+        }
+      }
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.get(
   '/:itemId/takeoff',
   loadOwnedProject,
@@ -340,6 +422,10 @@ router.delete(
       });
       if (!item) {
         res.status(404).json({ error: 'Selected BOQ item not found' });
+        return;
+      }
+      if (!item.isManual) {
+        res.status(400).json({ error: 'Only manual BOQ lines can be removed' });
         return;
       }
       await cleanupItemMeasurementSet(item as any);
