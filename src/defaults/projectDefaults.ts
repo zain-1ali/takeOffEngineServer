@@ -122,6 +122,8 @@ export const DEFAULT_PRICING = {
     electrical: 28,
     excavation: 12,
     disposal: 8,
+    /** Membrane / tanking — indicative; confirm against the rate databank. */
+    waterproofing: 24,
   } as Record<string, number>,
   materials: {
     cementBag: 9.5,

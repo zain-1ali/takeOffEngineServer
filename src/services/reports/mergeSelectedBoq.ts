@@ -4,6 +4,7 @@ import {
   qtyContextFromSummary,
   resolveCatalogueQty,
 } from './boqCatalogue/resolveCatalogueQty';
+import { rateKeyForBoqLine } from './boqCatalogue/rateKeyForLine';
 import { workCategoriesForElement } from './boqCatalogue';
 import { ELEMENT_META } from './elementMeta';
 import type { ElementReportBundle, ReportLine, ReportSource } from './types';
@@ -173,7 +174,17 @@ export function mergeSelectedBoqIntoByElement(
       });
       const suggestedQty =
         resolved && resolved.qty > 0 ? resolved.qty : undefined;
-      const rate = resolved && rates ? rates.boqRate(resolved.rateKey) : null;
+      const rateKey =
+        resolved?.rateKey ||
+        rateKeyForBoqLine({
+          elementKey,
+          catalogueRef: sel.catalogueRef,
+          workCategory: sel.workCategory,
+          unit: sel.unit || resolved?.unit,
+          description: sel.description,
+          floorLevelTypes: floorTypes,
+        });
+      const rate = rateKey && rates ? rates.boqRate(rateKey) : null;
       const qty = Number(sel.quantity) || 0;
       const line = selectedLine({
         sel,
