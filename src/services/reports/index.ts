@@ -176,12 +176,12 @@ function consolidateBom(
             [materials.defaultConcreteGrade || 'C25/30']: byElement
               .filter((be) => be.kind === 'structural')
               .reduce((s, be) => s + (Number(be.summary.concrete) || 0), 0),
-          },
+          } as Record<string, number>,
           steelByDia: {
             '0': byElement
               .filter((be) => be.kind === 'structural')
               .reduce((s, be) => s + (Number(be.summary.steel) || 0), 0),
-          },
+          } as Record<string, number>,
           totalFormwork: byElement
             .filter((be) => be.kind === 'structural')
             .reduce((s, be) => s + (Number(be.summary.formwork) || 0), 0),
