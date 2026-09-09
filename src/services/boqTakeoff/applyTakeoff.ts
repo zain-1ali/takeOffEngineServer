@@ -83,6 +83,7 @@ export async function recalcItemsOnSet(
     const q = itemQuantity(sib.unit, lines, sib.wastePct);
     sib.quantity = clampQty(q.total);
     sib.takeoffLineCount = lines.length;
+    sib.quantityMode = 'TAKEOFF';
     await sib.save();
     updated.push(sib._id.toString());
   }
@@ -238,6 +239,7 @@ export async function applyDimTakeoff(opts: {
   const q = itemQuantity(opts.item.unit, lines, opts.wastePct);
   opts.item.quantity = clampQty(q.total);
   opts.item.takeoffLineCount = lines.length;
+  opts.item.quantityMode = 'TAKEOFF';
   await opts.item.save();
 
   if (prevSetId && prevSetId.toString() !== set._id.toString()) {
@@ -268,6 +270,7 @@ export async function applyBbsTakeoff(opts: {
   opts.item.bbsTotalKg = q.totalKg;
   opts.item.quantity = clampQty(q.total);
   opts.item.takeoffLineCount = bars.length;
+  opts.item.quantityMode = 'TAKEOFF';
   await opts.item.save();
 
   await deleteSetIfOrphan(opts.projectId, prevSetId, opts.item._id);

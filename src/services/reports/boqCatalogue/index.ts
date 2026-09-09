@@ -4,14 +4,14 @@ import type { FloorLevelType } from '../../../lib/levelCompatibility'
 
 const file = catalogueJson as BoqCatalogueFile
 
-const byElement = new Map<string, BoqCatalogueItem[]>()
+const byElement = new Map()
 for (const item of file.items) {
   const list = byElement.get(item.elementKey) || []
   list.push(item)
   byElement.set(item.elementKey, list)
 }
 for (const list of byElement.values()) {
-  list.sort((a, b) => a.sortOrder - b.sortOrder)
+  list.sort((a: BoqCatalogueItem, b: BoqCatalogueItem) => a.sortOrder - b.sortOrder)
 }
 
 export function getCatalogueMeta(): Pick<BoqCatalogueFile, 'source' | 'importedAt' | 'itemCount'> {

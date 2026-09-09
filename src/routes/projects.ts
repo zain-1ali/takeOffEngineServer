@@ -12,7 +12,13 @@ import { loadOwnedProject } from '../middleware/loadOwnedProject';
 import { calculateInstances, SUPPORTED_ELEMENT_KEYS } from '../services/calculate';
 import { buildProjectReports } from '../services/reports';
 import { REPORTABLE_KEYS } from '../services/reports/elementMeta';
+import {
+  isReportableElementKey,
+  loadActivePackReportContext,
+} from '../services/boqPack/packReportContext';
+import { applyPrelimsQty } from '../services/boqPack/applyPrelimsQty';
 import ratePdfImportRouter from './ratePdfImport';
+import boqPackRouter from './boqPack';
 import manualBoqItemsRouter from './manualBoqItems';
 import ifcImportRouter from './ifcImport';
 import sheetsRouter from './sheets';
@@ -60,6 +66,7 @@ import type { RateLib } from '../engines/rateAnalysis';
 const router = Router();
 
 router.use('/:projectId/rate-lib/import-pdf', ratePdfImportRouter);
+router.use('/:projectId/boq-pack', boqPackRouter);
 router.use('/:projectId/manual-boq', manualBoqItemsRouter);
 router.use('/:projectId/selected-boq', selectedBoqItemsRouter);
 router.use('/:projectId/ifc-import', ifcImportRouter);
@@ -91,6 +98,14 @@ function publicProject(p: IProject) {
     revision: p.revision,
     date: p.date,
     gfaM2: p.gfaM2 == null || !(Number(p.gfaM2) > 0) ? null : Number(p.gfaM2),
+    programmeWeeks:
+      p.programmeWeeks == null || !(Number(p.programmeWeeks) > 0)
+        ? null
+        : Number(p.programmeWeeks),
+    contractValue:
+      p.contractValue == null || !(Number(p.contractValue) > 0)
+        ? null
+        : Number(p.contractValue),
     designAllowancePercent: normalizeCascadePercent(
       p.designAllowancePercent,
       DEFAULT_CASCADE_PERCENTS.designAllowancePercent,
@@ -352,7 +367,7 @@ router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response
     // Currency must change only via POST /convert-currency (explicit FX + audit log).
     const fields = [
       'name', 'number', 'client', 'contractor', 'consultant', 'location', 'units',
-      'preparedBy', 'revision', 'date', 'gfaM2',
+      'preparedBy', 'revision', 'date', 'gfaM2', 'programmeWeeks', 'contractValue',
       'designAllowancePercent', 'overheadPercent', 'profitPercent', 'inflationPercent',
       'reportTheme',
       'materials', 'rateLib', 'grid', 'useRateAnalysis',
@@ -365,13 +380,13 @@ router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response
     ]);
     for (const key of fields) {
       if (req.body?.[key] !== undefined) {
-        if (key === 'gfaM2') {
-          const raw = req.body.gfaM2;
+        if (key === 'gfaM2' || key === 'programmeWeeks' || key === 'contractValue') {
+          const raw = req.body[key];
           if (raw === null || raw === '' || raw === undefined) {
-            p.gfaM2 = null;
+            (p as any)[key] = null;
           } else {
             const n = Number(raw);
-            p.gfaM2 = Number.isFinite(n) && n > 0 ? n : null;
+            (p as any)[key] = Number.isFinite(n) && n > 0 ? n : null;
           }
         } else if (cascadeKeys.has(key)) {
           const fallback =
@@ -404,6 +419,41 @@ router.patch('/:projectId', loadOwnedProject, async (req: Request, res: Response
     next(err);
   }
 });
+
+router.post(
+  '/:projectId/apply-prelims-qty',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const dryRun = req.body?.dryRun !== false;
+      const rawIds = req.body?.itemIds;
+      const itemIds = Array.isArray(rawIds)
+        ? rawIds.map((id) => String(id)).filter(Boolean)
+        : undefined;
+      const p = req.project!;
+      const result = await applyPrelimsQty({
+        projectId: p._id,
+        project: {
+          programmeWeeks:
+            p.programmeWeeks == null || !(Number(p.programmeWeeks) > 0)
+              ? null
+              : Number(p.programmeWeeks),
+          gfaM2:
+            p.gfaM2 == null || !(Number(p.gfaM2) > 0) ? null : Number(p.gfaM2),
+          contractValue:
+            p.contractValue == null || !(Number(p.contractValue) > 0)
+              ? null
+              : Number(p.contractValue),
+        },
+        dryRun,
+        itemIds,
+      });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.delete('/:projectId', loadOwnedProject, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -945,7 +995,7 @@ router.get(
         }
       }
 
-      if (elementKey && !REPORTABLE_KEYS.includes(elementKey)) {
+      if (elementKey && !isReportableElementKey(elementKey, REPORTABLE_KEYS)) {
         res.status(400).json({
           error: `Unsupported elementKey. Supported: ${REPORTABLE_KEYS.join(', ')}`,
         });
@@ -997,6 +1047,8 @@ router.get(
         catalogueRef: 1,
       });
 
+      const packCtx = await loadActivePackReportContext(req.project!._id);
+
       const reports = buildProjectReports(
         req.project!,
         instances,
@@ -1009,6 +1061,9 @@ router.get(
             label: f.label,
             levelTypes: f.levelTypes,
           })),
+          hasActivePack: Boolean(packCtx),
+          packRatesByLineKey: packCtx?.ratesByLineKey,
+          packElementMeta: packCtx?.elementMeta,
         },
         manualItems.map((m) => toManualBoqReportItem(m as any)),
         selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),

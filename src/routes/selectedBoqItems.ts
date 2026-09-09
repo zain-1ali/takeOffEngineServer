@@ -402,6 +402,7 @@ router.patch(
           return;
         }
         item.quantity = qty;
+        item.quantityMode = 'TYPED';
       }
       await item.save();
       res.json({ item: publicSelectedBoqItem(item as any) });

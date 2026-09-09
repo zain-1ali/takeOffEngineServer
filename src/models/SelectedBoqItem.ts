@@ -33,6 +33,13 @@ export interface ISelectedBoqItem extends Document {
   bbsTotalKg?: number;
   /** Extra line typed by the user — not from the catalogue. */
   isManual: boolean;
+  packId?: Types.ObjectId | null;
+  packItemId?: Types.ObjectId | null;
+  lineKey?: string;
+  moduleNo?: number;
+  scope?: 'PROJECT' | 'FLOOR' | '';
+  quantityMode?: 'TYPED' | 'TAKEOFF' | '';
+  reconciliationStatus?: 'ACTIVE' | 'NEEDS_REVIEW' | 'ORPHANED' | '';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +82,25 @@ const selectedBoqItemSchema = new Schema(
     bbsBars: { type: [Schema.Types.Mixed], default: undefined },
     bbsTotalKg: { type: Number, default: undefined },
     isManual: { type: Boolean, default: false },
+    packId: { type: Schema.Types.ObjectId, ref: 'BoqPack', default: null },
+    packItemId: { type: Schema.Types.ObjectId, ref: 'BoqPackItem', default: null },
+    lineKey: { type: String, default: '', trim: true, index: true },
+    moduleNo: { type: Number, default: undefined },
+    scope: {
+      type: String,
+      enum: ['PROJECT', 'FLOOR', ''],
+      default: '',
+    },
+    quantityMode: {
+      type: String,
+      enum: ['TYPED', 'TAKEOFF', ''],
+      default: '',
+    },
+    reconciliationStatus: {
+      type: String,
+      enum: ['ACTIVE', 'NEEDS_REVIEW', 'ORPHANED', ''],
+      default: 'ACTIVE',
+    },
   },
   { timestamps: true },
 );

@@ -23,6 +23,7 @@ import {
 } from './builders';
 import { materialsForBom } from '../materialsMix';
 import { applyDisplayUnitsToReports } from './applyDisplayUnits';
+import type { PackElementMeta } from '../boqPack/packReportContext';
 import {
   CEMENT_BAG_KG,
   FORMWORK_WASTE,
@@ -526,6 +527,9 @@ export type BuildReportsOptions = {
    * Applicable Level filtering. When omitted, catalogue uses project-wide ('all').
    */
   floors?: Array<{ floorId: string; label?: string; levelTypes?: unknown }>;
+  hasActivePack?: boolean;
+  packRatesByLineKey?: Record<string, number>;
+  packElementMeta?: Record<string, PackElementMeta>;
 };
 
 export { buildFloorLevelTypesById } from './builders';
@@ -536,7 +540,9 @@ function dedupeSelectedAcrossFloors(
 ): SelectedBoqReportItem[] {
   const map = new Map<string, SelectedBoqReportItem>();
   for (const s of items) {
-    const key = `${s.elementKey}::${normalizeRef(s.catalogueRef)}`;
+    const key = s.lineKey
+      ? s.lineKey
+      : `${s.elementKey}::${normalizeRef(s.catalogueRef)}`;
     const prev = map.get(key);
     if (!prev) {
       map.set(key, { ...s });
@@ -613,6 +619,9 @@ export function buildProjectReports(
       elementKey: opts.elementKey,
       rates,
       floorLevelTypesByElement,
+      hasActivePack: opts.hasActivePack,
+      packRatesByLineKey: opts.packRatesByLineKey,
+      packElementMeta: opts.packElementMeta,
     },
   );
 

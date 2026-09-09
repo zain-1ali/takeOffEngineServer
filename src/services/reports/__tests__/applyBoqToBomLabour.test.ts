@@ -73,6 +73,45 @@ describe('applyBoqQuantitiesToBomLabour', () => {
     expect(out.cost.bom).toBeGreaterThan(0);
   });
 
+  it('still drives pad BOM from CORE_QTY_BINDINGS when BOQ lines carry pack rates', () => {
+    const bundle = {
+      ...padShell(),
+      boq: [
+        {
+          kind: 'item' as const,
+          ref: '1.07',
+          description: 'Concrete',
+          qty: 10,
+          unit: 'm³',
+          rate: 185.5,
+          selectedBoqId: 'sel1',
+          source: 'CATALOGUE' as const,
+        },
+        {
+          kind: 'item' as const,
+          ref: '1.08',
+          description: 'Formwork',
+          qty: 24,
+          unit: 'm²',
+          rate: 42,
+          selectedBoqId: 'sel2',
+          source: 'CATALOGUE' as const,
+        },
+      ],
+    };
+
+    const [out] = applyBoqQuantitiesToBomLabour([bundle], {
+      materials: DEFAULT_MATERIALS,
+      rates,
+    });
+
+    expect(out.summary.concrete).toBe(10);
+    expect(out.summary.formwork).toBe(24);
+    expect(out.bom.some((l) => l.kind === 'item' && /Cement/.test(l.description))).toBe(
+      true,
+    );
+  });
+
   it('leaves schedule BOM when BOQ qtys are still zero', () => {
     const bundle = {
       ...padShell(),

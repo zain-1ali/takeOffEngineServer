@@ -41,7 +41,8 @@ export function isBoqCatalogueEnabled(): boolean {
 
 /**
  * Core measured lines we can bind with high confidence to existing engine aggregates.
- * Values are catalogue `ref` strings from info.xlsx.
+ * Values are catalogue `ref` strings (Issue Tracker / info.xlsx). Keep these
+ * even when an ACTIVE pack supplies composite rates — qty still comes from engines.
  */
 export const CORE_QTY_BINDINGS: Record<
   string,

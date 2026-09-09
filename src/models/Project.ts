@@ -65,6 +65,10 @@ export interface IProject extends Document {
   date: string;
   /** Gross Floor Area (m²) for Cost Plan Rate/m². Null = omit the column. */
   gfaM2: number | null;
+  /** Programme duration in weeks for Module 0 prelims helpers. */
+  programmeWeeks: number | null;
+  /** Typed contract-value base excl. prelims & OH&P (project currency). */
+  contractValue: number | null;
   /** Cost Plan cascade — percentage points (6 = 6%). */
   designAllowancePercent: number;
   overheadPercent: number;
@@ -176,6 +180,8 @@ const projectSchema = new Schema<IProject>(
     revision: { type: String, default: 'A' },
     date: { type: String, default: () => new Date().toISOString().slice(0, 10) },
     gfaM2: { type: Number, default: null, min: 0 },
+    programmeWeeks: { type: Number, default: null, min: 0 },
+    contractValue: { type: Number, default: null, min: 0 },
     designAllowancePercent: {
       type: Number,
       default: DEFAULT_CASCADE_PERCENTS.designAllowancePercent,

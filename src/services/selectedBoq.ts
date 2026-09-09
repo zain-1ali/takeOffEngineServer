@@ -42,6 +42,10 @@ export type SelectedBoqReportItem = {
   measurementSetId?: string | null;
   takeoffLineCount?: number;
   isManual?: boolean;
+  lineKey?: string;
+  moduleNo?: number;
+  scope?: 'PROJECT' | 'FLOOR' | '';
+  reconciliationStatus?: 'ACTIVE' | 'NEEDS_REVIEW' | 'ORPHANED' | '';
 };
 
 export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqItem {
@@ -94,5 +98,9 @@ export function toSelectedBoqReportItem(doc: ISelectedBoqItem): SelectedBoqRepor
       : null,
     takeoffLineCount: Number(doc.takeoffLineCount) || 0,
     isManual: Boolean(doc.isManual),
+    lineKey: doc.lineKey || undefined,
+    moduleNo: doc.moduleNo ?? undefined,
+    scope: doc.scope || undefined,
+    reconciliationStatus: doc.reconciliationStatus || undefined,
   };
 }

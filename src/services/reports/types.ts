@@ -26,6 +26,8 @@ export type ReportLine = {
   applicableLevels?: string[];
   /** Selected catalogue row id — lets the UI edit qty. */
   selectedBoqId?: string;
+  /** Pack line key (e.g. M01:1.07) when an ACTIVE pack is present. */
+  lineKey?: string;
   /** Engine/schedule qty if this ref is bound; user must apply it. */
   suggestedQty?: number;
   takeoffKind?: '' | 'dim' | 'bbs';
