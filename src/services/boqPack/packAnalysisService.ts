@@ -343,6 +343,11 @@ export async function getPackAnalysis(opts: {
       })),
       computed: analysisComputedTotals(computed),
     },
+    pricing: {
+      currency: pack.pricing?.currency || 'USD',
+      location: pack.pricing?.location || '',
+      taxInclusive: Boolean(pack.pricing?.taxInclusive),
+    },
     applied: rate
       ? {
           compositeRate: appliedRate,
