@@ -14,6 +14,7 @@ import {
   parseCatalogueElementKey,
 } from '../boqPack/elementAliases';
 import { lookupPackCompositeRate } from '../boqPack/packRateLookup';
+import { PROJECT_SCOPE_FLOOR_ID } from '../boqPack/scope';
 import type { PackElementMeta } from '../boqPack/packReportContext';
 
 export function emptyElementBundle(
@@ -132,7 +133,11 @@ export function mergeSelectedBoqIntoByElement(
   const filtered = selected.filter((s) => {
     if (s.reconciliationStatus === 'ORPHANED') return false;
     if (opts?.elementKey && s.elementKey !== opts.elementKey) return false;
-    if (opts?.floorId && s.floorId !== opts.floorId) return false;
+    if (opts?.floorId && s.floorId !== opts.floorId) {
+      const projectWide =
+        s.floorId === PROJECT_SCOPE_FLOOR_ID || s.scope === 'PROJECT';
+      if (!projectWide) return false;
+    }
     return true;
   });
 

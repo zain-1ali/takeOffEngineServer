@@ -1,5 +1,7 @@
 import type { ISelectedBoqItem } from '../models/SelectedBoqItem';
 
+import { PROJECT_SCOPE_FLOOR_ID } from './boqPack/scope';
+
 export type PublicSelectedBoqItem = {
   id: string;
   projectId: string;
@@ -47,6 +49,23 @@ export type SelectedBoqReportItem = {
   scope?: 'PROJECT' | 'FLOOR' | '';
   reconciliationStatus?: 'ACTIVE' | 'NEEDS_REVIEW' | 'ORPHANED' | '';
 };
+
+/** Floor reports also include Module 0 / project-wide pack lines. */
+export function selectedBoqQueryFilter(opts: {
+  projectId: unknown;
+  floorId?: string | null;
+  elementKey?: string | null;
+}): Record<string, unknown> {
+  const filter: Record<string, unknown> = { projectId: opts.projectId };
+  if (opts.floorId) {
+    filter.$or = [
+      { floorId: opts.floorId },
+      { floorId: PROJECT_SCOPE_FLOOR_ID },
+    ];
+  }
+  if (opts.elementKey) filter.elementKey = opts.elementKey;
+  return filter;
+}
 
 export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqItem {
   return {

@@ -5,8 +5,9 @@ import { Instance, type IInstance } from '../models/Instance';
 import { ManualBoqItem } from '../models/ManualBoqItem';
 import selectedBoqItemsRouter from './selectedBoqItems';
 import { SelectedBoqItem } from '../models/SelectedBoqItem';
-import { toSelectedBoqReportItem } from '../services/selectedBoq';
+import { toSelectedBoqReportItem, selectedBoqQueryFilter } from '../services/selectedBoq';
 import { ensureCatalogueSelected } from '../services/boqTakeoff/ensureCatalogueSelected';
+import { syncPdfLinkedTakeoffs } from '../services/boqTakeoff/applyTakeoff';
 import { DEFAULT_FLOORS } from '../defaults/projectDefaults';
 import { loadOwnedProject } from '../middleware/loadOwnedProject';
 import { calculateInstances, SUPPORTED_ELEMENT_KEYS } from '../services/calculate';
@@ -55,10 +56,13 @@ import {
   applyManualBoqRatesForRevision,
   toManualBoqReportItem,
 } from '../services/manualBoq';
+import { findActiveBoqPack } from '../services/boqPack/persistBoqPack';
 import {
   buildConversionLogEntry,
+  convertProjectMaterials,
   convertRateLib,
   createCurrencyQuote,
+  fetchFxRate,
   takeCurrencyQuote,
 } from '../services/currencyConvert';
 import { convertActivePackCurrency } from '../services/boqPack/convertPackCurrency';
@@ -232,17 +236,35 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
 
     const cards = await Promise.all(
       projects.map(async (p) => {
-        const [floors, instances, manualItems] = await Promise.all([
+        const [floors, instances, manualItems, packCtx] = await Promise.all([
           Floor.find({ projectId: p._id }),
           Instance.find({ projectId: p._id }),
           ManualBoqItem.find({ projectId: p._id }),
+          loadActivePackReportContext(p._id),
         ]);
+        await ensureCatalogueSelected({
+          projectId: p._id,
+          floors: floors.map((f) => ({
+            floorId: f.floorId,
+            label: f.label,
+            levelTypes: f.levelTypes,
+          })),
+          floorId: null,
+          elementKey: null,
+        });
+        const selectedDocs = await SelectedBoqItem.find({ projectId: p._id });
 
         const reports = buildProjectReports(
           p,
           instances,
-          { scope: 'project' },
+          {
+            scope: 'project',
+            hasActivePack: Boolean(packCtx),
+            packRatesByLineKey: packCtx?.ratesByLineKey,
+            packElementMeta: packCtx?.elementMeta,
+          },
           manualItems.map((m) => toManualBoqReportItem(m as any)),
+          selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
         );
         const unpricedCount = reports.byElement.filter(
           (be) => be.units > 0 && !(be.cost.boq > 0),
@@ -510,6 +532,14 @@ router.post(
         res.status(400).json({ error: 'quoteId is required (fetch a quote first)' });
         return;
       }
+      const requestedRate = Number(req.body?.rate);
+      if (
+        req.body?.rate != null &&
+        (!Number.isFinite(requestedRate) || requestedRate <= 0)
+      ) {
+        res.status(400).json({ error: 'Conversion rate must be greater than zero' });
+        return;
+      }
       let quote;
       try {
         quote = takeCurrencyQuote(quoteId);
@@ -528,7 +558,33 @@ router.post(
         return;
       }
 
+      if (req.body?.rate != null) {
+        quote = { ...quote, rate: requestedRate };
+      }
+
+      const pack = await findActiveBoqPack(p._id);
+      const packFrom = String(pack?.pricing?.currency || p.currency)
+        .trim()
+        .toUpperCase();
+      let packRate = quote.rate;
+      if (pack && packFrom && packFrom !== quote.fromCurrency) {
+        if (packFrom === quote.toCurrency) {
+          packRate = 1;
+        } else {
+          const packQuote = await fetchFxRate(packFrom, quote.toCurrency);
+          packRate = packQuote.rate;
+        }
+      }
+
+      const packConverted = await convertActivePackCurrency({
+        projectId: p._id,
+        toCurrency: quote.toCurrency,
+        rate: quote.rate,
+        packRate,
+      });
+
       p.rateLib = convertRateLib(p.rateLib as any, quote.rate) as any;
+      p.materials = convertProjectMaterials(p.materials, quote.rate) as any;
       p.currency = quote.toCurrency;
       if (p.contractValue != null && Number.isFinite(p.contractValue)) {
         p.contractValue = round(Number(p.contractValue) * quote.rate, 4);
@@ -537,14 +593,9 @@ router.post(
       if (!p.currencyConversionLog) p.currencyConversionLog = [];
       p.currencyConversionLog.push(logEntry as any);
       p.markModified('rateLib');
+      p.markModified('materials');
       p.markModified('currencyConversionLog');
       await p.save();
-
-      const packConverted = await convertActivePackCurrency({
-        projectId: p._id,
-        toCurrency: quote.toCurrency,
-        rate: quote.rate,
-      });
 
       res.json({
         project: publicProject(p),
@@ -954,6 +1005,24 @@ router.get(
       }
       const manualItems = await ManualBoqItem.find(manualFilter).sort({ createdAt: 1 });
 
+      await ensureCatalogueSelected({
+        projectId: req.project!._id,
+        floors: floors.map((f) => ({
+          floorId: f.floorId,
+          label: f.label,
+          levelTypes: f.levelTypes,
+        })),
+        floorId: scope === 'floor' ? floorId : null,
+        elementKey: null,
+      });
+      const selectedDocs = await SelectedBoqItem.find(
+        selectedBoqQueryFilter({
+          projectId: req.project!._id,
+          floorId: scope === 'floor' ? floorId : null,
+        }),
+      ).sort({ elementKey: 1, catalogueRef: 1 });
+      const packCtx = await loadActivePackReportContext(req.project!._id);
+
       const costPlan = buildCostPlan(
         req.project!,
         instances,
@@ -965,6 +1034,10 @@ router.get(
             label: f.label,
             levelTypes: f.levelTypes,
           })),
+          hasActivePack: Boolean(packCtx),
+          packRatesByLineKey: packCtx?.ratesByLineKey,
+          packElementMeta: packCtx?.elementMeta,
+          selectedBoqItems: selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
         },
         manualItems.map((m) => ({
           ...toManualBoqReportItem(m as any),
@@ -1039,11 +1112,15 @@ router.get(
         ? []
         : await ManualBoqItem.find(manualFilter).sort({ createdAt: 1 });
 
-      const selectedFilter: Record<string, unknown> = {
+      const selectedFilter = selectedBoqQueryFilter({
         projectId: req.project!._id,
-      };
-      if (scope === 'floor') selectedFilter.floorId = floorId;
-      if (elementKey) selectedFilter.elementKey = elementKey;
+        floorId: scope === 'floor' ? floorId : null,
+        elementKey: elementKey || null,
+      });
+      await syncPdfLinkedTakeoffs(
+        req.project!._id,
+        scope === 'floor' ? floorId : null,
+      );
       await ensureCatalogueSelected({
         projectId: req.project!._id,
         floors: floors.map((f) => ({

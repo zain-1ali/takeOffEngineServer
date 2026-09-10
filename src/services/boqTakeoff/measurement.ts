@@ -12,6 +12,9 @@ export type TakeoffLine = {
   dims?: Record<string, DimValue>
   depth?: DimValue
   direct?: { value?: DimValue; prim?: TakeoffPrim }
+  /** Live link to a measurement traced on a PDF sheet. */
+  pdfTakeoffItemId?: string
+  pdfSheetId?: string
 }
 
 export type ShapeDef = {
@@ -408,6 +411,9 @@ export function sanitizeLines(raw: unknown): TakeoffLine[] {
             : '',
         prim,
       },
+      pdfTakeoffItemId:
+        typeof r.pdfTakeoffItemId === 'string' ? r.pdfTakeoffItemId : undefined,
+      pdfSheetId: typeof r.pdfSheetId === 'string' ? r.pdfSheetId : undefined,
     }
   })
 }

@@ -47,6 +47,8 @@ const FRANKFURTER_CODES = new Set([
 
 const OPEN_ER_URL = 'https://open.er-api.com/v6/latest';
 
+export type FxSource = 'frankfurter' | 'open-er-api';
+
 export type CurrencyQuote = {
   quoteId: string;
   fromCurrency: string;
@@ -54,6 +56,7 @@ export type CurrencyQuote = {
   rate: number;
   rateDate: string;
   fetchedAt: string;
+  source: FxSource;
 };
 
 export type CurrencyConversionLogEntry = {
@@ -86,7 +89,7 @@ export async function fetchFrankfurterRate(
   fromCurrency: string,
   toCurrency: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<{ rate: number; rateDate: string }> {
+): Promise<{ rate: number; rateDate: string; source: FxSource }> {
   const from = fromCurrency.toUpperCase();
   const to = toCurrency.toUpperCase();
   sameCurrencyError(from, to);
@@ -127,7 +130,7 @@ export async function fetchFrankfurterRate(
       'Frankfurter response was missing a usable rate. Conversion aborted.',
     );
   }
-  return { rate, rateDate: data.date };
+  return { rate, rateDate: data.date, source: 'frankfurter' };
 }
 
 /** Open Access ExchangeRate-API (includes RWF, KES, UGX, TZS). */
@@ -135,7 +138,7 @@ export async function fetchOpenErRate(
   fromCurrency: string,
   toCurrency: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<{ rate: number; rateDate: string }> {
+): Promise<{ rate: number; rateDate: string; source: FxSource }> {
   const from = fromCurrency.toUpperCase();
   const to = toCurrency.toUpperCase();
   sameCurrencyError(from, to);
@@ -174,14 +177,14 @@ export async function fetchOpenErRate(
   }
   const utc = data.time_last_update_utc || '';
   const rateDate = utc ? new Date(utc).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-  return { rate, rateDate };
+  return { rate, rateDate, source: 'open-er-api' };
 }
 
 export async function fetchFxRate(
   fromCurrency: string,
   toCurrency: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<{ rate: number; rateDate: string }> {
+): Promise<{ rate: number; rateDate: string; source: FxSource }> {
   const from = fromCurrency.toUpperCase();
   const to = toCurrency.toUpperCase();
   sameCurrencyError(from, to);
@@ -202,7 +205,7 @@ export async function createCurrencyQuote(
   toCurrency: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<CurrencyQuote> {
-  const { rate, rateDate } = await fetchFxRate(
+  const { rate, rateDate, source } = await fetchFxRate(
     fromCurrency,
     toCurrency,
     fetchImpl,
@@ -214,6 +217,7 @@ export async function createCurrencyQuote(
     rate,
     rateDate,
     fetchedAt: new Date().toISOString(),
+    source,
     expiresAt: Date.now() + QUOTE_TTL_MS,
   };
   quoteCache.set(quote.quoteId, quote);
@@ -224,6 +228,7 @@ export async function createCurrencyQuote(
     rate: quote.rate,
     rateDate: quote.rateDate,
     fetchedAt: quote.fetchedAt,
+    source: quote.source,
   };
 }
 
@@ -243,6 +248,27 @@ export function takeCurrencyQuote(quoteId: string): CurrencyQuote {
   // Consume — single use within the conversion action.
   quoteCache.delete(quoteId);
   return q;
+}
+
+const MATERIAL_MONEY_KEYS = [
+  'verticalBracingRate',
+  'soffitPropRate',
+  'appliedVerticalBracingRate',
+  'appliedSoffitPropRate',
+];
+
+/** Scale project material money fields (bracing / props) with the same FX quote. */
+export function convertProjectMaterials(materials: unknown, rate: number) {
+  if (!materials || typeof materials !== 'object') return materials;
+  const next: Record<string, unknown> = {
+    ...(materials as Record<string, unknown>),
+  };
+  for (let i = 0; i < MATERIAL_MONEY_KEYS.length; i++) {
+    const key = MATERIAL_MONEY_KEYS[i];
+    const n = Number(next[key]);
+    if (Number.isFinite(n)) next[key] = round(n * rate, 4);
+  }
+  return next;
 }
 
 /** Multiply every stored resource rate by `rate` (one quote, one pass). */

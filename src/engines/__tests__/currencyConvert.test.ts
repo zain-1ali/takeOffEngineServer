@@ -1,6 +1,7 @@
 import {
   buildConversionLogEntry,
   clearCurrencyQuotesForTests,
+  convertProjectMaterials,
   convertRateLib,
   createCurrencyQuote,
   takeCurrencyQuote,
@@ -35,6 +36,7 @@ describe('currencyConvert', () => {
     const quote = await createCurrencyQuote('USD', 'EUR', fetchImpl as any);
     expect(quote.rate).toBe(0.92);
     expect(quote.rateDate).toBe('2026-08-01');
+    expect(quote.source).toBe('frankfurter');
     expect(fetchImpl).toHaveBeenCalledTimes(1);
 
     const converted = convertRateLib(sampleLib, quote.rate);
@@ -73,6 +75,7 @@ describe('currencyConvert', () => {
     expect(quote.toCurrency).toBe('RWF');
     expect(quote.rate).toBe(1450.25);
     expect(quote.rateDate).toBe('2026-09-09');
+    expect(quote.source).toBe('open-er-api');
   });
 
   it('falls back then fails clearly when no FX service is reachable', async () => {
@@ -82,5 +85,23 @@ describe('currencyConvert', () => {
     await expect(
       createCurrencyQuote('USD', 'EUR', fetchImpl as any),
     ).rejects.toThrow(/Could not reach the exchange-rate service/i);
+  });
+
+  it('scales bracing and prop money fields on project materials', () => {
+    const next = convertProjectMaterials(
+      {
+        verticalBracingRate: 5,
+        soffitPropRate: 12,
+        appliedVerticalBracingRate: 5,
+        appliedSoffitPropRate: 12,
+        defaultConcreteGrade: 'C25/30',
+      },
+      1450,
+    ) as Record<string, unknown>;
+    expect(next.verticalBracingRate).toBe(7250);
+    expect(next.soffitPropRate).toBe(17400);
+    expect(next.appliedVerticalBracingRate).toBe(7250);
+    expect(next.appliedSoffitPropRate).toBe(17400);
+    expect(next.defaultConcreteGrade).toBe('C25/30');
   });
 });

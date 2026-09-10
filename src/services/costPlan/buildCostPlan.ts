@@ -17,6 +17,9 @@ import { makeRateAccessors, lineAmount } from '../reports/pricing';
 import { materialsForBom } from '../materialsMix';
 import type { ManualBoqReportItem } from '../manualBoqPricing';
 import type { ElementReportBundle, ReportLine } from '../reports/types';
+import { mergeSelectedBoqIntoByElement } from '../reports/mergeSelectedBoq';
+import type { SelectedBoqReportItem } from '../selectedBoq';
+import type { PackElementMeta } from '../boqPack/packReportContext';
 import {
   computeCostPlanCascade,
   resolveCascadePercents,
@@ -630,6 +633,25 @@ function buildCategorySections(
 
 const MANUAL_SECTION_ID = 'MANUAL';
 
+function dedupeSelectedAcrossFloors(items: SelectedBoqReportItem[]) {
+  const map = new Map();
+  for (const s of items) {
+    const key = s.lineKey
+      ? s.lineKey
+      : `${s.elementKey}::${s.catalogueRef}`;
+    const prev = map.get(key) as SelectedBoqReportItem | undefined;
+    if (!prev) {
+      map.set(key, { ...s });
+    } else {
+      map.set(key, {
+        ...prev,
+        quantity: (Number(prev.quantity) || 0) + (Number(s.quantity) || 0),
+      });
+    }
+  }
+  return [...map.values()] as SelectedBoqReportItem[];
+}
+
 export function buildCostPlan(
   project: IProject,
   instances: IInstance[],
@@ -637,6 +659,10 @@ export function buildCostPlan(
     scope: 'floor' | 'project';
     floorId?: string | null;
     floors?: Array<{ floorId: string; label?: string; levelTypes?: unknown }>;
+    hasActivePack?: boolean;
+    packRatesByLineKey?: Record<string, number>;
+    packElementMeta?: Record<string, PackElementMeta>;
+    selectedBoqItems?: SelectedBoqReportItem[];
   },
   manualItems: ManualBoqCostPlanItem[] = [],
 ): CostPlanPayload {
@@ -662,16 +688,52 @@ export function buildCostPlan(
   let beforeItemCount = 0;
   let beforeAmountSum = 0;
 
-  const elementKeys = [...byElement.keys()].sort(
-    (a, b) => elementSortKey(a) - elementSortKey(b),
+  const rates = makeRateAccessors(
+    project.rateLib as any,
+    DEFAULT_PRICING,
+    project.useRateAnalysis !== false,
   );
 
-  for (const elementKey of elementKeys) {
+  let bundles: ElementReportBundle[] = [];
+  const instanceKeys = [...byElement.keys()].sort(
+    (a, b) => elementSortKey(a) - elementSortKey(b),
+  );
+  for (const elementKey of instanceKeys) {
     const insts = byElement.get(elementKey)!;
-    const meta = ELEMENT_META[elementKey];
-    const label = meta?.label || elementKey;
+    const bundle = buildBundleForInstances(
+      elementKey,
+      insts,
+      project,
+      floorLevelTypesById,
+    );
+    if (bundle) bundles.push(bundle);
+  }
 
-    // Dominant UniFormat for this element set (first resolved; collect all for tag)
+  const selected = opts.selectedBoqItems || [];
+  if (opts.hasActivePack || selected.length) {
+    bundles = mergeSelectedBoqIntoByElement(
+      bundles,
+      opts.scope === 'project' ? dedupeSelectedAcrossFloors(selected) : selected,
+      {
+        floorId: opts.scope === 'floor' ? opts.floorId : null,
+        rates,
+        hasActivePack: opts.hasActivePack,
+        packRatesByLineKey: opts.packRatesByLineKey,
+        packElementMeta: opts.packElementMeta,
+      },
+    );
+  }
+
+  bundles.sort(
+    (a, b) => a.num - b.num || a.elementKey.localeCompare(b.elementKey),
+  );
+
+  for (const bundle of bundles) {
+    const elementKey = bundle.elementKey;
+    const insts = byElement.get(elementKey) || [];
+    const meta = ELEMENT_META[elementKey];
+    const label = meta?.label || bundle.label || elementKey;
+
     const uniformatCodes: string[] = [];
     for (const inst of insts) {
       const resolved = resolveUniformatCode(inst.elementKey, {
@@ -681,19 +743,14 @@ export function buildCostPlan(
       const code = codeBucketKey(resolved.code);
       if (!uniformatCodes.includes(code)) uniformatCodes.push(code);
     }
+    if (!uniformatCodes.length) {
+      const resolved = resolveUniformatCode(elementKey, {});
+      uniformatCodes.push(codeBucketKey(resolved.code));
+    }
     const defaultUf = uniformatCodes[0] || 'Z9990';
 
-    const bundle = buildBundleForInstances(
-      elementKey,
-      insts,
-      project,
-      floorLevelTypesById,
-    );
-    if (!bundle) continue;
-
     const collected = collectFromBundle(elementKey, bundle, project, defaultUf);
-    // Stamp per-instance UniFormat when walls split Interior/Exterior etc.
-    // (bundle is aggregated; keep defaultUf on lines — codes still listed on heading)
+    if (!collected.length) continue;
 
     beforeItemCount += collected.length;
     for (const row of collected) {

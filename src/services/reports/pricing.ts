@@ -63,6 +63,17 @@ const MAT_RATE_LIB_CODES: Record<string, string> = {
   water: 'WAT',
 };
 
+const LABOUR_TRADE_CODES: Record<string, string> = {
+  'concretor/mason': 'MAS',
+  mason: 'MAS',
+  carpenter: 'CARP',
+  'steel fixer': 'SFX',
+  plasterer: 'PLAS',
+  'tiler/screeder': 'TILR',
+  tiler: 'TILR',
+  labourer: 'LAB',
+};
+
 export function makeRateAccessors(rateLib: RateLib, pricing: PricingBook = DEFAULT_PRICING, useRateAnalysis = true) {
   const boqRate = (code: string): number | null => {
     if (useRateAnalysis && rateLib?.analyses?.[code]) {
@@ -84,6 +95,21 @@ export function makeRateAccessors(rateLib: RateLib, pricing: PricingBook = DEFAU
     return r != null && !isNaN(r) ? r : null;
   };
   const labRate = (trade: string): number => {
+    const key = String(trade || '').trim().toLowerCase();
+    const code = LABOUR_TRADE_CODES[key];
+    const labour = rateLib?.labour || [];
+    if (code) {
+      const byCode = labour.find((row) => row.code === code);
+      if (byCode && typeof byCode.rate === 'number' && !isNaN(byCode.rate)) {
+        return byCode.rate;
+      }
+    }
+    const byDesc = labour.find(
+      (row) => String(row.desc || '').trim().toLowerCase() === key,
+    );
+    if (byDesc && typeof byDesc.rate === 'number' && !isNaN(byDesc.rate)) {
+      return byDesc.rate;
+    }
     const r = pricing.labour[trade];
     return r != null && !isNaN(r) ? r : 0;
   };

@@ -288,4 +288,49 @@ describe('mergeSelectedBoqIntoByElement pack rates', () => {
     expect(item?.rate).toBeNull()
     expect(item?.amount).toBeNull()
   })
+
+  it('keeps project-wide pack lines when filtering to a floor', () => {
+    const out = mergeSelectedBoqIntoByElement(
+      [],
+      [
+        sel({
+          id: 'p',
+          floorId: '__PROJECT__',
+          scope: 'PROJECT',
+          elementKey: 'CAT_M00_E001',
+          catalogueRef: '0.01',
+          lineKey: 'M00:0.01',
+          quantity: 1,
+        }),
+        sel({
+          id: 'other',
+          floorId: 'F2',
+          elementKey: 'PAD_FOOTING',
+          catalogueRef: '1.01',
+          lineKey: 'M01:1.01',
+          quantity: 4,
+        }),
+      ],
+      {
+        floorId: 'F1',
+        rates,
+        hasActivePack: true,
+        packRatesByLineKey: { 'M00:0.01': 12, 'M01:1.01': 10 },
+        packElementMeta: {
+          CAT_M00_E001: {
+            label: "Employer's Requirements",
+            moduleNo: 0,
+            sortOrder: 1,
+            bindingKind: 'CATALOGUE',
+            scope: 'PROJECT',
+          },
+        },
+      },
+    )
+    const refs = out.flatMap((be) =>
+      be.boq.filter((l) => l.kind === 'item').map((l) => l.ref),
+    )
+    expect(refs).toContain('0.01')
+    expect(refs).not.toContain('1.01')
+  })
 })
