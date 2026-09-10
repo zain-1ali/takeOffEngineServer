@@ -1,6 +1,7 @@
 /**
- * Explicit Frankfurter-backed currency conversion for project rate banks.
+ * Explicit currency conversion for project rate banks and BOQ packs.
  * Never auto-converts; never uses a stale rate without a fresh quote.
+ * Frankfurter (ECB) first; open.er-api.com for RWF and other non-ECB codes.
  */
 import { randomUUID } from 'crypto';
 import type { RateLib } from '../engines/rateAnalysis';
@@ -8,6 +9,43 @@ import { round } from '../engines/math';
 
 /** Frankfurter v2 single-pair endpoint (not the old v1 `/latest` shape). */
 const FRANKFURTER_RATE_URL = 'https://api.frankfurter.dev/v2/rate';
+
+/** ECB/Frankfurter set — no RWF, KES, UGX, TZS, NGN. */
+const FRANKFURTER_CODES = new Set([
+  'AUD',
+  'BGN',
+  'BRL',
+  'CAD',
+  'CHF',
+  'CNY',
+  'CZK',
+  'DKK',
+  'EUR',
+  'GBP',
+  'HKD',
+  'HUF',
+  'IDR',
+  'ILS',
+  'INR',
+  'ISK',
+  'JPY',
+  'KRW',
+  'MXN',
+  'MYR',
+  'NOK',
+  'NZD',
+  'PHP',
+  'PLN',
+  'RON',
+  'SEK',
+  'SGD',
+  'THB',
+  'TRY',
+  'USD',
+  'ZAR',
+]);
+
+const OPEN_ER_URL = 'https://open.er-api.com/v6/latest';
 
 export type CurrencyQuote = {
   quoteId: string;
@@ -38,6 +76,12 @@ export function clearCurrencyQuotesForTests() {
   quoteCache.clear();
 }
 
+function sameCurrencyError(from: string, to: string) {
+  if (from === to) {
+    throw new Error('Target currency is the same as the project currency');
+  }
+}
+
 export async function fetchFrankfurterRate(
   fromCurrency: string,
   toCurrency: string,
@@ -45,9 +89,7 @@ export async function fetchFrankfurterRate(
 ): Promise<{ rate: number; rateDate: string }> {
   const from = fromCurrency.toUpperCase();
   const to = toCurrency.toUpperCase();
-  if (from === to) {
-    throw new Error('Target currency is the same as the project currency');
-  }
+  sameCurrencyError(from, to);
 
   let res: Response;
   try {
@@ -88,12 +130,79 @@ export async function fetchFrankfurterRate(
   return { rate, rateDate: data.date };
 }
 
+/** Open Access ExchangeRate-API (includes RWF, KES, UGX, TZS). */
+export async function fetchOpenErRate(
+  fromCurrency: string,
+  toCurrency: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ rate: number; rateDate: string }> {
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  sameCurrencyError(from, to);
+
+  let res: Response;
+  try {
+    res = await fetchImpl(`${OPEN_ER_URL}/${encodeURIComponent(from)}`);
+  } catch {
+    throw new Error(
+      'Could not reach the exchange-rate service. Conversion aborted — no rate applied.',
+    );
+  }
+
+  if (!res.ok) {
+    throw new Error(
+      `Exchange-rate service returned ${res.status}. Conversion aborted — no rate applied.`,
+    );
+  }
+
+  const data = (await res.json()) as {
+    result?: string;
+    base_code?: string;
+    time_last_update_utc?: string;
+    rates?: Record<string, number>;
+  };
+  const rate = data.rates?.[to];
+  if (data.result && data.result !== 'success') {
+    throw new Error(
+      'Exchange-rate service did not return a usable rate. Conversion aborted.',
+    );
+  }
+  if (!(typeof rate === 'number' && rate > 0)) {
+    throw new Error(
+      `No published rate for ${from}→${to} (RWF and other African currencies use this source). Conversion aborted.`,
+    );
+  }
+  const utc = data.time_last_update_utc || '';
+  const rateDate = utc ? new Date(utc).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+  return { rate, rateDate };
+}
+
+export async function fetchFxRate(
+  fromCurrency: string,
+  toCurrency: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ rate: number; rateDate: string }> {
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  sameCurrencyError(from, to);
+  const frankfurterPair =
+    FRANKFURTER_CODES.has(from) && FRANKFURTER_CODES.has(to);
+  if (frankfurterPair) {
+    try {
+      return await fetchFrankfurterRate(from, to, fetchImpl);
+    } catch {
+      /* African and missing pairs fall through */
+    }
+  }
+  return fetchOpenErRate(from, to, fetchImpl);
+}
+
 export async function createCurrencyQuote(
   fromCurrency: string,
   toCurrency: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<CurrencyQuote> {
-  const { rate, rateDate } = await fetchFrankfurterRate(
+  const { rate, rateDate } = await fetchFxRate(
     fromCurrency,
     toCurrency,
     fetchImpl,

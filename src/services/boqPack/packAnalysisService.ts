@@ -168,6 +168,7 @@ export async function patchPackResource(opts: {
     unit?: string
     unitRate?: number
     wastePct?: number
+    category?: string
   }
 }) {
   const pack = await requireActivePack(opts.projectId, opts.packId)
@@ -193,6 +194,9 @@ export async function patchPackResource(opts: {
   if (opts.patch.unit != null) resource.unit = opts.patch.unit
   if (opts.patch.unitRate != null) resource.unitRate = Number(opts.patch.unitRate) || 0
   if (opts.patch.wastePct != null) resource.wastePct = Number(opts.patch.wastePct) || 0
+  if (opts.patch.category != null) {
+    resource.category = String(opts.patch.category || '').toUpperCase() || resource.category
+  }
   await resource.save()
 
   const affected = await recomputeAnalysesForResource(pack._id, resource._id)
@@ -231,6 +235,66 @@ async function recomputeAnalysesForResource(
     await an.save()
   }
   return analyses.length
+}
+
+function categoryFromCode(code: string, category?: string): string {
+  const c = String(code || '').toUpperCase()
+  if (c.startsWith('MAT')) return 'MAT'
+  if (c.startsWith('LAB')) return 'LAB'
+  if (c.startsWith('PLT')) return 'PLT'
+  if (c.startsWith('SUB')) return 'SUB'
+  const cat = String(category || '').toUpperCase()
+  if (cat === 'MAT' || cat === 'LAB' || cat === 'PLT' || cat === 'SUB') return cat
+  return 'OTHER'
+}
+
+export async function createPackResource(opts: {
+  projectId: Types.ObjectId
+  packId?: string
+  code: string
+  category?: string
+  description?: string
+  unit?: string
+  unitRate?: number
+  wastePct?: number
+}) {
+  const pack = await requireActivePack(opts.projectId, opts.packId)
+  const code = String(opts.code || '').trim().toUpperCase()
+  if (!code) {
+    throw new PackAnalysisError(400, 'BAD_CODE', 'Resource code is required')
+  }
+  const clash = await BoqPackResource.findOne({ packId: pack._id, code })
+  if (clash) {
+    throw new PackAnalysisError(400, 'DUPLICATE_CODE', 'Resource code already exists')
+  }
+  const last = await BoqPackResource.findOne({ packId: pack._id })
+    .sort({ sortOrder: -1 })
+    .select({ sortOrder: 1 })
+  const resource = await BoqPackResource.create({
+    projectId: opts.projectId,
+    packId: pack._id,
+    code,
+    category: categoryFromCode(code, opts.category),
+    description: String(opts.description || '').trim(),
+    unit: String(opts.unit || '').trim() || 'nr',
+    unitRate: Number(opts.unitRate) || 0,
+    wastePct: Number(opts.wastePct) || 0,
+    sortOrder: (last?.sortOrder || 0) + 1,
+  })
+  return {
+    resource: {
+      id: resource._id.toString(),
+      code: resource.code,
+      category: resource.category,
+      description: resource.description,
+      unit: resource.unit,
+      unitRate: resource.unitRate,
+      wastePct: resource.wastePct,
+      sortOrder: resource.sortOrder,
+      usageCount: 0,
+      staleAnalysisCount: 0,
+    },
+  }
 }
 
 export async function listPackAnalyses(opts: {

@@ -23,6 +23,7 @@ import {
   listPackResources,
   patchPackAnalysis,
   patchPackResource,
+  createPackResource,
   recalculatePackAnalyses,
 } from '../services/boqPack/packAnalysisService';
 
@@ -203,9 +204,33 @@ router.patch(
           unit: body.unit,
           unitRate: body.unitRate,
           wastePct: body.wastePct,
+          category: body.category,
         },
       });
       res.json(data);
+    } catch (err) {
+      if (!handlePackAnalysisError(err, res, next)) next(err);
+    }
+  },
+);
+
+router.post(
+  '/resources',
+  loadOwnedProject,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body || {};
+      const data = await createPackResource({
+        projectId: req.project!._id,
+        packId: body.packId,
+        code: String(body.code || ''),
+        category: body.category,
+        description: body.description,
+        unit: body.unit,
+        unitRate: body.unitRate,
+        wastePct: body.wastePct,
+      });
+      res.status(201).json(data);
     } catch (err) {
       if (!handlePackAnalysisError(err, res, next)) next(err);
     }

@@ -61,6 +61,8 @@ import {
   createCurrencyQuote,
   takeCurrencyQuote,
 } from '../services/currencyConvert';
+import { convertActivePackCurrency } from '../services/boqPack/convertPackCurrency';
+import { round } from '../engines/math';
 import type { RateLib } from '../engines/rateAnalysis';
 
 const router = Router();
@@ -528,6 +530,9 @@ router.post(
 
       p.rateLib = convertRateLib(p.rateLib as any, quote.rate) as any;
       p.currency = quote.toCurrency;
+      if (p.contractValue != null && Number.isFinite(p.contractValue)) {
+        p.contractValue = round(Number(p.contractValue) * quote.rate, 4);
+      }
       const logEntry = buildConversionLogEntry(quote, req.user!.userId);
       if (!p.currencyConversionLog) p.currencyConversionLog = [];
       p.currencyConversionLog.push(logEntry as any);
@@ -535,9 +540,16 @@ router.post(
       p.markModified('currencyConversionLog');
       await p.save();
 
+      const packConverted = await convertActivePackCurrency({
+        projectId: p._id,
+        toCurrency: quote.toCurrency,
+        rate: quote.rate,
+      });
+
       res.json({
         project: publicProject(p),
         conversion: logEntry,
+        pack: packConverted,
       });
     } catch (err) {
       next(err);

@@ -1,7 +1,7 @@
 import type * as XLSX from 'xlsx'
 import { cellText, sheetRange } from './parseCells'
 
-const ISO = /\b(USD|EUR|GBP|KES|UGX|TZS|ZAR|AED|SAR|INR|CNY|JPY|AUD|CAD|CHF|NGN)\b/i
+const ISO = /\b(USD|EUR|GBP|KES|UGX|TZS|RWF|ZAR|AED|SAR|INR|CNY|JPY|AUD|CAD|CHF|NGN)\b/i
 
 export function parsePackPricing(wb: XLSX.WorkBook): {
   currency: string

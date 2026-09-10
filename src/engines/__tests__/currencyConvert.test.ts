@@ -54,12 +54,33 @@ describe('currencyConvert', () => {
     expect(log.rateDate).toBe('2026-08-01');
   });
 
-  it('fails clearly when Frankfurter is unreachable', async () => {
+  it('quotes RWF via the open exchange-rate fallback (not Frankfurter)', async () => {
+    const fetchImpl = jest.fn(async (url: string) => {
+      expect(String(url)).toContain('open.er-api.com');
+      expect(String(url)).toContain('/USD');
+      return {
+        ok: true,
+        json: async () => ({
+          result: 'success',
+          base_code: 'USD',
+          time_last_update_utc: 'Wed, 09 Sep 2026 00:00:01 +0000',
+          rates: { RWF: 1450.25, KES: 129.1 },
+        }),
+      } as Response;
+    });
+
+    const quote = await createCurrencyQuote('USD', 'RWF', fetchImpl as any);
+    expect(quote.toCurrency).toBe('RWF');
+    expect(quote.rate).toBe(1450.25);
+    expect(quote.rateDate).toBe('2026-09-09');
+  });
+
+  it('falls back then fails clearly when no FX service is reachable', async () => {
     const fetchImpl = jest.fn(async () => {
       throw new Error('network down');
     });
     await expect(
       createCurrencyQuote('USD', 'EUR', fetchImpl as any),
-    ).rejects.toThrow(/Could not reach the Frankfurter/i);
+    ).rejects.toThrow(/Could not reach the exchange-rate service/i);
   });
 });
