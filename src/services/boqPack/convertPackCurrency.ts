@@ -6,35 +6,6 @@ import { ManualBoqItem } from '../../models/ManualBoqItem'
 import { findActiveBoqPack } from './persistBoqPack'
 import { round } from '../../engines/math'
 
-const RATE_MONEY_KEYS = [
-  'labour',
-  'material',
-  'plant',
-  'subcontract',
-  'directCost',
-  'compositeRate',
-  'transport',
-  'sundries',
-  'overheadAmt',
-  'profitAmt',
-]
-
-const ANALYSIS_MONEY_KEYS = [
-  'material',
-  'labour',
-  'plant',
-  'subcontract',
-  'baseResourceCost',
-  'wasteAllowance',
-  'directResourceCost',
-  'transport',
-  'sundries',
-  'primeCost',
-  'overhead',
-  'profit',
-  'compositeRate',
-]
-
 function scale(n: number, rate: number): number {
   return round((Number(n) || 0) * rate, 4)
 }
@@ -56,14 +27,14 @@ export async function convertActivePackCurrency(opts: {
   for (let i = 0; i < manuals.length; i++) {
     const m = manuals[i]
     if (m.appliedUnitRate != null) m.appliedUnitRate = scale(m.appliedUnitRate, fx)
-    m.appliedBomUnitLines = (m.appliedBomUnitLines || []).map((ln) => ({
-      ...ln,
-      rate: scale(ln.rate, fx),
-    }))
-    m.appliedLabUnitLines = (m.appliedLabUnitLines || []).map((ln) => ({
-      ...ln,
-      dayRate: scale(ln.dayRate, fx),
-    }))
+    const bom = m.appliedBomUnitLines || []
+    for (let j = 0; j < bom.length; j++) {
+      bom[j].rate = scale(bom[j].rate, fx)
+    }
+    const lab = m.appliedLabUnitLines || []
+    for (let j = 0; j < lab.length; j++) {
+      lab[j].dayRate = scale(lab[j].dayRate, fx)
+    }
     m.markModified('appliedBomUnitLines')
     m.markModified('appliedLabUnitLines')
     await m.save()
@@ -80,10 +51,16 @@ export async function convertActivePackCurrency(opts: {
   const rates = await BoqPackRate.find({ packId: pack._id })
   for (let i = 0; i < rates.length; i++) {
     const row = rates[i]
-    for (let k = 0; k < RATE_MONEY_KEYS.length; k++) {
-      const key = RATE_MONEY_KEYS[k]
-      ;(row as any)[key] = scale((row as any)[key], fx)
-    }
+    row.labour = scale(row.labour, fx)
+    row.material = scale(row.material, fx)
+    row.plant = scale(row.plant, fx)
+    row.subcontract = scale(row.subcontract, fx)
+    row.directCost = scale(row.directCost, fx)
+    row.compositeRate = scale(row.compositeRate, fx)
+    row.transport = scale(row.transport, fx)
+    row.sundries = scale(row.sundries, fx)
+    row.overheadAmt = scale(row.overheadAmt, fx)
+    row.profitAmt = scale(row.profitAmt, fx)
     row.currency = to
     await row.save()
   }
@@ -91,13 +68,23 @@ export async function convertActivePackCurrency(opts: {
   const analyses = await BoqPackAnalysis.find({ packId: pack._id })
   for (let i = 0; i < analyses.length; i++) {
     const an = analyses[i]
-    const computed = an.computed || ({} as any)
-    for (let k = 0; k < ANALYSIS_MONEY_KEYS.length; k++) {
-      const key = ANALYSIS_MONEY_KEYS[k]
-      computed[key] = scale(computed[key], fx)
+    const c = an.computed
+    if (c) {
+      c.material = scale(c.material, fx)
+      c.labour = scale(c.labour, fx)
+      c.plant = scale(c.plant, fx)
+      c.subcontract = scale(c.subcontract, fx)
+      c.baseResourceCost = scale(c.baseResourceCost, fx)
+      c.wasteAllowance = scale(c.wasteAllowance, fx)
+      c.directResourceCost = scale(c.directResourceCost, fx)
+      c.transport = scale(c.transport, fx)
+      c.sundries = scale(c.sundries, fx)
+      c.primeCost = scale(c.primeCost, fx)
+      c.overhead = scale(c.overhead, fx)
+      c.profit = scale(c.profit, fx)
+      c.compositeRate = scale(c.compositeRate, fx)
+      an.markModified('computed')
     }
-    an.computed = computed
-    an.markModified('computed')
     await an.save()
   }
 
