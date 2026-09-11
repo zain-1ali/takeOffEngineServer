@@ -286,6 +286,7 @@ router.patch(
         packId: body.packId,
         revision: Number(body.revision),
         apply: Boolean(body.apply),
+        description: body.description,
         lines: body.lines,
         allowances: body.allowances,
       });

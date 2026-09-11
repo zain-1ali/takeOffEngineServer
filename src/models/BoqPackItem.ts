@@ -10,6 +10,7 @@ export interface IBoqPackItem extends Document {
   elementKey: string;
   elementRef: string;
   description: string;
+  descriptionEdited: boolean;
   unit: string;
   applicableLevelRaw: string;
   formulaText: string;
@@ -39,6 +40,7 @@ const schema = new Schema(
     elementKey: { type: String, required: true, trim: true, index: true },
     elementRef: { type: String, default: '' },
     description: { type: String, required: true, trim: true },
+    descriptionEdited: { type: Boolean, default: false },
     unit: { type: String, required: true, trim: true },
     applicableLevelRaw: { type: String, default: '' },
     formulaText: { type: String, default: '' },

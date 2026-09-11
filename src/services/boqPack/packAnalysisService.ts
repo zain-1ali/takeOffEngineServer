@@ -1,7 +1,9 @@
 import { Types } from 'mongoose'
 import { BoqPackAnalysis } from '../../models/BoqPackAnalysis'
+import { BoqPackItem } from '../../models/BoqPackItem'
 import { BoqPackRate } from '../../models/BoqPackRate'
 import { BoqPackResource } from '../../models/BoqPackResource'
+import { SelectedBoqItem } from '../../models/SelectedBoqItem'
 import {
   analysisComputedTotals,
   analysisStatusFromComputed,
@@ -190,7 +192,10 @@ export async function patchPackResource(opts: {
     }
     resource.code = opts.patch.code
   }
-  if (opts.patch.description != null) resource.description = opts.patch.description
+  if (opts.patch.description != null) {
+    resource.description = String(opts.patch.description).trim()
+    resource.descriptionEdited = true
+  }
   if (opts.patch.unit != null) resource.unit = opts.patch.unit
   if (opts.patch.unitRate != null) resource.unitRate = Number(opts.patch.unitRate) || 0
   if (opts.patch.wastePct != null) resource.wastePct = Number(opts.patch.wastePct) || 0
@@ -432,6 +437,7 @@ export async function patchPackAnalysis(opts: {
   packId?: string
   revision: number
   apply?: boolean
+  description?: string
   lines?: Array<{ sourceCode: string; quantity: number; remarks?: string }>
   allowances?: {
     transportPctMaterials?: number
@@ -448,6 +454,39 @@ export async function patchPackAnalysis(opts: {
   }
   if (analysis.revision !== opts.revision) {
     throw new PackAnalysisError(409, 'STALE_REVISION', 'Analysis was updated elsewhere')
+  }
+  if (opts.description != null) {
+    const description = String(opts.description).trim()
+    if (!description) {
+      throw new PackAnalysisError(400, 'INVALID_DESCRIPTION', 'Description is required')
+    }
+    if (description.length > 1000) {
+      throw new PackAnalysisError(
+        400,
+        'INVALID_DESCRIPTION',
+        'Description must be 1000 characters or fewer',
+      )
+    }
+    analysis.description = description
+    await Promise.all([
+      BoqPackItem.updateMany(
+        { packId: pack._id, lineKey },
+        { $set: { description, descriptionEdited: true } },
+      ),
+      SelectedBoqItem.updateMany(
+        { projectId: opts.projectId, packId: pack._id, lineKey },
+        { $set: { description } },
+      ),
+    ])
+  }
+  const calculationChanged = Boolean(opts.lines || opts.allowances || opts.apply)
+  if (!calculationChanged) {
+    await analysis.save()
+    return getPackAnalysis({
+      projectId: opts.projectId,
+      lineKey,
+      packId: pack._id.toString(),
+    })
   }
   if (opts.lines) {
     const resources = await BoqPackResource.find({ packId: pack._id }).lean()

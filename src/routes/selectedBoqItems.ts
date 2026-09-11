@@ -10,6 +10,8 @@ import {
 import { resolveFloorLevelTypes } from '../lib/levelCompatibility';
 import { Floor } from '../models/Floor';
 import { BlueprintSheet } from '../models/BlueprintSheet';
+import { BoqPackAnalysis } from '../models/BoqPackAnalysis';
+import { BoqPackItem } from '../models/BoqPackItem';
 import { TakeoffItemModel } from '../models/TakeoffItem';
 import { publicSelectedBoqItem } from '../services/selectedBoq';
 import {
@@ -403,6 +405,40 @@ router.patch(
         }
         item.quantity = qty;
         item.quantityMode = 'TYPED';
+      }
+      if (req.body?.description != null) {
+        const description = String(req.body.description).trim();
+        if (!description) {
+          res.status(400).json({ error: 'description is required' });
+          return;
+        }
+        if (description.length > 1000) {
+          res.status(400).json({
+            error: 'description must be 1000 characters or fewer',
+          });
+          return;
+        }
+        item.description = description;
+        if (item.packId && item.lineKey) {
+          await Promise.all([
+            BoqPackItem.updateMany(
+              { packId: item.packId, lineKey: item.lineKey },
+              { $set: { description, descriptionEdited: true } },
+            ),
+            BoqPackAnalysis.updateMany(
+              { packId: item.packId, lineKey: item.lineKey },
+              { $set: { description } },
+            ),
+            SelectedBoqItem.updateMany(
+              {
+                projectId: req.project!._id,
+                packId: item.packId,
+                lineKey: item.lineKey,
+              },
+              { $set: { description } },
+            ),
+          ]);
+        }
       }
       await item.save();
       res.json({ item: publicSelectedBoqItem(item as any) });

@@ -51,6 +51,7 @@ export type TakeoffDetail = {
   ref: string;
   description: string;
   elementKey: string;
+  floorId: string;
   wastePct: number;
   measurementSetId: string | null;
   linked: boolean;
@@ -353,6 +354,7 @@ export async function getTakeoffDetail(
     ref: item.catalogueRef,
     description: item.description,
     elementKey: item.elementKey,
+    floorId: item.floorId,
     wastePct: Number(item.wastePct) || 0,
     measurementSetId: setId ? setId.toString() : null,
     linked: sharedBy.length > 0,

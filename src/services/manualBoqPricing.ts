@@ -40,6 +40,7 @@ export type ManualRateSnapshot = {
 
 /** Plain shape used for report building (avoids Mongoose DocumentArray typing). */
 export type ManualBoqReportItem = {
+  id?: string;
   floorId?: string | null;
   description: string;
   unit: string;
@@ -159,6 +160,7 @@ function manualItem(
   qty: number,
   unit: string,
   rate: number | null,
+  manualBoqId?: string,
 ): ReportLine {
   return {
     kind: 'item',
@@ -169,6 +171,7 @@ function manualItem(
     rate,
     amount: lineAmount(qty, rate),
     source: 'MANUAL',
+    manualBoqId,
   };
 }
 
@@ -203,7 +206,16 @@ export function buildManualReportContribution(
     const amount = lineAmount(qty, rate);
     if (amount != null) pricedTotal += amount;
 
-    boq.push(manualItem(`M.${n}`, it.description, qty, it.unit || 'nr', rate));
+    boq.push(
+      manualItem(
+        `M.${n}`,
+        it.description,
+        qty,
+        it.unit || 'nr',
+        rate,
+        it.id,
+      ),
+    );
 
     (it.appliedBomUnitLines || []).forEach((line) => {
       const lineQty = (line.qtyPerUnit || 0) * qty;

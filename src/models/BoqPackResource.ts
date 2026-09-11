@@ -7,6 +7,7 @@ export interface IBoqPackResource extends Document {
   code: string;
   category: string;
   description: string;
+  descriptionEdited: boolean;
   unit: string;
   unitRate: number;
   wastePct: number;
@@ -30,6 +31,7 @@ const schema = new Schema(
     code: { type: String, required: true, trim: true },
     category: { type: String, default: 'OTHER' },
     description: { type: String, default: '' },
+    descriptionEdited: { type: Boolean, default: false },
     unit: { type: String, default: '' },
     unitRate: { type: Number, default: 0 },
     wastePct: { type: Number, default: 0 },

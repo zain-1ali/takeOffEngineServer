@@ -128,6 +128,32 @@ export async function persistBoqPackFromWorkbook(opts: {
     .sort({ version: -1 })
     .select({ version: 1 })
   const version = (last?.version || 0) + 1
+  const previousActive = await BoqPack.findOne({
+    projectId: opts.projectId,
+    status: 'ACTIVE',
+  })
+  const [editedItems, editedResources] = previousActive
+    ? await Promise.all([
+        BoqPackItem.find({
+          packId: previousActive._id,
+          descriptionEdited: true,
+        })
+          .select({ lineKey: 1, description: 1 })
+          .lean(),
+        BoqPackResource.find({
+          packId: previousActive._id,
+          descriptionEdited: true,
+        })
+          .select({ code: 1, description: 1 })
+          .lean(),
+      ])
+    : [[], []]
+  const editedItemDescription = new Map(
+    editedItems.map((item) => [item.lineKey, item.description]),
+  )
+  const editedResourceDescription = new Map(
+    editedResources.map((resource) => [resource.code, resource.description]),
+  )
 
   const staging = await BoqPack.create({
     projectId: opts.projectId,
@@ -184,7 +210,9 @@ export async function persistBoqPackFromWorkbook(opts: {
       lineKey: it.lineKey,
       elementKey: it.elementKey,
       elementRef: it.elementRef,
-      description: it.description || it.ref,
+      description:
+        editedItemDescription.get(it.lineKey) || it.description || it.ref,
+      descriptionEdited: editedItemDescription.has(it.lineKey),
       unit: it.unit || 'nr',
       applicableLevelRaw: it.applicableLevelRaw,
       formulaText: it.formulaText,
@@ -231,7 +259,9 @@ export async function persistBoqPackFromWorkbook(opts: {
         packId: staging._id,
         code: res.code,
         category: res.category,
-        description: res.description,
+        description:
+          editedResourceDescription.get(res.code) || res.description,
+        descriptionEdited: editedResourceDescription.has(res.code),
         unit: res.unit,
         unitRate: res.unitRate,
         wastePct: res.wastePct,
@@ -272,7 +302,8 @@ export async function persistBoqPackFromWorkbook(opts: {
           lineKey: an.lineKey,
           moduleNo: an.moduleNo,
           ref: an.ref,
-          description: an.description,
+          description:
+            editedItemDescription.get(an.lineKey) || an.description,
           unit: an.unit,
           lines: an.lines.map((ln) => ({
             resourceId: resourceIdByCode.get(ln.sourceCode) || null,
@@ -291,12 +322,6 @@ export async function persistBoqPackFromWorkbook(opts: {
         }
       }),
     )
-
-    const previousActive = await BoqPack.findOne({
-      projectId: opts.projectId,
-      status: 'ACTIVE',
-      _id: { $ne: staging._id },
-    })
 
     const reconcile = await reconcileSelectedBoqForPack({
       projectId: opts.projectId,
