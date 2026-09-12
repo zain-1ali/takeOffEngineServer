@@ -661,6 +661,8 @@ export function buildCostPlan(
     floors?: Array<{ floorId: string; label?: string; levelTypes?: unknown }>;
     hasActivePack?: boolean;
     packRatesByLineKey?: Record<string, number>;
+    packAnalysesByLineKey?: Record<string, unknown>;
+    packResourcesByCode?: Record<string, unknown>;
     packElementMeta?: Record<string, PackElementMeta>;
     selectedBoqItems?: SelectedBoqReportItem[];
   },

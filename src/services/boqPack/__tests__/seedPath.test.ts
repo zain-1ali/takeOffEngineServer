@@ -10,5 +10,17 @@ describe('resolveDefaultBoqPackSeedPath', () => {
     expect(path.basename(found as string).toLowerCase()).toMatch(
       /issue tracker\.xlsx$/,
     )
+    if (process.env.USERPROFILE || process.env.HOME) {
+      const client = path.join(
+        process.env.USERPROFILE || process.env.HOME || '',
+        'Downloads',
+        'PROJECT  ISSUE TRACKER.xlsx',
+      )
+      if (fs.existsSync(client)) {
+        expect(path.normalize(found as string).toLowerCase()).toBe(
+          path.normalize(client).toLowerCase(),
+        )
+      }
+    }
   })
 })

@@ -460,11 +460,11 @@ export async function patchPackAnalysis(opts: {
     if (!description) {
       throw new PackAnalysisError(400, 'INVALID_DESCRIPTION', 'Description is required')
     }
-    if (description.length > 1000) {
+    if (description.length > 4000) {
       throw new PackAnalysisError(
         400,
         'INVALID_DESCRIPTION',
-        'Description must be 1000 characters or fewer',
+        'Description must be 4000 characters or fewer',
       )
     }
     analysis.description = description

@@ -5,7 +5,14 @@ import { EXISTING_ENGINE_KEY_SET } from '../existingEngines'
 import { parseIssueTrackerWorkbook } from '../parseIssueTrackerWorkbook'
 import { resolveDefaultBoqPackSeedPath } from '../seedPath'
 
-const workbookPath = resolveDefaultBoqPackSeedPath()
+const CLIENT_XLSX = path.join(
+  process.env.USERPROFILE || process.env.HOME || '',
+  'Downloads',
+  'PROJECT  ISSUE TRACKER.xlsx',
+)
+const workbookPath = fs.existsSync(CLIENT_XLSX)
+  ? CLIENT_XLSX
+  : resolveDefaultBoqPackSeedPath()
 const describeIf = workbookPath ? describe : describe.skip
 
 describeIf('parseIssueTrackerWorkbook', () => {

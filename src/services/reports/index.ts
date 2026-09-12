@@ -9,6 +9,11 @@ import {
 import type { SelectedBoqReportItem } from '../selectedBoq';
 import { mergeSelectedBoqIntoByElement } from './mergeSelectedBoq';
 import { applyBoqQuantitiesToBomLabour } from './applyBoqToBomLabour';
+import {
+  applyPackAnalysisToBomLabour,
+  type PackAnalysisBreakdown,
+} from './applyPackAnalysisToBomLabour';
+import type { PackAnalysisResource } from '../boqPack/computePackAnalysis';
 import { normalizeRef } from './boqCatalogue';
 import {
   buildManualReportContribution,
@@ -349,7 +354,7 @@ function consolidateLabourFromBundles(
   rates: ReturnType<typeof makeRateAccessors>,
 ): ProjectReportsPayload['labour'] {
   const allActivities: LabourActivity[] = [];
-  const allManDays: Record<string, number> = {};
+  const tradeMap = new Map();
   let ref = 0;
   for (const be of byElement) {
     for (const a of be.labour.activities) {
@@ -362,10 +367,31 @@ function consolidateLabourFromBundles(
       });
     }
     for (const t of be.labour.trades) {
-      allManDays[t.trade] = (allManDays[t.trade] || 0) + t.manDays;
+      const prev = tradeMap.get(t.trade);
+      if (!prev) {
+        tradeMap.set(t.trade, { ...t });
+        continue;
+      }
+      const manDays = (Number(prev.manDays) || 0) + (Number(t.manDays) || 0);
+      const cost = (Number(prev.cost) || 0) + (Number(t.cost) || 0);
+      tradeMap.set(t.trade, {
+        ...prev,
+        manDays,
+        cost,
+        dayRate: manDays > 0 ? cost / manDays : prev.dayRate || t.dayRate,
+      });
     }
   }
-  const trades = tradesFromManDays(allManDays, rates);
+  const trades: TradeSummary[] = [...tradeMap.values()].sort((a, b) =>
+    a.trade.localeCompare(b.trade),
+  );
+  if (!trades.length) {
+    const allManDays: Record<string, number> = {};
+    for (const a of allActivities) {
+      allManDays[a.gang] = (allManDays[a.gang] || 0) + (Number(a.days) || 0);
+    }
+    trades.push(...tradesFromManDays(allManDays, rates, 'CATALOGUE'));
+  }
   const totalManDays = trades.reduce((s, t) => s + t.manDays, 0);
   const totalCost = trades.reduce((s, t) => s + t.cost, 0);
   const byFloor: LabourFloorLoad[] = floorId
@@ -530,6 +556,8 @@ export type BuildReportsOptions = {
   hasActivePack?: boolean;
   packRatesByLineKey?: Record<string, number>;
   packElementMeta?: Record<string, PackElementMeta>;
+  packAnalysesByLineKey?: Record<string, PackAnalysisBreakdown>;
+  packResourcesByCode?: Record<string, PackAnalysisResource>;
 };
 
 export { buildFloorLevelTypesById } from './builders';
@@ -629,6 +657,11 @@ export function buildProjectReports(
     materials,
     rates,
     floorLevelTypesByElement,
+  });
+
+  byElement = applyPackAnalysisToBomLabour(byElement, {
+    analysesByLineKey: opts.packAnalysesByLineKey,
+    resourcesByCode: opts.packResourcesByCode,
   });
 
   const structuralEntries = entries.filter(

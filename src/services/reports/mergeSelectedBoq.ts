@@ -257,7 +257,11 @@ export function mergeSelectedBoqIntoByElement(
         isRebar: resolved?.isRebar,
         dec: resolved?.dec,
         takeoffLinked: Boolean(
-          sel.measurementSetId && (setUsers.get(sel.measurementSetId) || 0) > 1,
+          (Number(sel.takeoffLineCount) || 0) > 0 ||
+            Boolean(sel.measurementSetId) ||
+            Boolean(sel.takeoffKind) ||
+            (sel.measurementSetId &&
+              (setUsers.get(sel.measurementSetId) || 0) > 1),
         ),
         needsReview,
       });

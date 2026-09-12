@@ -412,9 +412,9 @@ router.patch(
           res.status(400).json({ error: 'description is required' });
           return;
         }
-        if (description.length > 1000) {
+        if (description.length > 4000) {
           res.status(400).json({
-            error: 'description must be 1000 characters or fewer',
+            error: 'description must be 4000 characters or fewer',
           });
           return;
         }
