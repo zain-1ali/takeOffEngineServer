@@ -214,6 +214,7 @@ export async function persistBoqPackFromWorkbook(opts: {
         editedItemDescription.get(it.lineKey) || it.description || it.ref,
       descriptionEdited: editedItemDescription.has(it.lineKey),
       unit: it.unit || 'nr',
+      workCategory: it.workCategory || '',
       applicableLevelRaw: it.applicableLevelRaw,
       formulaText: it.formulaText,
       quantityBasis: it.quantityBasis,

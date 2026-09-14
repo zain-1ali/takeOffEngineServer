@@ -74,6 +74,8 @@ export type ElementReportBundle = {
   suffix: string;
   label: string;
   kind: 'structural' | 'masonry' | 'finish' | 'earthworks' | 'mep';
+  /** 3D/schedule engine when this heading is linked (e.g. Roof Slab → SLABS). */
+  engineKey?: string;
   units: number;
   boq: ReportLine[];
   bom: ReportLine[];

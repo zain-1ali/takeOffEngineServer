@@ -42,6 +42,34 @@ describe('resolveUniformatCode', () => {
     );
   });
 
+  it('maps Issue Tracker modules and special headings', () => {
+    expect(
+      resolveUniformatCode('CAT_M00_E001', {
+        moduleNo: 0,
+        headingLabel: 'Preliminaries',
+      }).code,
+    ).toBe('P10');
+    expect(
+      resolveUniformatCode('CAT_M03_E020', { moduleNo: 3 }).code,
+    ).toBe('D20');
+    expect(
+      resolveUniformatCode('CAT_M07_E001', { moduleNo: 7 }).code,
+    ).toBe('D40');
+    expect(
+      resolveUniformatCode('CAT_M09_E001', { moduleNo: 9 }).code,
+    ).toBe('D10');
+    expect(
+      resolveUniformatCode('CAT_M12_E001', { moduleNo: 12 }).code,
+    ).toBe('E10');
+    expect(
+      resolveUniformatCode('CAT_M01_E014', {
+        moduleNo: 1,
+        engineKey: 'SLABS',
+        headingLabel: 'Roof Slab',
+      }).code,
+    ).toBe('B1020');
+  });
+
   it('maps doors/windows and wall finishes by location', () => {
     expect(
       resolveUniformatCode('DOORS_WINDOWS', { location: 'Exterior' }).code,

@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { normalizeLabel, resolveElementBinding } from './elementAliases'
+import { classifyPackWorkCategory } from './classifyPackWorkCategory'
 import { formatLineKey, formatModuleKey, parseModuleSheetName } from './lineKey'
 import { cellNumber, cellText, sheetRange } from './parseCells'
 import { parseRateAnalysisSheet } from './parseRateAnalysis'
@@ -153,6 +154,14 @@ function parseModuleSheet(
       elementRef: elRef,
       description,
       unit,
+      workCategory: classifyPackWorkCategory({
+        moduleNo,
+        ref,
+        description,
+        unit,
+        elementKey: binding.elementKey,
+        headingLabel: currentLabel,
+      }),
       applicableLevelRaw: currentLevel,
       formulaText,
       quantityBasis: inferQuantityBasis(formulaText),

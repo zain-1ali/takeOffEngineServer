@@ -43,7 +43,10 @@ export type CostPlanWorkCategory =
   | 'Plaster'
   | 'Paint'
   | 'Finishes'
+  | 'Waterproofing'
+  | 'Insulation'
   | 'MEP'
+  | 'Prelims'
   | 'Excavation'
   | 'Disposal'
   | 'Other';
@@ -64,27 +67,35 @@ export type CostPlanLine = ReportLine & {
 
 /** Full display order (used when element kind is unknown / Manual). */
 export const WORK_CATEGORY_ORDER: CostPlanWorkCategory[] = [
+  'Excavation',
+  'Disposal',
+  'Blinding',
   'Concrete',
   'Formwork',
   'Reinforcement',
+  'Waterproofing',
+  'Insulation',
   'Masonry',
   'Mortar',
-  'Blinding',
   'Screed',
   'Tiling',
   'Plaster',
   'Paint',
   'Finishes',
   'MEP',
-  'Excavation',
-  'Disposal',
+  'Prelims',
   'Other',
 ];
 
 const STRUCTURAL_CATEGORY_ORDER: CostPlanWorkCategory[] = [
+  'Excavation',
+  'Disposal',
+  'Blinding',
   'Concrete',
   'Formwork',
   'Reinforcement',
+  'Waterproofing',
+  'Insulation',
   'Other',
 ];
 const MASONRY_CATEGORY_ORDER: CostPlanWorkCategory[] = [
@@ -110,8 +121,11 @@ const MEP_CATEGORY_ORDER: CostPlanWorkCategory[] = ['MEP', 'Other'];
 
 export function categoryOrderForElement(
   elementKey?: string | null,
+  engineKey?: string | null,
 ): CostPlanWorkCategory[] {
-  const kind = elementKey ? ELEMENT_META[elementKey]?.kind : undefined;
+  const kind =
+    (engineKey && ELEMENT_META[engineKey]?.kind) ||
+    (elementKey ? ELEMENT_META[elementKey]?.kind : undefined);
   switch (kind) {
     case 'structural':
       return STRUCTURAL_CATEGORY_ORDER;
@@ -166,11 +180,14 @@ export function classifyWorkCategory(
   ) {
     return 'Reinforcement';
   }
-  if (/\bformwork\b|\bfalsework\b|\bsoffit\b/.test(d)) return 'Formwork';
+  if (/\bformwork\b|\bfalsework\b/.test(d)) return 'Formwork';
   if (/\bblinding\b/.test(d)) return 'Blinding';
   if (/\bmortar\b/.test(d)) return 'Mortar';
   if (
-    /\bmasonry\b|\bblock work\b|\bblockwork\b|\bstone\b|\bbrick\b/.test(d)
+    /\bmasonry\b|\bblock work\b|\bblockwork\b|\bbrick\b/.test(d) ||
+    (/\bstone\b/.test(d) &&
+      /\bfoundation|rubble|walling|mason/.test(d) &&
+      !/\bfloor|cladding|cill|sill|worktop|window board/.test(d))
   ) {
     return 'Masonry';
   }
@@ -226,7 +243,7 @@ export function classifyWorkCategory(
   return 'Other';
 }
 
-const KNOWN_COST_PLAN_CATEGORIES = new Set<string>(WORK_CATEGORY_ORDER);
+const KNOWN_COST_PLAN_CATEGORIES: Set<string> = new Set(WORK_CATEGORY_ORDER);
 
 /** Map client catalogue workCategory → cost-plan bucket when unambiguous. */
 function mapCatalogueWorkCategory(
@@ -246,10 +263,15 @@ function mapCatalogueWorkCategory(
     raw === 'Floor Finishes' ||
     raw === 'Wall Finishes' ||
     raw === 'Ceiling Finishes' ||
-    raw === 'Doors & Windows'
+    raw === 'Doors & Windows' ||
+    raw === 'Lintels'
   ) {
     return 'Finishes';
   }
+
+  if (raw === 'Prelims') return 'Prelims';
+  if (raw === 'Waterproofing') return 'Waterproofing';
+  if (raw === 'Insulation') return 'Insulation';
 
   // Excel sometimes tags concrete under Reinforcement — defer to heuristics.
   if (raw === 'Reinforcement' && !line.isRebar) {
@@ -260,7 +282,8 @@ function mapCatalogueWorkCategory(
   if (KNOWN_COST_PLAN_CATEGORIES.has(raw)) {
     return raw as CostPlanWorkCategory;
   }
-  return null;
+  if (/^mep$/i.test(raw)) return 'MEP';
+  return 'Other';
 }
 
 function categoryHeader(category: CostPlanWorkCategory): CostPlanLine {
@@ -530,6 +553,7 @@ function collectFromBundle(
       const row = itemFromReport(line, defaultUniformat, elementKey);
       row.workCategory = classifyWorkCategory({
         ...row,
+        workCategory: line.workCategory,
         elementKey,
         summaryKey:
           bundle.kind === 'mep' ? 'mep' : finishSummaryKey(line),
@@ -732,21 +756,33 @@ export function buildCostPlan(
 
   for (const bundle of bundles) {
     const elementKey = bundle.elementKey;
-    const insts = byElement.get(elementKey) || [];
-    const meta = ELEMENT_META[elementKey];
-    const label = meta?.label || bundle.label || elementKey;
+    const pack = opts.packElementMeta?.[elementKey];
+    const engineKey = (pack?.engineKey || bundle.engineKey || '').trim();
+    const insts =
+      byElement.get(elementKey) ||
+      (engineKey ? byElement.get(engineKey) : undefined) ||
+      [];
+    const meta = ELEMENT_META[elementKey] || (engineKey ? ELEMENT_META[engineKey] : undefined);
+    const label = pack?.label || meta?.label || bundle.label || elementKey;
 
     const uniformatCodes: string[] = [];
     for (const inst of insts) {
       const resolved = resolveUniformatCode(inst.elementKey, {
         location: (inst as IInstance & { location?: string | null }).location,
         floorId: inst.floorId,
+        moduleNo: pack?.moduleNo,
+        engineKey: engineKey || inst.elementKey,
+        headingLabel: pack?.label || label,
       });
       const code = codeBucketKey(resolved.code);
       if (!uniformatCodes.includes(code)) uniformatCodes.push(code);
     }
     if (!uniformatCodes.length) {
-      const resolved = resolveUniformatCode(elementKey, {});
+      const resolved = resolveUniformatCode(elementKey, {
+        moduleNo: pack?.moduleNo,
+        engineKey: engineKey || undefined,
+        headingLabel: pack?.label || label,
+      });
       uniformatCodes.push(codeBucketKey(resolved.code));
     }
     const defaultUf = uniformatCodes[0] || 'Z9990';
@@ -768,7 +804,7 @@ export function buildCostPlan(
     const emitted = emitCategorisedItems(
       prefix,
       collected,
-      categoryOrderForElement(elementKey),
+      categoryOrderForElement(elementKey, engineKey || undefined),
     );
     for (const row of emitted.flat) flat.push(row);
 

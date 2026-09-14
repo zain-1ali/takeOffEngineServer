@@ -1,3 +1,5 @@
+import { isRoofSlabHeading, parseCatalogueElementKey } from '../boqPack/elementAliases';
+
 /**
  * UniFormat II classification for Cost Plan grouping.
  * Location-dependent codes require Instance.location (user-overridable).
@@ -20,6 +22,7 @@ export type UniformatCodeDef = {
 
 /** Standard UniFormat II Level-1 groups used in the Cost Plan. */
 export const UNIFORMAT_GROUPS: { id: string; title: string }[] = [
+  { id: 'P', title: 'Prelims' },
   { id: 'A', title: 'Substructure' },
   { id: 'B', title: 'Shell' },
   { id: 'C', title: 'Interiors' },
@@ -31,6 +34,7 @@ export const UNIFORMAT_GROUPS: { id: string; title: string }[] = [
 ];
 
 export const UNIFORMAT_CODES: Record<string, UniformatCodeDef> = {
+  P10: { code: 'P10', title: 'Preliminaries', group: 'P' },
   A1010: { code: 'A1010', title: 'Standard Foundations', group: 'A' },
   A1020: { code: 'A1020', title: 'Special Foundations', group: 'A' },
   A1030: { code: 'A1030', title: 'Slab on Grade', group: 'A' },
@@ -47,9 +51,12 @@ export const UNIFORMAT_CODES: Record<string, UniformatCodeDef> = {
   C3010: { code: 'C3010', title: 'Wall Finishes', group: 'C' },
   C3020: { code: 'C3020', title: 'Floor Finishes', group: 'C' },
   C3030: { code: 'C3030', title: 'Ceiling Finishes', group: 'C' },
+  D10: { code: 'D10', title: 'Conveying', group: 'D' },
   D20: { code: 'D20', title: 'Plumbing', group: 'D' },
   D30: { code: 'D30', title: 'HVAC', group: 'D' },
+  D40: { code: 'D40', title: 'Fire Protection', group: 'D' },
   D50: { code: 'D50', title: 'Electrical', group: 'D' },
+  E10: { code: 'E10', title: 'Equipment and Furnishings', group: 'E' },
   G20: { code: 'G20', title: 'Site Improvements', group: 'G' },
   Z9990: { code: 'Z9990', title: 'Unclassified', group: 'Z' },
 };
@@ -169,49 +176,104 @@ export function normalizeLocation(
   return match || null;
 }
 
+/** Issue Tracker module → UniFormat when the heading is catalogue-only. */
+const MODULE_UNIFORMAT: Record<number, string> = {
+  0: 'P10',
+  3: 'D20',
+  4: 'D50',
+  5: 'D30',
+  6: 'D50',
+  7: 'D40',
+  8: 'D50',
+  9: 'D10',
+  10: 'G20',
+  11: 'D50',
+  12: 'E10',
+  13: 'D50',
+  15: 'D30',
+  16: 'D20',
+  17: 'C3010',
+};
+
+function codeResult(
+  code: string,
+  location: UniformatLocation | null,
+): { code: string; title: string; group: string; location: UniformatLocation | null } {
+  const def = UNIFORMAT_CODES[code] || UNIFORMAT_CODES.Z9990;
+  return { code: def.code, title: def.title, group: def.group, location };
+}
+
+function resolveLocationDependent(
+  elementKey: string,
+  opts?: { location?: string | null; floorId?: string },
+): { code: string; title: string; group: string; location: UniformatLocation | null } | null {
+  if (!LOCATION_DEPENDENT_ELEMENTS.has(elementKey)) return null;
+  const floorId = opts?.floorId || '';
+  const loc =
+    normalizeLocation(elementKey, opts?.location) ||
+    defaultLocationForElement(elementKey, floorId);
+  let code: string | null = null;
+  if (elementKey === 'WALLS' || elementKey === 'MASONRY') {
+    code = loc ? WALL_LIKE_LOCATION_MAP[loc] || null : null;
+  } else if (elementKey === 'SLABS') {
+    code = loc ? SLAB_LOCATION_MAP[loc] || null : null;
+  } else if (elementKey === 'DOORS_WINDOWS') {
+    code = loc ? DOORS_WINDOWS_LOCATION_MAP[loc] || null : null;
+  } else if (elementKey === 'WALL_FINISH') {
+    code = loc ? WALL_FINISH_LOCATION_MAP[loc] || null : null;
+  }
+  if (!code || !UNIFORMAT_CODES[code]) return null;
+  return codeResult(code, loc);
+}
+
 /**
- * Resolve UniFormat code for an element instance.
- * Uses location when required; falls back to defaultLocation then Unclassified.
+ * Resolve UniFormat code for an element instance or pack heading.
+ * Uses location when required; falls back to module map then Unclassified.
  */
 export function resolveUniformatCode(
   elementKey: string,
   opts?: {
     location?: string | null;
     floorId?: string;
+    moduleNo?: number;
+    engineKey?: string;
+    headingLabel?: string;
   },
 ): { code: string; title: string; group: string; location: UniformatLocation | null } {
-  const fixed = FIXED_ELEMENT_CODES[elementKey];
-  if (fixed) {
-    const def = UNIFORMAT_CODES[fixed];
-    return { code: def.code, title: def.title, group: def.group, location: null };
+  const headingLabel = opts?.headingLabel || '';
+  const engineKey = (opts?.engineKey || '').trim();
+  const moduleNo =
+    opts?.moduleNo != null
+      ? opts.moduleNo
+      : parseCatalogueElementKey(elementKey)?.moduleNo;
+
+  if (isRoofSlabHeading({ elementKey, label: headingLabel })) {
+    return codeResult('B1020', 'Roof');
   }
 
-  if (LOCATION_DEPENDENT_ELEMENTS.has(elementKey)) {
-    const floorId = opts?.floorId || '';
-    const loc =
-      normalizeLocation(elementKey, opts?.location) ||
-      defaultLocationForElement(elementKey, floorId);
+  const locKey = LOCATION_DEPENDENT_ELEMENTS.has(elementKey)
+    ? elementKey
+    : LOCATION_DEPENDENT_ELEMENTS.has(engineKey)
+      ? engineKey
+      : '';
+  if (locKey) {
+    const located = resolveLocationDependent(locKey, opts);
+    if (located) return located;
+  }
 
-    let code: string | null = null;
-    if (elementKey === 'WALLS' || elementKey === 'MASONRY') {
-      code = loc ? WALL_LIKE_LOCATION_MAP[loc] || null : null;
-    } else if (elementKey === 'SLABS') {
-      code = loc ? SLAB_LOCATION_MAP[loc] || null : null;
-    } else if (elementKey === 'DOORS_WINDOWS') {
-      code = loc ? DOORS_WINDOWS_LOCATION_MAP[loc] || null : null;
-    } else if (elementKey === 'WALL_FINISH') {
-      code = loc ? WALL_FINISH_LOCATION_MAP[loc] || null : null;
-    }
+  const fixed = FIXED_ELEMENT_CODES[elementKey] || (engineKey && FIXED_ELEMENT_CODES[engineKey]);
+  if (fixed) {
+    return codeResult(fixed, null);
+  }
 
-    if (code && UNIFORMAT_CODES[code]) {
-      const def = UNIFORMAT_CODES[code];
-      return {
-        code: def.code,
-        title: def.title,
-        group: def.group,
-        location: loc,
-      };
-    }
+  if (moduleNo === 16 && /solar|thermal|heat pump|hvac|chilled/i.test(headingLabel)) {
+    return codeResult('D30', null);
+  }
+  if (moduleNo === 17 && /ceiling/i.test(headingLabel)) {
+    return codeResult('C3030', null);
+  }
+  if (moduleNo != null && MODULE_UNIFORMAT[moduleNo]) {
+    return codeResult(MODULE_UNIFORMAT[moduleNo], null);
   }
 
   const unc = UNIFORMAT_CODES.Z9990;
@@ -219,7 +281,7 @@ export function resolveUniformatCode(
     code: unc.code,
     title: unc.title,
     group: unc.group,
-    location: normalizeLocation(elementKey, opts?.location),
+    location: normalizeLocation(locKey || elementKey, opts?.location),
   };
 }
 

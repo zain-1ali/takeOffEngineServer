@@ -21,14 +21,19 @@ export function emptyElementBundle(
   elementKey: string,
   packMeta?: Record<string, PackElementMeta>,
 ): ElementReportBundle | null {
-  const meta = ELEMENT_META[elementKey];
-  if (meta) {
+  const pack = packMeta?.[elementKey];
+  const engineKey = (pack?.engineKey || '').trim();
+  const engineMeta = engineKey ? ELEMENT_META[engineKey] : undefined;
+  const meta = ELEMENT_META[elementKey] || engineMeta;
+
+  if (meta && !isCatalogueElementKey(elementKey)) {
     return {
       elementKey: meta.key,
       num: meta.num,
       suffix: meta.suffix,
-      label: meta.label,
+      label: pack?.label || meta.label,
       kind: meta.kind,
+      engineKey: engineKey || meta.key,
       units: 0,
       boq: [],
       bom: [],
@@ -38,7 +43,6 @@ export function emptyElementBundle(
     };
   }
 
-  const pack = packMeta?.[elementKey];
   const parsed = parseCatalogueElementKey(elementKey);
   if (!pack && !parsed && !isCatalogueElementKey(elementKey)) return null;
 
@@ -49,7 +53,8 @@ export function emptyElementBundle(
     num: moduleNo * 1000 + sortOrder,
     suffix: '',
     label: pack?.label || `Module ${moduleNo} item`,
-    kind: 'finish',
+    kind: engineMeta?.kind || 'finish',
+    engineKey: engineKey || undefined,
     units: 0,
     boq: [],
     bom: [],
@@ -164,9 +169,22 @@ export function mergeSelectedBoqIntoByElement(
       map.set(elementKey, bundle);
     }
 
+    const pack = opts?.packElementMeta?.[elementKey];
+    const engineKey = (pack?.engineKey || bundle.engineKey || '').trim();
+    if (engineKey && engineKey !== elementKey) {
+      const engineBundle = map.get(engineKey);
+      if (engineBundle?.summary && Object.keys(engineBundle.summary).length) {
+        bundle.summary = { ...engineBundle.summary };
+        bundle.units = bundle.units || engineBundle.units;
+      }
+    }
+    bundle.engineKey = engineKey || bundle.engineKey;
+
     const ctx = qtyContextFromSummary(bundle.summary);
     const floorTypes =
-      opts?.floorLevelTypesByElement?.[elementKey] ?? ('all' as const);
+      (engineKey && opts?.floorLevelTypesByElement?.[engineKey]) ||
+      opts?.floorLevelTypesByElement?.[elementKey] ||
+      ('all' as const);
     const rates = opts?.rates;
 
     const newBoq: ReportLine[] = [];
@@ -219,6 +237,8 @@ export function mergeSelectedBoqIntoByElement(
         catalogueRef: sel.catalogueRef,
         ctx,
         floorLevelTypes: floorTypes,
+        engineKey: engineKey || undefined,
+        headingLabel: pack?.label || bundle.label,
       });
       const suggestedQty =
         resolved && resolved.qty > 0 ? resolved.qty : undefined;
@@ -238,6 +258,8 @@ export function mergeSelectedBoqIntoByElement(
           resolved?.rateKey ||
           rateKeyForBoqLine({
             elementKey,
+            engineKey: engineKey || undefined,
+            headingLabel: pack?.label || bundle.label,
             catalogueRef: sel.catalogueRef,
             workCategory: sel.workCategory,
             unit: sel.unit || resolved?.unit,
@@ -281,7 +303,15 @@ export function mergeSelectedBoqIntoByElement(
     bundle.cost = { ...bundle.cost, boq: boqTot };
   }
 
-  return [...map.values()].sort(
+  const merged = [...map.values()].sort(
     (a, b) => a.num - b.num || a.suffix.localeCompare(b.suffix),
   );
+  // Linked engines (Roof Slab → SLABS) leave both an engine shell and the
+  // heading bundle. Element-tab reports must return the heading, not the
+  // lower-numbered engine row (frontend reads byElement[0]).
+  if (opts?.elementKey) {
+    const heading = merged.find((be) => be.elementKey === opts.elementKey);
+    if (heading) return [heading];
+  }
+  return merged;
 }

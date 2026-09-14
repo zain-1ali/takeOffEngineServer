@@ -12,6 +12,7 @@ export interface IBoqPackItem extends Document {
   description: string;
   descriptionEdited: boolean;
   unit: string;
+  workCategory: string;
   applicableLevelRaw: string;
   formulaText: string;
   quantityBasis: 'independent' | 'derived' | 'conditional';
@@ -42,6 +43,7 @@ const schema = new Schema(
     description: { type: String, required: true, trim: true },
     descriptionEdited: { type: Boolean, default: false },
     unit: { type: String, required: true, trim: true },
+    workCategory: { type: String, default: '', trim: true },
     applicableLevelRaw: { type: String, default: '' },
     formulaText: { type: String, default: '' },
     quantityBasis: {

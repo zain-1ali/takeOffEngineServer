@@ -37,6 +37,7 @@ export type ParsedBoqPackItem = {
   elementRef: string
   description: string
   unit: string
+  workCategory: string
   applicableLevelRaw: string
   formulaText: string
   quantityBasis: QuantityBasis

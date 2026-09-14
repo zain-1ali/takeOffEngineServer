@@ -53,6 +53,7 @@ async function insertMissingSelected(opts: {
       unit: it.unit || 'nr',
       formulaText: it.formulaText || '',
       quantityBasis: it.quantityBasis || 'independent',
+      workCategory: it.workCategory || '',
       applicableLevels: it.applicableLevelRaw ? [it.applicableLevelRaw] : [],
       quantity: 0,
       packId: opts.packId,

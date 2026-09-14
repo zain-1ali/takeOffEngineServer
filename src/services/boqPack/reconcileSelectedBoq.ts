@@ -49,6 +49,7 @@ export async function loadPackItemsForMatch(
     lineKey: it.lineKey,
     elementKey: it.elementKey,
     unit: it.unit || 'nr',
+    workCategory: it.workCategory || '',
     description: it.description,
     formulaText: it.formulaText || '',
     quantityBasis: it.quantityBasis,
@@ -107,6 +108,8 @@ export async function reconcileSelectedBoqForPack(opts: {
       packItemId: match._id,
       lineKey: match.lineKey,
       moduleNo: match.moduleNo,
+      elementKey: match.elementKey,
+      workCategory: match.workCategory || '',
       reconciliationStatus: needsReview ? 'NEEDS_REVIEW' : 'ACTIVE',
     }
     if (!needsReview) {

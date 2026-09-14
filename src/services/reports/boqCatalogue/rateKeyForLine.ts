@@ -28,6 +28,8 @@ function normUnit(u: string): string {
  */
 export function rateKeyForBoqLine(args: {
   elementKey: string
+  engineKey?: string
+  headingLabel?: string
   catalogueRef?: string
   workCategory?: string
   unit?: string
@@ -39,6 +41,11 @@ export function rateKeyForBoqLine(args: {
     args.elementKey,
     args.catalogueRef || '',
     args.floorLevelTypes,
+    {
+      engineKey: args.engineKey,
+      headingElementKey: args.elementKey,
+      headingLabel: args.headingLabel,
+    },
   )
   if (role) {
     if (role === 'formwork' && unit === 'm') return 'formworkLm'

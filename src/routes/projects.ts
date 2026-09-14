@@ -1091,9 +1091,19 @@ router.get(
         return;
       }
 
+      const packCtxEarly = await loadActivePackReportContext(req.project!._id);
+      const instanceKey =
+        (packCtxEarly?.elementMeta?.[elementKey]?.engineKey || '').trim() ||
+        elementKey;
+
       const filter: Record<string, unknown> = { projectId: req.project!._id };
       if (scope === 'floor') filter.floorId = floorId;
-      if (elementKey) filter.elementKey = elementKey;
+      if (elementKey) {
+        filter.elementKey =
+          instanceKey !== elementKey
+            ? { $in: [elementKey, instanceKey] }
+            : elementKey;
+      }
 
       const [instances, floors] = await Promise.all([
         Instance.find(filter).sort({
@@ -1140,7 +1150,7 @@ router.get(
         catalogueRef: 1,
       });
 
-      const packCtx = await loadActivePackReportContext(req.project!._id);
+      const packCtx = packCtxEarly;
 
       const reports = buildProjectReports(
         req.project!,

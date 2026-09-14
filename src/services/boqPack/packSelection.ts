@@ -7,6 +7,7 @@ export type PackItemMatch = {
   lineKey: string
   elementKey: string
   unit: string
+  workCategory?: string
   description: string
   formulaText?: string
   quantityBasis?: string
@@ -90,9 +91,5 @@ export function bindingNeedsReview(
   const prevScope = inferredScope(selected.scope, selected.floorId)
   const unit = String(selected.unit || '').trim()
   const nextUnit = String(packItem.unit || '').trim()
-  return (
-    selected.elementKey !== packItem.elementKey ||
-    prevScope !== packItem.scope ||
-    unit !== nextUnit
-  )
+  return prevScope !== packItem.scope || unit !== nextUnit
 }

@@ -2,6 +2,7 @@ import {
   emptyElementBundle,
   mergeSelectedBoqIntoByElement,
 } from '../mergeSelectedBoq'
+import { rateKeyForBoqLine } from '../boqCatalogue/rateKeyForLine'
 import type { SelectedBoqReportItem } from '../../selectedBoq'
 
 function sel(
@@ -43,6 +44,90 @@ describe('mergeSelectedBoqIntoByElement pack rates', () => {
     matRate: () => 0,
     labRate: () => 0,
   }
+
+  it('resolves Roof Slab fallback rates through its SLABS engine', () => {
+    expect(
+      rateKeyForBoqLine({
+        elementKey: 'CAT_M01_E014',
+        engineKey: 'SLABS',
+        headingLabel: 'Roof Slab',
+        catalogueRef: '14.02',
+        unit: 'm³',
+      }),
+    ).toBe('concrete')
+    expect(
+      rateKeyForBoqLine({
+        elementKey: 'CAT_M01_E014',
+        engineKey: 'SLABS',
+        headingLabel: 'Roof Slab',
+        catalogueRef: '11.03',
+        unit: 'm³',
+      }),
+    ).toBeNull()
+  })
+
+  it('returns the Roof Slab heading bundle, not the linked SLABS engine shell', () => {
+    const out = mergeSelectedBoqIntoByElement(
+      [
+        {
+          elementKey: 'SLABS',
+          num: 10,
+          suffix: '',
+          label: 'Slabs',
+          kind: 'structural',
+          engineKey: 'SLABS',
+          units: 1,
+          boq: [],
+          bom: [],
+          labour: { activities: [], trades: [], totalManDays: 0, totalCost: 0 },
+          summary: { concrete: 4.8, formwork: 28, steel: 208.9 },
+          cost: { boq: 0, bom: 0, labour: 0 },
+        },
+      ],
+      [
+        sel({
+          id: 'r',
+          floorId: 'RF',
+          elementKey: 'CAT_M01_E014',
+          catalogueRef: '14.02',
+          lineKey: 'M01:14.02',
+          moduleNo: 1,
+          description: 'Roof slab concrete',
+          unit: 'm³',
+          quantity: 0,
+          workCategory: 'Concrete',
+        }),
+      ],
+      {
+        floorId: 'RF',
+        elementKey: 'CAT_M01_E014',
+        rates,
+        hasActivePack: true,
+        packRatesByLineKey: { 'M01:14.02': 17.91 },
+        packElementMeta: {
+          CAT_M01_E014: {
+            label: 'Roof Slab',
+            moduleNo: 1,
+            sortOrder: 14,
+            bindingKind: 'ENGINE',
+            engineKey: 'SLABS',
+            scope: 'FLOOR',
+          },
+        },
+        floorLevelTypesByElement: {
+          SLABS: ['Roof'],
+          CAT_M01_E014: ['Roof'],
+        },
+      },
+    )
+    expect(out).toHaveLength(1)
+    expect(out[0].elementKey).toBe('CAT_M01_E014')
+    expect(out[0].label).toBe('Roof Slab')
+    const item = out[0].boq.find((l) => l.kind === 'item')
+    expect(item?.ref).toBe('14.02')
+    expect(item?.suggestedQty).toBe(4.8)
+    expect(item?.rate).toBe(17.91)
+  })
 
   it('prices pack lines from compositeRate, not rateLib', () => {
     const out = mergeSelectedBoqIntoByElement(

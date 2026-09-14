@@ -13,6 +13,7 @@ export type PackElementMeta = {
   moduleNo: number
   sortOrder: number
   bindingKind: 'ENGINE' | 'CATALOGUE'
+  engineKey?: string
   scope: 'PROJECT' | 'FLOOR'
 }
 
@@ -75,6 +76,7 @@ export async function loadActivePackReportContext(
       moduleNo: el.moduleNo,
       sortOrder: el.sortOrder,
       bindingKind: el.bindingKind,
+      engineKey: el.engineKey || '',
       scope: el.scope,
     }
     if (!elementMeta[el.elementKey]) elementMeta[el.elementKey] = meta

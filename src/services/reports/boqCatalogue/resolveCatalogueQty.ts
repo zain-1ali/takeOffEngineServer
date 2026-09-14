@@ -5,6 +5,7 @@
 import { normalizeRef } from './index'
 import { CORE_QTY_BINDINGS } from './types'
 import type { FloorLevelType } from '../../../lib/levelCompatibility'
+import { isRoofSlabHeading } from '../../boqPack/elementAliases'
 
 export type CatalogueQtyRole =
   | 'rebar'
@@ -38,21 +39,40 @@ function preferRoof(
   )
 }
 
+export type BindingRoleOpts = {
+  engineKey?: string
+  headingElementKey?: string
+  headingLabel?: string
+}
+
 /** Which binding role (if any) does this catalogue ref play for the element? */
 export function bindingRoleForRef(
   elementKey: string,
   catalogueRef: string,
   floorLevelTypes?: readonly FloorLevelType[] | 'all',
+  opts?: BindingRoleOpts,
 ): CatalogueQtyRole | null {
-  const bindings = CORE_QTY_BINDINGS[elementKey]
+  const qtyKey = opts?.engineKey || elementKey
+  const bindings = CORE_QTY_BINDINGS[qtyKey]
   if (!bindings) return null
   const want = normalizeRef(catalogueRef)
-  const roof = preferRoof(floorLevelTypes)
+  const headingKey = opts?.headingElementKey || elementKey
+  const roofHeading = isRoofSlabHeading({
+    elementKey: headingKey,
+    label: opts?.headingLabel,
+  })
+  const floorHeading = headingKey === 'SLABS'
 
   const match = (normal?: string, roofAlt?: string) => {
+    if (roofHeading) {
+      return Boolean(roofAlt && normalizeRef(roofAlt) === want)
+    }
+    if (floorHeading) {
+      return Boolean(normal && normalizeRef(normal) === want)
+    }
+    const roof = preferRoof(floorLevelTypes)
     if (roof && roofAlt && normalizeRef(roofAlt) === want) return true
     if (normal && normalizeRef(normal) === want) return true
-    // Also accept the non-preferred variant so selections still fill
     if (roofAlt && normalizeRef(roofAlt) === want) return true
     return false
   }
@@ -92,11 +112,18 @@ export function resolveCatalogueQty(args: {
   catalogueRef: string
   ctx: CatalogueQtyContext
   floorLevelTypes?: readonly FloorLevelType[] | 'all'
+  engineKey?: string
+  headingLabel?: string
 }): ResolvedCatalogueQty | null {
   const role = bindingRoleForRef(
     args.elementKey,
     args.catalogueRef,
     args.floorLevelTypes,
+    {
+      engineKey: args.engineKey,
+      headingElementKey: args.elementKey,
+      headingLabel: args.headingLabel,
+    },
   )
   if (!role) return null
 

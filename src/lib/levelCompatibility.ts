@@ -21,7 +21,7 @@ export function isFloorLevelType(value: unknown): value is FloorLevelType {
 
 export function normalizeLevelTypes(raw: unknown): FloorLevelType[] {
   if (!Array.isArray(raw)) return [];
-  const set = new Set<FloorLevelType>();
+  const set = new Set();
   for (const item of raw) {
     if (isFloorLevelType(item)) set.add(item);
   }

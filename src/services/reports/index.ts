@@ -605,7 +605,12 @@ export function buildProjectReports(
     filtered = filtered.filter((i) => i.floorId === opts.floorId);
   }
   if (opts.elementKey) {
-    filtered = filtered.filter((i) => i.elementKey === opts.elementKey);
+    const packMeta = opts.packElementMeta?.[opts.elementKey];
+    const instanceKey = (packMeta?.engineKey || '').trim() || opts.elementKey;
+    filtered = filtered.filter(
+      (i) =>
+        i.elementKey === instanceKey || i.elementKey === opts.elementKey,
+    );
   }
 
   const floorLevelTypesById = buildFloorLevelTypesById(opts.floors);
@@ -652,6 +657,13 @@ export function buildProjectReports(
       packElementMeta: opts.packElementMeta,
     },
   );
+
+  if (opts.elementKey) {
+    const heading = byElement.find((be) => be.elementKey === opts.elementKey);
+    if (heading) {
+      byElement = [heading];
+    }
+  }
 
   byElement = applyBoqQuantitiesToBomLabour(byElement, {
     materials,

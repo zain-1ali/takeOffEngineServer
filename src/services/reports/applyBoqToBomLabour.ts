@@ -1,54 +1,6 @@
 import type { ProjectMaterials } from '../../models/Project';
 import type { FloorLevelType } from '../../lib/levelCompatibility';
-import { CORE_QTY_BINDINGS } from './boqCatalogue/types';
-
-type CatalogueQtyContext = {
-  concrete?: number;
-  formwork?: number;
-  steel?: number;
-  excavation?: number;
-  disposal?: number;
-  masonry?: number;
-  blinding?: number;
-};
-
-function normRef(ref: string): string {
-  return String(ref || '').trim();
-}
-
-function roleForRef(
-  elementKey: string,
-  catalogueRef: string,
-): keyof CatalogueQtyContext | null {
-  const b = CORE_QTY_BINDINGS[elementKey];
-  if (!b) return null;
-  const want = normRef(catalogueRef);
-  const hit = (a?: string, roof?: string) =>
-    (a && normRef(a) === want) || (roof && normRef(roof) === want);
-  if (hit(b.rebar, b.rebarRoof)) return 'steel';
-  if (hit(b.concrete, b.concreteRoof)) return 'concrete';
-  if (hit(b.formwork, b.formworkRoof)) return 'formwork';
-  if (b.excavation && normRef(b.excavation) === want) return 'excavation';
-  if (b.disposal && normRef(b.disposal) === want) return 'disposal';
-  if (b.masonry && normRef(b.masonry) === want) return 'masonry';
-  if (b.blinding && normRef(b.blinding) === want) return 'blinding';
-  return null;
-}
-
-function qtyContextFromSummary(
-  summary: Record<string, number> | undefined,
-): CatalogueQtyContext {
-  const s = summary || {};
-  return {
-    concrete: s.concrete,
-    formwork: s.formwork,
-    steel: s.steel,
-    excavation: s.excavation,
-    disposal: s.disposal,
-    masonry: s.masonry,
-    blinding: s.blinding,
-  };
-}
+import { bindingRoleForRef } from './boqCatalogue/resolveCatalogueQty';
 import {
   CEMENT_BAG_KG,
   FORMWORK_WASTE,
@@ -65,6 +17,45 @@ import type {
   ReportLine,
   TradeSummary,
 } from './types';
+
+type CatalogueQtyContext = {
+  concrete?: number;
+  formwork?: number;
+  steel?: number;
+  excavation?: number;
+  disposal?: number;
+  masonry?: number;
+  blinding?: number;
+};
+
+function roleForRef(
+  elementKey: string,
+  catalogueRef: string,
+  engineKey?: string,
+  floorLevelTypes?: readonly FloorLevelType[] | 'all',
+): keyof CatalogueQtyContext | null {
+  const role = bindingRoleForRef(elementKey, catalogueRef, floorLevelTypes, {
+    engineKey,
+    headingElementKey: elementKey,
+  });
+  if (role === 'rebar') return 'steel';
+  return role;
+}
+
+function qtyContextFromSummary(
+  summary: Record<string, number> | undefined,
+): CatalogueQtyContext {
+  const s = summary || {};
+  return {
+    concrete: s.concrete,
+    formwork: s.formwork,
+    steel: s.steel,
+    excavation: s.excavation,
+    disposal: s.disposal,
+    masonry: s.masonry,
+    blinding: s.blinding,
+  };
+}
 
 function normUnit(u: unknown): string {
   return String(u ?? '')
@@ -162,6 +153,8 @@ function structuralLabour(
 export function qtyOverridesFromBoq(
   elementKey: string,
   boq: ReportLine[],
+  engineKey?: string,
+  floorLevelTypes?: readonly FloorLevelType[] | 'all',
 ): Partial<CatalogueQtyContext> {
   const out: Partial<CatalogueQtyContext> = {};
   const add = (key: keyof CatalogueQtyContext, n: number) => {
@@ -171,7 +164,12 @@ export function qtyOverridesFromBoq(
     if (line.kind !== 'item' || !line.selectedBoqId) continue;
     const qty = Number(line.qty) || 0;
     if (!(qty > 0) || !line.ref) continue;
-    const role = roleForRef(elementKey, line.ref);
+    const role = roleForRef(
+      elementKey,
+      line.ref,
+      engineKey,
+      floorLevelTypes,
+    );
     if (!role) continue;
     if (role === 'steel') {
       add('steel', normUnit(line.unit) === 't' ? qty * 1000 : qty);
@@ -362,7 +360,12 @@ export function applyBoqQuantitiesToBomLabour(
   },
 ): ElementReportBundle[] {
   return byElement.map((be) => {
-    const override = qtyOverridesFromBoq(be.elementKey, be.boq);
+    const override = qtyOverridesFromBoq(
+      be.elementKey,
+      be.boq,
+      be.engineKey,
+      opts.floorLevelTypesByElement?.[be.engineKey || be.elementKey],
+    );
     if (!hasOverride(override)) return be;
 
     const ctx = mergeMeasured(qtyContextFromSummary(be.summary), override);

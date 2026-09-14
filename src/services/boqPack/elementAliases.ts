@@ -4,7 +4,7 @@ import {
 } from './existingEngines'
 
 export type ElementBinding =
-  | { bindingKind: 'ENGINE'; elementKey: ExistingEngineKey; engineKey: ExistingEngineKey }
+  | { bindingKind: 'ENGINE'; elementKey: string; engineKey: ExistingEngineKey }
   | { bindingKind: 'CATALOGUE'; elementKey: string }
 
 /** Unicode NFKC, lower, &→and, punctuation → space. */
@@ -19,7 +19,7 @@ export function normalizeLabel(raw: string): string {
 }
 
 /**
- * Approved aliases only — no fuzzy match.
+ * Canonical 1:1 aliases — workbook heading owns the engine as elementKey.
  * Ambiguous labels must not be listed twice with different keys.
  */
 const ALIAS_TO_ENGINE: Record<string, ExistingEngineKey> = {
@@ -41,8 +41,6 @@ const ALIAS_TO_ENGINE: Record<string, ExistingEngineKey> = {
   walls: 'WALLS',
   beams: 'BEAMS',
   slabs: 'SLABS',
-  'roof slab': 'SLABS',
-  'roof slabs': 'SLABS',
   stairs: 'STAIRS',
   ramps: 'RAMPS',
   'masonry infill walls': 'MASONRY',
@@ -55,6 +53,7 @@ const ALIAS_TO_ENGINE: Record<string, ExistingEngineKey> = {
   'skirting baseboards': 'SKIRTING',
   skirting: 'SKIRTING',
   'ductwork and air distribution': 'DUCTS',
+  'ductwork systems': 'DUCTS',
   ducts: 'DUCTS',
   'air distribution ducts': 'DUCTS',
   'duct fittings': 'DUCT_FITTINGS',
@@ -63,6 +62,15 @@ const ALIAS_TO_ENGINE: Record<string, ExistingEngineKey> = {
   'cable containment': 'ELECTRICAL',
   'conduits and cable trays': 'ELECTRICAL',
   'cable containment systems': 'ELECTRICAL',
+}
+
+/**
+ * Extra headings that share a 3D engine but keep their own report identity.
+ * elementKey = CAT_Mxx_Eyyy; engineKey = linked engine.
+ */
+const LINKED_ENGINE_ALIASES: Record<string, ExistingEngineKey> = {
+  'roof slab': 'SLABS',
+  'roof slabs': 'SLABS',
 }
 
 export function catalogueElementKey(moduleNo: number, elementRef: string): string {
@@ -83,12 +91,33 @@ export function isCatalogueElementKey(key: string): boolean {
   return parseCatalogueElementKey(key) != null
 }
 
+export function isRoofSlabHeading(args: {
+  elementKey: string
+  label?: string
+}): boolean {
+  const label = normalizeLabel(args.label || '')
+  if (label === 'roof slab' || label === 'roof slabs') return true
+  const parsed = parseCatalogueElementKey(args.elementKey)
+  return Boolean(parsed && parsed.moduleNo === 1 && parsed.elementNo === 14)
+}
+
 export function resolveElementBinding(args: {
   label: string
   moduleNo: number
   elementRef: string
 }): ElementBinding {
   const norm = normalizeLabel(args.label)
+  const linked = LINKED_ENGINE_ALIASES[norm]
+  if (linked) {
+    if (!EXISTING_ENGINE_KEY_SET.has(linked)) {
+      throw new Error(`Alias maps to unknown engine ${linked}`)
+    }
+    return {
+      bindingKind: 'ENGINE',
+      elementKey: catalogueElementKey(args.moduleNo, args.elementRef),
+      engineKey: linked,
+    }
+  }
   const engine = ALIAS_TO_ENGINE[norm]
   if (engine) {
     if (!EXISTING_ENGINE_KEY_SET.has(engine)) {

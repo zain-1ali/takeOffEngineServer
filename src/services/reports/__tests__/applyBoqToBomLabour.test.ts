@@ -1,5 +1,8 @@
 import { DEFAULT_MATERIALS, DEFAULT_RATE_LIB } from '../../../defaults/projectDefaults';
-import { applyBoqQuantitiesToBomLabour } from '../applyBoqToBomLabour';
+import {
+  applyBoqQuantitiesToBomLabour,
+  qtyOverridesFromBoq,
+} from '../applyBoqToBomLabour';
 import { makeRateAccessors } from '../pricing';
 import type { ElementReportBundle } from '../types';
 
@@ -22,6 +25,32 @@ function padShell(): ElementReportBundle {
 }
 
 describe('applyBoqQuantitiesToBomLabour', () => {
+  it('binds roof refs only on the Roof Slab heading', () => {
+    const roofLine = [
+      {
+        kind: 'item' as const,
+        ref: '14.02',
+        description: 'Roof concrete',
+        qty: 7,
+        unit: 'm³',
+        selectedBoqId: 'roof-concrete',
+      },
+    ];
+
+    expect(
+      qtyOverridesFromBoq(
+        'CAT_M01_E014',
+        roofLine,
+        'SLABS',
+        ['Roof'],
+      ).concrete,
+    ).toBe(7);
+    expect(
+      qtyOverridesFromBoq('SLABS', roofLine, 'SLABS', ['Above-Grade'])
+        .concrete,
+    ).toBeUndefined();
+  });
+
   it('rebuilds pad footing BOM and labour from takeoff qty', () => {
     const bundle = {
       ...padShell(),

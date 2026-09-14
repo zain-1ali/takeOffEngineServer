@@ -106,7 +106,7 @@ describe('packSelection', () => {
         },
         pad,
       ),
-    ).toBe(true)
+    ).toBe(false)
     expect(
       bindingNeedsReview(
         {
