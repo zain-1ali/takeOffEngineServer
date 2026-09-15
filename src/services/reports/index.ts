@@ -578,6 +578,14 @@ function dedupeSelectedAcrossFloors(
       map.set(key, {
         ...prev,
         quantity: (Number(prev.quantity) || 0) + (Number(s.quantity) || 0),
+        inputQuantity:
+          prev.inputQuantity != null || s.inputQuantity != null
+            ? (Number(prev.inputQuantity) || 0) + (Number(s.inputQuantity) || 0)
+            : undefined,
+        inputQtySource:
+          prev.inputQtySource === 'derived' || s.inputQtySource === 'derived'
+            ? 'derived'
+            : prev.inputQtySource || s.inputQtySource,
       });
     }
   }

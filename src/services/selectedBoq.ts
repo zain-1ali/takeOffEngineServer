@@ -22,6 +22,8 @@ export type PublicSelectedBoqItem = {
   takeoffLineCount: number;
   isManual: boolean;
   quantityMode: 'TYPED' | 'TAKEOFF' | '';
+  lineKey?: string;
+  scope?: 'PROJECT' | 'FLOOR' | '';
   createdAt: string;
   updatedAt: string;
 };
@@ -50,6 +52,8 @@ export type SelectedBoqReportItem = {
   moduleNo?: number;
   scope?: 'PROJECT' | 'FLOOR' | '';
   reconciliationStatus?: 'ACTIVE' | 'NEEDS_REVIEW' | 'ORPHANED' | '';
+  inputQuantity?: number;
+  inputQtySource?: 'input' | 'derived';
 };
 
 /** Floor reports also include Module 0 / project-wide pack lines. */
@@ -92,6 +96,8 @@ export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqI
     takeoffLineCount: Number(doc.takeoffLineCount) || 0,
     isManual: Boolean(doc.isManual),
     quantityMode: doc.quantityMode || '',
+    lineKey: doc.lineKey || '',
+    scope: doc.scope || '',
     createdAt: doc.createdAt?.toISOString?.() || '',
     updatedAt: doc.updatedAt?.toISOString?.() || '',
   };

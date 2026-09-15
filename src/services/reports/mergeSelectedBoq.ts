@@ -249,6 +249,8 @@ export function mergeSelectedBoqIntoByElement(
       const billed = billedQty({
         quantityMode: sel.quantityMode,
         storedQty: Number(sel.quantity) || 0,
+        inputQty: sel.inputQuantity,
+        inputQtySource: sel.inputQtySource,
         engineQty,
       });
       const packRate = lookupPackCompositeRate({

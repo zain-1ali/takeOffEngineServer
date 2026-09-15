@@ -4,8 +4,11 @@ import { Floor, type IFloor } from '../models/Floor';
 import { Instance, type IInstance } from '../models/Instance';
 import { ManualBoqItem } from '../models/ManualBoqItem';
 import selectedBoqItemsRouter from './selectedBoqItems';
+import takeoffInputsRouter from './takeoffInputs';
 import { SelectedBoqItem } from '../models/SelectedBoqItem';
+import { TakeoffInputSet } from '../models/TakeoffInputSet';
 import { toSelectedBoqReportItem, selectedBoqQueryFilter } from '../services/selectedBoq';
+import { attachInputQuantities } from '../services/takeoffInputs';
 import { ensureCatalogueSelected } from '../services/boqTakeoff/ensureCatalogueSelected';
 import { syncPdfLinkedTakeoffs } from '../services/boqTakeoff/applyTakeoff';
 import { DEFAULT_FLOORS } from '../defaults/projectDefaults';
@@ -75,6 +78,7 @@ router.use('/:projectId/rate-lib/import-pdf', ratePdfImportRouter);
 router.use('/:projectId/boq-pack', boqPackRouter);
 router.use('/:projectId/manual-boq', manualBoqItemsRouter);
 router.use('/:projectId/selected-boq', selectedBoqItemsRouter);
+router.use('/:projectId/takeoff-inputs', takeoffInputsRouter);
 router.use('/:projectId/ifc-import', ifcImportRouter);
 router.use('/:projectId/sheets', loadOwnedProject, sheetsRouter);
 router.use('/:projectId/layers', loadOwnedProject, layersRouter);
@@ -1023,7 +1027,17 @@ router.get(
           floorId: scope === 'floor' ? floorId : null,
         }),
       ).sort({ elementKey: 1, catalogueRef: 1 });
+      const inputSets = await TakeoffInputSet.find({
+        projectId: req.project!._id,
+        ...(scope === 'floor'
+          ? { floorId: { $in: [floorId, '__PROJECT__'] } }
+          : {}),
+      });
       const packCtx = await loadActivePackReportContext(req.project!._id);
+      const selectedWithInputs = attachInputQuantities(
+        selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
+        inputSets,
+      );
 
       const costPlan = buildCostPlan(
         req.project!,
@@ -1041,7 +1055,7 @@ router.get(
           packAnalysesByLineKey: packCtx?.analysesByLineKey,
           packResourcesByCode: packCtx?.resourcesByCode,
           packElementMeta: packCtx?.elementMeta,
-          selectedBoqItems: selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
+          selectedBoqItems: selectedWithInputs,
         },
         manualItems.map((m) => ({
           ...toManualBoqReportItem(m as any),
@@ -1149,6 +1163,13 @@ router.get(
         elementKey: 1,
         catalogueRef: 1,
       });
+      const inputSets = await TakeoffInputSet.find({
+        projectId: req.project!._id,
+        ...(scope === 'floor'
+          ? { floorId: { $in: [floorId, '__PROJECT__'] } }
+          : {}),
+        ...(elementKey ? { elementKey } : {}),
+      });
 
       const packCtx = packCtxEarly;
 
@@ -1171,7 +1192,10 @@ router.get(
           packElementMeta: packCtx?.elementMeta,
         },
         manualItems.map((m) => toManualBoqReportItem(m as any)),
-        selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
+        attachInputQuantities(
+          selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
+          inputSets,
+        ),
       );
 
       res.json(reports);

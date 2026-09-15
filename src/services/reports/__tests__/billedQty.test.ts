@@ -13,6 +13,44 @@ describe('billedQty', () => {
     ).toEqual({ qty: 2.2, source: 'takeoff' })
   })
 
+  it('keeps typed and measured overrides ahead of Take off Inputs', () => {
+    expect(
+      billedQty({
+        quantityMode: 'TYPED',
+        storedQty: 2,
+        inputQty: 8,
+        engineQty: 5,
+      }),
+    ).toEqual({ qty: 2, source: 'typed' })
+    expect(
+      billedQty({
+        quantityMode: 'TAKEOFF',
+        storedQty: 3,
+        inputQty: 8,
+        engineQty: 5,
+      }),
+    ).toEqual({ qty: 3, source: 'takeoff' })
+  })
+
+  it('uses saved input or derived quantities ahead of engine bindings', () => {
+    expect(
+      billedQty({
+        storedQty: 0,
+        inputQty: 8,
+        inputQtySource: 'input',
+        engineQty: 5,
+      }),
+    ).toEqual({ qty: 8, source: 'input' })
+    expect(
+      billedQty({
+        storedQty: 0,
+        inputQty: 6,
+        inputQtySource: 'derived',
+        engineQty: 5,
+      }),
+    ).toEqual({ qty: 6, source: 'derived' })
+  })
+
   it('uses engine qty when unbound mode and a binding exists', () => {
     expect(
       billedQty({ quantityMode: '', storedQty: 0, engineQty: 4.8 }),

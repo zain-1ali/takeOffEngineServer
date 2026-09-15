@@ -32,7 +32,13 @@ export type ReportLine = {
   /** Engine qty when this ref is a CORE binding (including 0). */
   suggestedQty?: number;
   quantityMode?: 'TYPED' | 'TAKEOFF' | '';
-  qtySource?: 'typed' | 'takeoff' | 'engine' | 'stored';
+  qtySource?:
+    | 'typed'
+    | 'takeoff'
+    | 'input'
+    | 'derived'
+    | 'engine'
+    | 'stored';
   takeoffKind?: '' | 'dim' | 'bbs';
   measurementSetId?: string | null;
   takeoffLineCount?: number;

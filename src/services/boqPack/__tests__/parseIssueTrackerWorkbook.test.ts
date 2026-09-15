@@ -17,6 +17,7 @@ import {
 } from '../packSelection'
 import { parseIssueTrackerWorkbook } from '../parseIssueTrackerWorkbook'
 import { resolveDefaultBoqPackSeedPath } from '../seedPath'
+import { recipeForLine } from '../../takeoffInputs'
 
 const CLIENT_XLSX = path.join(
   process.env.USERPROFILE || process.env.HOME || '',
@@ -33,6 +34,14 @@ describeIf('parseIssueTrackerWorkbook', () => {
     fs.readFileSync(workbookPath as string),
     path.basename(workbookPath as string),
   )
+
+  it('gives every active pack line a Take off Input quantity path', () => {
+    const unresolved = pack.items.filter((item) => {
+      const recipe = recipeForLine(item)
+      return !recipe.method || recipe.fields.length === 0
+    })
+    expect(unresolved).toEqual([])
+  })
 
   it('parses required modules without Module 14', () => {
     expect(pack.errors).toEqual([])
