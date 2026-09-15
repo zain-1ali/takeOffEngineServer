@@ -397,7 +397,11 @@ router.patch(
         res.status(404).json({ error: 'Selected BOQ item not found' });
         return;
       }
-      if (req.body?.quantity != null && req.body.quantity !== '') {
+      const followInputs =
+        req.body?.followInputs === true || req.body?.quantityMode === '';
+      if (followInputs) {
+        item.quantityMode = '';
+      } else if (req.body?.quantity != null && req.body.quantity !== '') {
         const qty = Number(req.body.quantity);
         if (!Number.isFinite(qty) || qty < 0) {
           res.status(400).json({ error: 'quantity must be a number ≥ 0' });

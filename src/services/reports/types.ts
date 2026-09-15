@@ -29,8 +29,10 @@ export type ReportLine = {
   manualBoqId?: string;
   /** Pack line key (e.g. M01:1.07) when an ACTIVE pack is present. */
   lineKey?: string;
-  /** Engine/schedule qty if this ref is bound; user must apply it. */
+  /** Engine qty when this ref is a CORE binding (including 0). */
   suggestedQty?: number;
+  quantityMode?: 'TYPED' | 'TAKEOFF' | '';
+  qtySource?: 'typed' | 'takeoff' | 'engine' | 'stored';
   takeoffKind?: '' | 'dim' | 'bbs';
   measurementSetId?: string | null;
   takeoffLineCount?: number;

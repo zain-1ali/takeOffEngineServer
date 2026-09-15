@@ -21,6 +21,7 @@ export type PublicSelectedBoqItem = {
   measurementSetId: string | null;
   takeoffLineCount: number;
   isManual: boolean;
+  quantityMode: 'TYPED' | 'TAKEOFF' | '';
   createdAt: string;
   updatedAt: string;
 };
@@ -44,6 +45,7 @@ export type SelectedBoqReportItem = {
   measurementSetId?: string | null;
   takeoffLineCount?: number;
   isManual?: boolean;
+  quantityMode?: 'TYPED' | 'TAKEOFF' | '';
   lineKey?: string;
   moduleNo?: number;
   scope?: 'PROJECT' | 'FLOOR' | '';
@@ -89,6 +91,7 @@ export function publicSelectedBoqItem(doc: ISelectedBoqItem): PublicSelectedBoqI
       : null,
     takeoffLineCount: Number(doc.takeoffLineCount) || 0,
     isManual: Boolean(doc.isManual),
+    quantityMode: doc.quantityMode || '',
     createdAt: doc.createdAt?.toISOString?.() || '',
     updatedAt: doc.updatedAt?.toISOString?.() || '',
   };
@@ -117,6 +120,7 @@ export function toSelectedBoqReportItem(doc: ISelectedBoqItem): SelectedBoqRepor
       : null,
     takeoffLineCount: Number(doc.takeoffLineCount) || 0,
     isManual: Boolean(doc.isManual),
+    quantityMode: doc.quantityMode || '',
     lineKey: doc.lineKey || undefined,
     moduleNo: doc.moduleNo ?? undefined,
     scope: doc.scope || undefined,

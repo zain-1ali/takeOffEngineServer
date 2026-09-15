@@ -125,7 +125,9 @@ describe('mergeSelectedBoqIntoByElement pack rates', () => {
     expect(out[0].label).toBe('Roof Slab')
     const item = out[0].boq.find((l) => l.kind === 'item')
     expect(item?.ref).toBe('14.02')
+    expect(item?.qty).toBe(4.8)
     expect(item?.suggestedQty).toBe(4.8)
+    expect(item?.qtySource).toBe('engine')
     expect(item?.rate).toBe(17.91)
   })
 
@@ -284,17 +286,119 @@ describe('mergeSelectedBoqIntoByElement pack rates', () => {
     expect(items.some((l) => l.ref === 'A')).toBe(false)
 
     const concrete = items.find((l) => l.ref === '1.07')
+    expect(concrete?.qty).toBe(4.2)
     expect(concrete?.suggestedQty).toBe(4.2)
+    expect(concrete?.qtySource).toBe('engine')
     expect(concrete?.rate).toBe(185.5)
     expect(concrete?.amount).toBeCloseTo(4.2 * 185.5)
 
     const formwork = items.find((l) => l.ref === '1.08')
     expect(formwork?.suggestedQty).toBe(18.5)
+    expect(formwork?.qtySource).toBe('engine')
     expect(formwork?.rate).toBe(42)
 
     const rebar = items.find((l) => l.ref === '1.06')
     expect(rebar?.suggestedQty).toBe(0.21)
+    expect(rebar?.qtySource).toBe('engine')
     expect(rebar?.rate).toBe(1200)
+  })
+
+  it('keeps TYPED qty instead of the live engine qty', () => {
+    const out = mergeSelectedBoqIntoByElement(
+      [
+        {
+          elementKey: 'PAD_FOOTING',
+          num: 1,
+          suffix: '',
+          label: 'Pad Foundation',
+          kind: 'structural',
+          units: 1,
+          boq: [],
+          bom: [],
+          labour: { activities: [], trades: [], totalManDays: 0, totalCost: 0 },
+          summary: { concrete: 4.8 },
+          cost: { boq: 0, bom: 0, labour: 0 },
+        },
+      ],
+      [
+        sel({
+          id: 'c',
+          elementKey: 'PAD_FOOTING',
+          catalogueRef: '1.07',
+          quantity: 1,
+          quantityMode: 'TYPED',
+        }),
+      ],
+    )
+    const item = out[0].boq.find((l) => l.kind === 'item')
+    expect(item?.qty).toBe(1)
+    expect(item?.suggestedQty).toBe(4.8)
+    expect(item?.qtySource).toBe('typed')
+  })
+
+  it('keeps TAKEOFF qty instead of the live engine qty', () => {
+    const out = mergeSelectedBoqIntoByElement(
+      [
+        {
+          elementKey: 'PAD_FOOTING',
+          num: 1,
+          suffix: '',
+          label: 'Pad Foundation',
+          kind: 'structural',
+          units: 1,
+          boq: [],
+          bom: [],
+          labour: { activities: [], trades: [], totalManDays: 0, totalCost: 0 },
+          summary: { concrete: 4.8 },
+          cost: { boq: 0, bom: 0, labour: 0 },
+        },
+      ],
+      [
+        sel({
+          id: 'c',
+          elementKey: 'PAD_FOOTING',
+          catalogueRef: '1.07',
+          quantity: 2.2,
+          quantityMode: 'TAKEOFF',
+          takeoffKind: 'dim',
+        }),
+      ],
+    )
+    const item = out[0].boq.find((l) => l.kind === 'item')
+    expect(item?.qty).toBe(2.2)
+    expect(item?.qtySource).toBe('takeoff')
+  })
+
+  it('leaves unbound catalogue qty at the stored number', () => {
+    const out = mergeSelectedBoqIntoByElement(
+      [
+        {
+          elementKey: 'PAD_FOOTING',
+          num: 1,
+          suffix: '',
+          label: 'Pad Foundation',
+          kind: 'structural',
+          units: 1,
+          boq: [],
+          bom: [],
+          labour: { activities: [], trades: [], totalManDays: 0, totalCost: 0 },
+          summary: { concrete: 4.8 },
+          cost: { boq: 0, bom: 0, labour: 0 },
+        },
+      ],
+      [
+        sel({
+          id: 'w',
+          elementKey: 'PAD_FOOTING',
+          catalogueRef: '1.09',
+          quantity: 0,
+        }),
+      ],
+    )
+    const item = out[0].boq.find((l) => l.kind === 'item')
+    expect(item?.qty).toBe(0)
+    expect(item?.suggestedQty).toBeUndefined()
+    expect(item?.qtySource).toBe('stored')
   })
 
   it('does not use rateLib heuristics for M2 finishes when the pack is active', () => {

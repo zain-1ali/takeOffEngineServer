@@ -61,7 +61,7 @@ async function insertMissingSelected(opts: {
       lineKey: it.lineKey,
       moduleNo: it.moduleNo,
       scope: opts.scope,
-      quantityMode: 'TYPED',
+      quantityMode: '',
       reconciliationStatus: 'ACTIVE',
     });
   }
@@ -128,6 +128,25 @@ async function ensureFromActivePack(opts: {
   return created;
 }
 
+/** Clear pack-seeded TYPED qty-0 rows so bound lines can follow engine qty. */
+async function clearSeededTypedZeroQty(
+  projectId: Types.ObjectId,
+): Promise<void> {
+  await SelectedBoqItem.updateMany(
+    {
+      projectId,
+      quantityMode: 'TYPED',
+      quantity: 0,
+      $or: [
+        { takeoffKind: '' },
+        { takeoffKind: { $exists: false } },
+        { takeoffKind: null },
+      ],
+    },
+    { $set: { quantityMode: '' } },
+  );
+}
+
 /**
  * Insert any missing catalogue rows as selected BOQ items (qty 0).
  * Active pack replaces catalogue.json. Filtered by each floor's level types. Idempotent.
@@ -141,6 +160,7 @@ export async function ensureCatalogueSelected(opts: {
   if (!isBoqCatalogueEnabled()) return 0;
 
   await ensureDefaultBoqPack({ projectId: opts.projectId });
+  await clearSeededTypedZeroQty(opts.projectId);
 
   const fromPack = await ensureFromActivePack(opts);
   if (fromPack >= 0) return fromPack;

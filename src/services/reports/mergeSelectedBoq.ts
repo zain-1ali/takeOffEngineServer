@@ -1,4 +1,5 @@
 import type { SelectedBoqReportItem } from '../selectedBoq';
+import { billedQty } from './billedQty';
 import { lineAmount, type RateAccessors } from './pricing';
 import {
   qtyContextFromSummary,
@@ -70,10 +71,12 @@ function selectedLine(args: {
   unit: string;
   rate: number | null;
   suggestedQty?: number;
+  quantityMode?: 'TYPED' | 'TAKEOFF' | '';
+  qtySource?: ReportLine['qtySource'];
   isRebar?: boolean;
   dec?: number;
-    takeoffLinked?: boolean;
-    needsReview?: boolean;
+  takeoffLinked?: boolean;
+  needsReview?: boolean;
 }): ReportLine {
   return {
     kind: 'item',
@@ -92,6 +95,8 @@ function selectedLine(args: {
     selectedBoqId: args.sel.id,
     lineKey: args.sel.lineKey,
     suggestedQty: args.suggestedQty,
+    quantityMode: args.quantityMode,
+    qtySource: args.qtySource,
     isRebar: args.isRebar,
     dec: args.dec,
     takeoffKind: args.sel.takeoffKind,
@@ -103,8 +108,7 @@ function selectedLine(args: {
 
 /**
  * BOQ is only user-added catalogue items. Engine A/B/C lines are dropped.
- * Qty comes from the stored selection (manual / takeoff / applied schedule).
- * A bound schedule qty is exposed as suggestedQty — not auto-applied.
+ * Bound CORE qty follows the engine unless quantityMode is TYPED or TAKEOFF.
  */
 export function mergeSelectedBoqIntoByElement(
   byElement: ElementReportBundle[],
@@ -240,8 +244,13 @@ export function mergeSelectedBoqIntoByElement(
         engineKey: engineKey || undefined,
         headingLabel: pack?.label || bundle.label,
       });
-      const suggestedQty =
-        resolved && resolved.qty > 0 ? resolved.qty : undefined;
+      const engineQty = resolved ? resolved.qty : null;
+      const suggestedQty = engineQty != null ? engineQty : undefined;
+      const billed = billedQty({
+        quantityMode: sel.quantityMode,
+        storedQty: Number(sel.quantity) || 0,
+        engineQty,
+      });
       const packRate = lookupPackCompositeRate({
         hasActivePack: opts?.hasActivePack,
         isManual: sel.isManual,
@@ -268,7 +277,7 @@ export function mergeSelectedBoqIntoByElement(
           });
         rate = rateKey && rates ? rates.boqRate(rateKey) : null;
       }
-      const qty = Number(sel.quantity) || 0;
+      const qty = billed.qty;
       const needsReview = sel.reconciliationStatus === 'NEEDS_REVIEW';
       const line = selectedLine({
         sel,
@@ -276,6 +285,8 @@ export function mergeSelectedBoqIntoByElement(
         unit: sel.unit || resolved?.unit || '',
         rate,
         suggestedQty,
+        quantityMode: sel.quantityMode || '',
+        qtySource: billed.source,
         isRebar: resolved?.isRebar,
         dec: resolved?.dec,
         takeoffLinked: Boolean(
