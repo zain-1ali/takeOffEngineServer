@@ -17,7 +17,7 @@ import {
 } from '../packSelection'
 import { parseIssueTrackerWorkbook } from '../parseIssueTrackerWorkbook'
 import { resolveDefaultBoqPackSeedPath } from '../seedPath'
-import { recipeForLine } from '../../takeoffInputs'
+import { visibleSchemaForLines } from '../../takeoffInputs/schemas'
 
 const CLIENT_XLSX = path.join(
   process.env.USERPROFILE || process.env.HOME || '',
@@ -36,10 +36,34 @@ describeIf('parseIssueTrackerWorkbook', () => {
   )
 
   it('gives every active pack line a Take off Input quantity path', () => {
-    const unresolved = pack.items.filter((item) => {
-      const recipe = recipeForLine(item)
-      return !recipe.method || recipe.fields.length === 0
-    })
+    const unresolved = []
+    const byElement = new Map()
+    for (const item of pack.items) {
+      const list = byElement.get(item.elementKey) || []
+      list.push(item)
+      byElement.set(item.elementKey, list)
+    }
+    for (const [elementKey, items] of byElement) {
+      const engineKey = pack.elements.find((el) => el.elementKey === elementKey)
+        ?.engineKey
+      const visible = visibleSchemaForLines(
+        elementKey,
+        items.map((item) => ({
+          lineKey: item.lineKey,
+          catalogueRef: item.ref,
+          description: item.description,
+          unit: item.unit,
+          quantityBasis: item.quantityBasis,
+          workCategory: item.workCategory,
+        })),
+        engineKey,
+      )
+      for (const item of items) {
+        if (!visible.recipes[item.ref] && !visible.recipes[item.lineKey]) {
+          unresolved.push(`${elementKey}:${item.ref}`)
+        }
+      }
+    }
     expect(unresolved).toEqual([])
   })
 

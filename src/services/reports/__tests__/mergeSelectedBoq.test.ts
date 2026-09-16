@@ -454,6 +454,34 @@ describe('mergeSelectedBoqIntoByElement pack rates', () => {
     expect(out[0].boq.some((l) => l.ref === 'FF')).toBe(false)
   })
 
+  it('uses Take off Input qty and pack rate for billed amount', () => {
+    const out = mergeSelectedBoqIntoByElement(
+      [],
+      [
+        sel({
+          id: 'fill',
+          elementKey: 'PAD_FOOTING',
+          catalogueRef: '1.04',
+          lineKey: 'M01:1.04',
+          unit: 'm3',
+          quantity: 0,
+          inputQuantity: 4,
+          inputQtySource: 'input',
+        }),
+      ],
+      {
+        rates,
+        hasActivePack: true,
+        packRatesByLineKey: { 'M01:1.04': 25 },
+      },
+    )
+    const item = out[0].boq.find((l) => l.kind === 'item')
+    expect(item?.qty).toBe(4)
+    expect(item?.qtySource).toBe('input')
+    expect(item?.rate).toBe(25)
+    expect(item?.amount).toBe(100)
+  })
+
   it('leaves pack line rate null when the Rates Schedule has no match', () => {
     const out = mergeSelectedBoqIntoByElement(
       [],

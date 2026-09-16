@@ -8,7 +8,7 @@ import takeoffInputsRouter from './takeoffInputs';
 import { SelectedBoqItem } from '../models/SelectedBoqItem';
 import { TakeoffInputSet } from '../models/TakeoffInputSet';
 import { toSelectedBoqReportItem, selectedBoqQueryFilter } from '../services/selectedBoq';
-import { attachInputQuantities } from '../services/takeoffInputs';
+import { attachInputQuantities, engineKeyByHeadingFromMeta } from '../services/takeoffInputs';
 import { ensureCatalogueSelected } from '../services/boqTakeoff/ensureCatalogueSelected';
 import { syncPdfLinkedTakeoffs } from '../services/boqTakeoff/applyTakeoff';
 import { DEFAULT_FLOORS } from '../defaults/projectDefaults';
@@ -1037,6 +1037,10 @@ router.get(
       const selectedWithInputs = attachInputQuantities(
         selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
         inputSets,
+        {
+          instances,
+          engineKeyByHeading: engineKeyByHeadingFromMeta(packCtx?.elementMeta),
+        },
       );
 
       const costPlan = buildCostPlan(
@@ -1195,6 +1199,10 @@ router.get(
         attachInputQuantities(
           selectedDocs.map((d) => toSelectedBoqReportItem(d as any)),
           inputSets,
+          {
+            instances,
+            engineKeyByHeading: engineKeyByHeadingFromMeta(packCtx?.elementMeta),
+          },
         ),
       );
 
